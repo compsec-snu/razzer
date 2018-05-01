@@ -1,0 +1,37 @@
+From 4c8d9ff46cdc230eea74d7d0796f740baccf44cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:13:19 +0200
+Subject: [PATCH 35/48] Changes to scripts/Makefile.build to handle warnings while compiling with clang . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ scripts/Makefile.build |    7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
+
+Index: linux/scripts/Makefile.build
+===================================================================
+--- linux.orig/scripts/Makefile.build	2012-09-14 23:20:38.000000000 -0400
++++ linux/scripts/Makefile.build	2012-09-14 23:52:12.574515595 -0400
+@@ -64,12 +64,21 @@
+ 
+ warning-1 := -Wextra -Wunused -Wno-unused-parameter
+ warning-1 += -Wmissing-declarations
++warning-1 += -Wno-initializer-overrides
+ warning-1 += -Wmissing-format-attribute
+-warning-1 += -Wmissing-prototypes
++#warning-1 += -Wmissing-prototypes
+ warning-1 += -Wold-style-definition
+ warning-1 += $(call cc-option, -Wmissing-include-dirs)
+-warning-1 += $(call cc-option, -Wunused-but-set-variable)
++#warning-1 += $(call cc-option, -Wunused-but-set-variable)
+ warning-1 += $(call cc-option, -Wunused-value)
++warning-1 += -Wno-unused-value
++warning-1 += -Wno-format
++warning-1 += -Wno-unknown-warning-option
++warning-1 += -Wno-self-assign
++warning-1 += -fcatch-undefined-behavior
++warning-1 += -Wno-sign-compare
++warning-1 += -Wno-format-zero-length
++warning-1 += -Wno-uninitialized
+ 
+ warning-2 := -Waggregate-return
+ warning-2 += -Wcast-align

@@ -1,0 +1,71 @@
+From 5976e69b274e6e421ff411311d7f8d51b4d4af50 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:52 +0200
+Subject: [PATCH 08/11] Revert "m32r: uaccess s/might_sleep/might_fault/"
+
+This reverts commit 01682576d5fd1c92b96d79560b17208a6567c331.
+---
+ arch/m32r/include/asm/uaccess.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/m32r/include/asm/uaccess.h b/arch/m32r/include/asm/uaccess.h
+index 84fe7ba..1c7047b 100644
+--- a/arch/m32r/include/asm/uaccess.h
++++ b/arch/m32r/include/asm/uaccess.h
+@@ -216,7 +216,7 @@ extern int fixup_exception(struct pt_regs *regs);
+ ({									\
+ 	long __gu_err = 0;						\
+ 	unsigned long __gu_val;						\
+-	might_fault();							\
++	might_sleep();							\
+ 	__get_user_size(__gu_val,(ptr),(size),__gu_err);		\
+ 	(x) = (__typeof__(*(ptr)))__gu_val;				\
+ 	__gu_err;							\
+@@ -227,7 +227,7 @@ extern int fixup_exception(struct pt_regs *regs);
+ 	long __gu_err = -EFAULT;					\
+ 	unsigned long __gu_val = 0;					\
+ 	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);		\
+-	might_fault();							\
++	might_sleep();							\
+ 	if (access_ok(VERIFY_READ,__gu_addr,size))			\
+ 		__get_user_size(__gu_val,__gu_addr,(size),__gu_err);	\
+ 	(x) = (__typeof__(*(ptr)))__gu_val;				\
+@@ -295,7 +295,7 @@ do {									\
+ #define __put_user_nocheck(x,ptr,size)					\
+ ({									\
+ 	long __pu_err;							\
+-	might_fault();							\
++	might_sleep();							\
+ 	__put_user_size((x),(ptr),(size),__pu_err);			\
+ 	__pu_err;							\
+ })
+@@ -305,7 +305,7 @@ do {									\
+ ({									\
+ 	long __pu_err = -EFAULT;					\
+ 	__typeof__(*(ptr)) __user *__pu_addr = (ptr);			\
+-	might_fault();							\
++	might_sleep();							\
+ 	if (access_ok(VERIFY_WRITE,__pu_addr,size))			\
+ 		__put_user_size((x),__pu_addr,(size),__pu_err);		\
+ 	__pu_err;							\
+@@ -597,7 +597,7 @@ unsigned long __generic_copy_from_user(void *, const void __user *, unsigned lon
+  */
+ #define copy_to_user(to,from,n)				\
+ ({							\
+-	might_fault();					\
++	might_sleep();					\
+ 	__generic_copy_to_user((to),(from),(n));	\
+ })
+ 
+@@ -638,7 +638,7 @@ unsigned long __generic_copy_from_user(void *, const void __user *, unsigned lon
+  */
+ #define copy_from_user(to,from,n)			\
+ ({							\
+-	might_fault();					\
++	might_sleep();					\
+ 	__generic_copy_from_user((to),(from),(n));	\
+ })
+ 
+-- 
+1.8.1.4
+

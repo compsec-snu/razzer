@@ -1,0 +1,216 @@
+From 9bd41ee58a5f1445c123c51d478e9644dd0ebc88 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Wed, 8 Jan 2014 18:32:11 +0000
+Subject: [PATCH 21/26] [x86] Support i386-*-*-code16 triple for emitting
+ 16-bit code
+
+(cherry picked from commit bb5e9246d13cd3105aca5e3abd726ecadd1801be)
+---
+ include/llvm/ADT/Triple.h                       |  1 +
+ lib/Support/Triple.cpp                          |  2 ++
+ lib/Target/X86/MCTargetDesc/X86MCTargetDesc.cpp |  5 +++-
+ lib/Target/X86/X86Subtarget.cpp                 |  6 +++--
+ test/MC/X86/ret.s                               | 31 ++++++++++++++++++++++++-
+ test/MC/X86/x86-16.s                            |  4 +---
+ 6 files changed, 42 insertions(+), 7 deletions(-)
+
+diff --git a/include/llvm/ADT/Triple.h b/include/llvm/ADT/Triple.h
+index 84e0b29..ea931c4 100644
+--- a/include/llvm/ADT/Triple.h
++++ b/include/llvm/ADT/Triple.h
+@@ -120,6 +120,7 @@ public:
+     GNUEABI,
+     GNUEABIHF,
+     GNUX32,
++    CODE16,
+     EABI,
+     MachO,
+     Android,
+diff --git a/lib/Support/Triple.cpp b/lib/Support/Triple.cpp
+index 6c978a0..e73d552 100644
+--- a/lib/Support/Triple.cpp
++++ b/lib/Support/Triple.cpp
+@@ -149,6 +149,7 @@ const char *Triple::getEnvironmentTypeName(EnvironmentType Kind) {
+   case GNUEABIHF: return "gnueabihf";
+   case GNUEABI: return "gnueabi";
+   case GNUX32: return "gnux32";
++  case CODE16: return "code16";
+   case EABI: return "eabi";
+   case MachO: return "macho";
+   case Android: return "android";
+@@ -301,6 +302,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
+     .StartsWith("gnueabihf", Triple::GNUEABIHF)
+     .StartsWith("gnueabi", Triple::GNUEABI)
+     .StartsWith("gnux32", Triple::GNUX32)
++    .StartsWith("code16", Triple::CODE16)
+     .StartsWith("gnu", Triple::GNU)
+     .StartsWith("macho", Triple::MachO)
+     .StartsWith("android", Triple::Android)
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCTargetDesc.cpp b/lib/Target/X86/MCTargetDesc/X86MCTargetDesc.cpp
+index 9f61b5a..2cabeb2 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCTargetDesc.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCTargetDesc.cpp
+@@ -48,8 +48,11 @@ std::string X86_MC::ParseX86Triple(StringRef TT) {
+   std::string FS;
+   if (TheTriple.getArch() == Triple::x86_64)
+     FS = "+64bit-mode,-32bit-mode,-16bit-mode";
+-  else
++  else if (TheTriple.getEnvironment() != Triple::CODE16)
+     FS = "-64bit-mode,+32bit-mode,-16bit-mode";
++  else
++    FS = "-64bit-mode,-32bit-mode,+16bit-mode";
++
+   return FS;
+ }
+ 
+diff --git a/lib/Target/X86/X86Subtarget.cpp b/lib/Target/X86/X86Subtarget.cpp
+index 69c9ffe..3b66089 100644
+--- a/lib/Target/X86/X86Subtarget.cpp
++++ b/lib/Target/X86/X86Subtarget.cpp
+@@ -548,8 +548,10 @@ X86Subtarget::X86Subtarget(const std::string &TT, const std::string &CPU,
+   , TargetTriple(TT)
+   , StackAlignOverride(StackAlignOverride)
+   , In64BitMode(TargetTriple.getArch() == Triple::x86_64)
+-  , In32BitMode(TargetTriple.getArch() == Triple::x86)
+-  , In16BitMode(false) {
++  , In32BitMode(TargetTriple.getArch() == Triple::x86 &&
++                TargetTriple.getEnvironment() != Triple::CODE16)
++  , In16BitMode(TargetTriple.getArch() == Triple::x86 &&
++                TargetTriple.getEnvironment() == Triple::CODE16) {
+   initializeEnvironment();
+   resetSubtargetFeatures(CPU, FS);
+ }
+diff --git a/test/MC/X86/ret.s b/test/MC/X86/ret.s
+index fdb8515..bac669b 100644
+--- a/test/MC/X86/ret.s
++++ b/test/MC/X86/ret.s
+@@ -2,84 +2,113 @@
+ // RUN: FileCheck --check-prefix=ERR64 < %t.err %s
+ // RUN: not llvm-mc -triple i386-unknown-unknown --show-encoding %s 2> %t.err | FileCheck --check-prefix=32 %s
+ // RUN: FileCheck --check-prefix=ERR32 < %t.err %s
+-
++// RUN: not llvm-mc -triple i386-unknown-unknown-code16 --show-encoding %s 2> %t.err | FileCheck --check-prefix=16 %s
++// RUN: FileCheck --check-prefix=ERR16 < %t.err %s
+ 
+ 	ret
+ // 64: retq
+ // 64: encoding: [0xc3]
+ // 32: retl
+ // 32: encoding: [0xc3]
++// 16: retw
++// 16: encoding: [0xc3]
+ 	retw
+ // 64: retw
+ // 64: encoding: [0x66,0xc3]
+ // 32: retw
+ // 32: encoding: [0x66,0xc3]
++// 16: retw
++// 16: encoding: [0xc3]
+ 	retl
+ // ERR64: error: instruction requires: Not 64-bit mode
+ // 32: retl
+ // 32: encoding: [0xc3]
++// 16: retl
++// 16: encoding: [0x66,0xc3]
+ 	retq
+ // 64: retq
+ // 64: encoding: [0xc3]
+ // ERR32: error: instruction requires: 64-bit mode
++// ERR16: error: instruction requires: 64-bit mode
+ 
+ 	ret $0
+ // 64: retq $0
+ // 64: encoding: [0xc2,0x00,0x00]
+ // 32: retl $0
+ // 32: encoding: [0xc2,0x00,0x00]
++// 16: retw $0
++// 16: encoding: [0xc2,0x00,0x00]
+ 	retw $0
+ // 64: retw $0
+ // 64: encoding: [0x66,0xc2,0x00,0x00]
+ // 32: retw $0
+ // 32: encoding: [0x66,0xc2,0x00,0x00]
++// 16: retw $0
++// 16: encoding: [0xc2,0x00,0x00]
+ 	retl $0
+ // ERR64: error: instruction requires: Not 64-bit mode
+ // 32: retl $0
+ // 32: encoding: [0xc2,0x00,0x00]
++// 16: retl $0
++// 16: encoding: [0x66,0xc2,0x00,0x00]
+ 	retq $0
+ // 64: retq $0
+ // 64: encoding: [0xc2,0x00,0x00]
+ // ERR32: error: instruction requires: 64-bit mode
++// ERR16: error: instruction requires: 64-bit mode
+ 
+ 	lret
+ // 64: lretl
+ // 64: encoding: [0xcb]
+ // 32: lretl
+ // 32: encoding: [0xcb]
++// 16: lretw
++// 16: encoding: [0xcb]
+ 	lretw
+ // 64: lretw
+ // 64: encoding: [0x66,0xcb]
+ // 32: lretw
+ // 32: encoding: [0x66,0xcb]
++// 16: lretw
++// 16: encoding: [0xcb]
+ 	lretl
+ // 64: lretl
+ // 64: encoding: [0xcb]
+ // 32: lretl
+ // 32: encoding: [0xcb]
++// 16: lretl
++// 16: encoding: [0x66,0xcb]
+ 	lretq
+ // 64: lretq
+ // 64: encoding: [0x48,0xcb]
+ // ERR32: error: instruction requires: 64-bit mode
++// ERR16: error: instruction requires: 64-bit mode
+ 
+ 	lret $0
+ // 64: lretl $0
+ // 64: encoding: [0xca,0x00,0x00]
+ // 32: lretl $0
+ // 32: encoding: [0xca,0x00,0x00]
++// 16: lretw $0
++// 16: encoding: [0xca,0x00,0x00]
+ 	lretw $0
+ // 64: lretw $0
+ // 64: encoding: [0x66,0xca,0x00,0x00]
+ // 32: lretw $0
+ // 32: encoding: [0x66,0xca,0x00,0x00]
++// 16: lretw $0
++// 16: encoding: [0xca,0x00,0x00]
+ 	lretl $0
+ // 64: lretl $0
+ // 64: encoding: [0xca,0x00,0x00]
+ // 32: lretl $0
+ // 32: encoding: [0xca,0x00,0x00]
++// 16: lretl $0
++// 16: encoding: [0x66,0xca,0x00,0x00]
+ 	lretq $0
+ // 64: lretq $0
+ // 64: encoding: [0x48,0xca,0x00,0x00]
+ // ERR32: error: instruction requires: 64-bit mode
++// ERR16: error: instruction requires: 64-bit mode
+ 
+ 
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 1910f46..1dd8f62 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -1,6 +1,4 @@
+-// RUN: llvm-mc -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
+-
+-	.code16
++// RUN: llvm-mc -triple i386-unknown-unknown-code16 --show-encoding %s | FileCheck %s
+ 
+ 	movl $0x12345678, %ebx
+ // CHECK: movl
+-- 
+1.8.4
+

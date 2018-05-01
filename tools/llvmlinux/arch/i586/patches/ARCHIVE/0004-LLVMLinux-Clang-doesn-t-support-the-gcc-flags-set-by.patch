@@ -1,0 +1,31 @@
+From a9d876260c242b84a46707146963aa71d0ec561d Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:25 -0400
+Subject: [PATCH 04/10] LLVMLinux: Clang doesn't support the gcc flags set by
+ CONFIG_ARCH_HWEIGHT_CFLAGS
+
+Ignore the flags set in Kconfig for hweight if the compiler is clang.
+
+Author: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ lib/Makefile | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/Makefile b/lib/Makefile
+index a459c31..5b20e6c 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -43,7 +43,9 @@ obj-$(CONFIG_HAS_IOMEM) += iomap_copy.o devres.o
+ obj-$(CONFIG_CHECK_SIGNATURE) += check_signature.o
+ obj-$(CONFIG_DEBUG_LOCKING_API_SELFTESTS) += locking-selftest.o
+ 
++ifneq ($(COMPILER),clang)
+ CFLAGS_hweight.o = $(subst $(quote),,$(CONFIG_ARCH_HWEIGHT_CFLAGS))
++endif
+ obj-$(CONFIG_GENERIC_HWEIGHT) += hweight.o
+ 
+ obj-$(CONFIG_BTREE) += btree.o
+-- 
+1.8.1.4
+

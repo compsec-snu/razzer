@@ -1,0 +1,63 @@
+From 58206238f32b8b99e639fe60711cf39c4e2fb62e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:54:03 +0100
+Subject: [PATCH 08/51] Add noinline_for_stack to drivers/block/loop.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add noinline_for_stack to drivers/block/loop.c
+---
+ drivers/block/loop.c |    8 ++++----
+ 1 Datei geändert, 4 Zeilen hinzugefügt(+), 4 Zeilen entfernt(-)
+
+diff --git a/drivers/block/loop.c b/drivers/block/loop.c
+index 54046e5..aea2f9f 100644
+--- a/drivers/block/loop.c
++++ b/drivers/block/loop.c
+@@ -1205,7 +1205,7 @@ loop_info64_to_old(const struct loop_info64 *info64, struct loop_info *info)
+ 	return 0;
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_set_status_old(struct loop_device *lo, const struct loop_info __user *arg)
+ {
+ 	struct loop_info info;
+@@ -1217,7 +1217,7 @@ loop_set_status_old(struct loop_device *lo, const struct loop_info __user *arg)
+ 	return loop_set_status(lo, &info64);
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)
+ {
+ 	struct loop_info64 info64;
+@@ -1227,7 +1227,7 @@ loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)
+ 	return loop_set_status(lo, &info64);
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {
+ 	struct loop_info info;
+ 	struct loop_info64 info64;
+@@ -1245,7 +1245,7 @@ loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {
+ 	return err;
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_get_status64(struct loop_device *lo, struct loop_info64 __user *arg) {
+ 	struct loop_info64 info64;
+ 	int err = 0;
+-- 
+1.7.10.4
+

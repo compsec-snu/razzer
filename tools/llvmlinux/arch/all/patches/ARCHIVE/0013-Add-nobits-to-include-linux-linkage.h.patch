@@ -1,0 +1,79 @@
+From 79894fb3bc22e9cc408a813cd6638becb8b7cb7b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:28:14 +0100
+Subject: [PATCH 13/51] Add @nobits to include/linux/linkage.h
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add @nobits to include/linux/linkage.h
+
+Find @nobits at: http://sourceware.org/binutils/docs/as/Section.html
+
+[...]
+
+ELF Version
+
+This is one of the ELF section stack manipulation directives. The others are .subsection (see SubSection), .pushsection (see PushSectio
+n), .popsection (see PopSection), and .previous (see Previous).
+
+For ELF targets, the .section directive is used like this:
+
+     .section name [, "flags"[, @type[,flag_specific_arguments]]]
+
+The optional flags argument is a quoted string which may contain any combination of the following characters:
+
+a
+    section is allocatable
+e
+    section is excluded from executable and shared library.
+w
+    section is writable
+x
+    section is executable
+M
+    section is mergeable
+S
+    section contains zero terminated strings
+G
+    section is a member of a section group
+T
+    section is used for thread-local-storage
+?
+    section is a member of the previously-current section's group, if any
+
+The optional type argument may contain one of the following constants:
+
+@progbits
+    section contains data
+@nobits
+    section does not contain data (i.e., section only occupies space)
+
+[...]
+---
+ include/linux/linkage.h |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/include/linux/linkage.h b/include/linux/linkage.h
+index 807f1e5..7657122 100644
+--- a/include/linux/linkage.h
++++ b/include/linux/linkage.h
+@@ -24,7 +24,7 @@
+  * alignment directives yourself
+  */
+ #define __PAGE_ALIGNED_DATA	.section ".data..page_aligned", "aw"
+-#define __PAGE_ALIGNED_BSS	.section ".bss..page_aligned", "aw"
++#define __PAGE_ALIGNED_BSS	.section ".bss..page_aligned", "aw", @nobits
+ 
+ /*
+  * This is used by architectures to keep arguments on the stack
+-- 
+1.7.10.4
+

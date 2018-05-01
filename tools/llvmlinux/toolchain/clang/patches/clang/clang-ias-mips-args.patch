@@ -1,0 +1,36 @@
+From 53acf5be34fcc5180bb91927caf6d44373371ce6 Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Wed, 13 May 2015 14:40:27 +0100
+Subject: [PATCH] DO-NOT-UPSTREAM [mips] [IAS] Ignore some MIPS-specific
+ assembler options when using the IAS.
+
+These options are either already passed to the IAS through compiler options or
+are not supported at the moment, so instead of passing them on to the IAS, we
+just ignore them and continue building.
+
+This patch is intended as a temporary workaround.
+
+---
+ lib/Driver/Tools.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/lib/Driver/Tools.cpp b/lib/Driver/Tools.cpp
+index 138a31b..b212157 100644
+--- a/lib/Driver/Tools.cpp
++++ b/lib/Driver/Tools.cpp
+@@ -2179,6 +2179,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
+             TakeNextArg = true;
+         } else if (Value.startswith("-gdwarf-")) {
+           CmdArgs.push_back(Value.data());
++        } else if (Value == "-mips32r2") {
++          continue;
++        } else if (Value == "-msoft-float") {
++          continue;
++        } else if (Value == "--trap") {
++          continue;
+         } else {
+           D.Diag(diag::err_drv_unsupported_option_argument)
+             << A->getOption().getName() << Value;
+-- 
+1.9.1
+

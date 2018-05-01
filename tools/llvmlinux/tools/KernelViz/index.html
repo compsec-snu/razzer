@@ -1,0 +1,250 @@
+<!doctype html>
+<!--
+##############################################################################
+# Copyright (c) 2014 Mark Charlebois
+#
+# All rights reserved. 
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted (subject to the limitations in the disclaimer
+# below) provided that the following conditions are met:
+# 
+# * Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#  
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# 
+# * Neither the name KernelViz nor the names of its contributors may be used
+#   to endorse or promote products derived from this software without 
+#   specific prior written permission.
+# 
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY
+# THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
+# NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+##############################################################################
+<!-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+</head>
+<script src="external/d3/d3.v3.js"></script>
+<script src="external/dagre/dagre-d3.js"></script>
+<script src="external/completely/complete.ly.1.0.1.min.js"></script>
+<script src="scripts/ForceGraph.js"></script>
+<script src="scripts/DirectedGraph.js"></script>
+<script src="scripts/DirView.js"></script>
+<script src="scripts/DualView.js"></script>
+<script src="scripts/Layout.js"></script>
+<script>
+function init() {
+  layout = new Layout();
+  layout.init();
+  layout.setView("moduleview");
+  layout.resize();
+}
+</script>
+<style>
+body {
+  font-family: sans-serif;
+  font-size: 14px;
+  background: #eee;
+}
+
+.node rect {
+  stroke: #333;
+}
+
+.selected rect {
+  stroke-width: 4px;
+  stroke: #00d;
+}
+
+.edgePath path {
+  stroke: #333;
+  fill: none;
+}
+
+.nodeInfo,
+.linkKey,
+.nodeKey, 
+.topbuttons,
+.viewbuttons,
+.labelbutton {
+  width: 240px;
+  margin-left: 0px;
+  margin-top: 0px;
+  margin-bottom: 5px;
+  padding: 5px;
+  border: 1px solid #999;
+  float: left;
+  background: #f8f8f8;
+}
+
+.optionitem {
+  margin-top: 5px;
+}
+
+td {
+  border:1px solid #999;
+}
+
+svg {
+  border: 1px solid #999;
+  overflow: hidden;
+  background: #f8f8f8;
+}
+
+.node-fg {
+  stroke: #000;
+  fill: #fd9040;
+  stroke-width: 1.5px;
+}
+
+.node-selected {
+  stroke: #00d;
+  stroke-width: 4px;
+}
+
+.link {
+  stroke: #000;
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
+.label {
+  pointer-events: none;
+}
+
+.selector,
+.funcselector {
+  float: left;
+  z-index: 1;
+}
+
+.link-hidden {
+ display: none;
+}
+
+.node-hidden {
+ display: none;
+}
+
+.link-shadow {
+  stroke: #222;
+  stroke-opacity: .2;
+}
+
+.link-source,
+.link-target {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
+.link-source {
+  stroke: #d62728;
+}
+
+.link-target {
+  stroke: #2ca02c;
+}
+
+.nodeInfo {
+  height: 200px;
+}
+
+.optionlabel {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.wordwrap {
+  word-wrap: break-word;
+}
+
+</style>
+<body onload="init()">
+<div class="controls" style="float:left;width:250px" >
+  <div class="topbuttons">
+    <div class="optionlabel">View</div>
+    <select onchange="layout.setView(this.value)">
+      <option value="toplevel">DirView</option>
+      <option value="module" selected="true">ModuleView</option>
+      <option value="func">FunctionView</option>
+   </select>
+  </div>
+  <div class="selector viewbuttons">
+    <div class="optionlabel">Module</div>
+    <div class="selectortxt"></div>
+  </div>
+  <div class="funcoption viewbuttons">
+    <div class="optionlabel">Function</div>
+    <div class="optionitem">
+      Name: <span id="funcname"></span>
+    </div>
+    <div class="optionitem">
+      File: <span id="funcfile"></span>
+    </div>
+    <div class="funcoption optionitem">
+      Search Text:<br>
+      <input type="text" id="funcsearchtext" style="width:225px"/>
+      <div class="fselector" style="position:absolute"></div>
+    </div>
+  </div>
+  <div class="viewbuttons">
+    <div class="optionlabel">Options</div>
+    <div class="optionitem">
+      <select onchange='layout.setGraphType(this.value)'>
+        <option value='directed' selected='true'/>Directed Graph</option>
+        <option value='forced'>Force Graph</option>
+      </select>
+    </div>
+    <div class="funcoption">
+      <div class="optionitem">
+        Call depth:&nbsp;
+        <select id="funcdepth">
+          <option selected="true">1</option>
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="labelbutton">
+    <div class="optionlabel">Force Graph</div>
+    <input type='checkbox' checked='true' onclick='layout.showLabels(this.checked)'/>Show Labels
+    <br/>
+    <input type='checkbox' checked='true' onclick='layout.enableZoom(this.checked)'/>Zoom
+    <div class="topviewcontrols">
+      <input type='checkbox' checked='true' onclick='layout.showLinks(this.checked)'/>Show Links
+    </div>
+  </div>
+  <div class="viewInfo">
+    <div>
+      <div class="nodeInfo">
+        <div class="optionlabel">Selected Node</div>
+        <div class="nodeInfoContainer"></div>
+      </div>
+      <div class="keyContainer"></div>
+    </div>
+  </div>
+</div>
+<div class="container" style="float:right;">
+  <svg>
+    <g/>
+  </svg>
+</div>
+
+</body>
+</html>

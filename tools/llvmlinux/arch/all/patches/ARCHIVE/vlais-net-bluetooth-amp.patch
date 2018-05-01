@@ -1,0 +1,50 @@
+From efde5d3df75fcdd0ccd55100819cb6a4479ea7e2 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 4 Apr 2014 18:18:00 -0300
+Subject: [PATCH] bluetooth: LLVMLinux: Remove VLAIS from bluetooth/amp.c
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch allocates the appropriate amount of memory
+using a char array using the SHASH_DESC_ON_STACK macro.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon M<C3><B6>ller <dl9pf@gmx.de>
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: "David S. Miller" <davem@davemloft.net>
+---
+ net/bluetooth/amp.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/net/bluetooth/amp.c b/net/bluetooth/amp.c
+index 016cdb6..72fb296 100644
+--- a/net/bluetooth/amp.c
++++ b/net/bluetooth/amp.c
+@@ -149,15 +149,15 @@ static int hmac_sha256(u8 *key, u8 ksize, char *plaintext, u8 psize, u8 *output)
+ 	if (ret) {
+ 		BT_DBG("crypto_ahash_setkey failed: err %d", ret);
+ 	} else {
+-		struct {
+-			struct shash_desc shash;
+-			char ctx[crypto_shash_descsize(tfm)];
+-		} desc;
++		char sdesc[sizeof(struct shash_desc)
++			+ crypto_shash_descsize(tfm)
++			+ CRYPTO_MINALIGN] CRYPTO_MINALIGN_ATTR;
++		struct shash_desc *desc = (struct shash_desc *)sdesc;
+ 
+-		desc.shash.tfm = tfm;
+-		desc.shash.flags = CRYPTO_TFM_REQ_MAY_SLEEP;
++		desc->tfm = tfm;
++		desc->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+ 
+-		ret = crypto_shash_digest(&desc.shash, plaintext, psize,
++		ret = crypto_shash_digest(desc, plaintext, psize,
+ 					  output);
+ 	}
+ 
+-- 
+1.9.1
+

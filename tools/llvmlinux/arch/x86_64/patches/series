@@ -1,0 +1,5 @@
+hweight-x86.patch
+export-memcpy-clang-x86_64.patch
+boot-workaround-PR18415.patch
+vlais-xen-mmu.patch
+0001-Revert-x86-Align-jump-targets-to-1-byte-boundaries.patch

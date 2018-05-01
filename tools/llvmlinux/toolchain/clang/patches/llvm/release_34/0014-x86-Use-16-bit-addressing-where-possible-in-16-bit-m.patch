@@ -1,0 +1,141 @@
+From b10fc475da9f2b83e8ad3538164b2cd51a4e16a5 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:18 +0000
+Subject: [PATCH 14/26] [x86] Use 16-bit addressing where possible in 16-bit
+ mode
+
+Where "where possible" means that it's an immediate value and it's below
+0x10000. In fact GAS will either truncate or error with larger values,
+and will insist on using the addr32 prefix to get 32-bit addressing. So
+perhaps we should do that, in a later patch.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198758 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 4f32ce2436d11f4de00db677f2c1d0a4022dbcfe)
+---
+ lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp | 32 ++++++++-------
+ test/MC/X86/x86-16.s                             | 52 ++++++++++++++++++++++++
+ 2 files changed, 70 insertions(+), 14 deletions(-)
+
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+index a06136f..5581831 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+@@ -57,6 +57,24 @@ public:
+     return (STI.getFeatureBits() & X86::Mode16Bit) != 0;
+   }
+ 
++  /// Is16BitMemOperand - Return true if the specified instruction has
++  /// a 16-bit memory operand. Op specifies the operand # of the memoperand.
++  bool Is16BitMemOperand(const MCInst &MI, unsigned Op) const {
++    const MCOperand &BaseReg  = MI.getOperand(Op+X86::AddrBaseReg);
++    const MCOperand &IndexReg = MI.getOperand(Op+X86::AddrIndexReg);
++    const MCOperand &Disp     = MI.getOperand(Op+X86::AddrDisp);
++
++    if (is16BitMode() && BaseReg.getReg() == 0 &&
++        Disp.isImm() && Disp.getImm() < 0x10000)
++      return true;
++    if ((BaseReg.getReg() != 0 &&
++         X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg.getReg())) ||
++        (IndexReg.getReg() != 0 &&
++         X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg.getReg())))
++      return true;
++    return false;
++  }
++
+   unsigned GetX86RegNum(const MCOperand &MO) const {
+     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg()) & 0x7;
+   }
+@@ -250,20 +268,6 @@ static bool Is64BitMemOperand(const MCInst &MI, unsigned Op) {
+ }
+ #endif
+ 
+-/// Is16BitMemOperand - Return true if the specified instruction has
+-/// a 16-bit memory operand. Op specifies the operand # of the memoperand.
+-static bool Is16BitMemOperand(const MCInst &MI, unsigned Op) {
+-  const MCOperand &BaseReg  = MI.getOperand(Op+X86::AddrBaseReg);
+-  const MCOperand &IndexReg = MI.getOperand(Op+X86::AddrIndexReg);
+-
+-  if ((BaseReg.getReg() != 0 &&
+-       X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg.getReg())) ||
+-      (IndexReg.getReg() != 0 &&
+-       X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg.getReg())))
+-    return true;
+-  return false;
+-}
+-
+ /// StartsWithGlobalOffsetTable - Check if this expression starts with
+ ///  _GLOBAL_OFFSET_TABLE_ and if it is of the form
+ ///  _GLOBAL_OFFSET_TABLE_-symbol. This is needed to support PIC on ELF
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index e395a77..4f2108c 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -319,6 +319,10 @@ cmovnae	%bx,%bx
+ // CHECK:  encoding: [0x9b]
+ 	fwait
+ 
++// CHECK: [0x65,0x66,0x8b,0x06,0x7c,0x00]
++// FIXME: This is a correct bug poor encoding: Use 65 66 a1 7c 00
++        movl	%gs:124, %eax
++
+ // CHECK: pusha
+ // CHECK:  encoding: [0x60]
+         	pusha
+@@ -701,6 +705,54 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0xdf,0xe9]
+         	fucompi
+ 
++// CHECK: fldcw	32493
++// CHECK:  encoding: [0xd9,0x2e,0xed,0x7e]
++        	fldcww	0x7eed
++
++// CHECK: fldcw	32493
++// CHECK:  encoding: [0xd9,0x2e,0xed,0x7e]
++        	fldcw	0x7eed
++
++// CHECK: fnstcw	32493
++// CHECK:  encoding: [0xd9,0x3e,0xed,0x7e]
++        	fnstcww	0x7eed
++
++// CHECK: fnstcw	32493
++// CHECK:  encoding: [0xd9,0x3e,0xed,0x7e]
++        	fnstcw	0x7eed
++
++// CHECK: wait
++// CHECK:  encoding: [0x9b]
++        	fstcww	0x7eed
++
++// CHECK: wait
++// CHECK:  encoding: [0x9b]
++        	fstcw	0x7eed
++
++// CHECK: fnstsw	32493
++// CHECK:  encoding: [0xdd,0x3e,0xed,0x7e]
++        	fnstsww	0x7eed
++
++// CHECK: fnstsw	32493
++// CHECK:  encoding: [0xdd,0x3e,0xed,0x7e]
++        	fnstsw	0x7eed
++
++// CHECK: wait
++// CHECK:  encoding: [0x9b]
++        	fstsww	0x7eed
++
++// CHECK: wait
++// CHECK:  encoding: [0x9b]
++        	fstsw	0x7eed
++
++// CHECK: verr	32493
++// CHECK:  encoding: [0x0f,0x00,0x26,0xed,0x7e]
++        	verrw	0x7eed
++
++// CHECK: verr	32493
++// CHECK:  encoding: [0x0f,0x00,0x26,0xed,0x7e]
++        	verr	0x7eed
++
+ // CHECK: wait
+ // CHECK:  encoding: [0x9b]
+         	fclex
+-- 
+1.8.4
+

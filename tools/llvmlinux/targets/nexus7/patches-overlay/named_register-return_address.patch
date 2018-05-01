@@ -1,0 +1,37 @@
+From bbd969cb23df5b40b929bc3cc6ae34bc8a29c9ba Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:27 -0400
+Subject: [PATCH 36/39] arm: LLVMLinux: Use current_stack_pointer for
+ return_address
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The existing code uses named registers to get the value of the stack pointer.
+The new current_stack_pointer macro is more readable and allows for a central
+portable implementation of how to get the stack pointer with ASM. This change
+supports being able to compile the kernel with both gcc and Clang.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/arm/kernel/return_address.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+--- android_kernel_nexus7.orig/arch/arm/kernel/return_address.c
++++ android_kernel_nexus7/arch/arm/kernel/return_address.c
+@@ -39,12 +39,11 @@
+ {
+ 	struct return_address_data data;
+ 	struct stackframe frame;
+-	register unsigned long current_sp asm ("sp");
+ 
+ 	data.level = level + 1;
+ 
+ 	frame.fp = (unsigned long)__builtin_frame_address(0);
+-	frame.sp = current_sp;
++	frame.sp = __builtin_stack_pointer();
+ 	frame.lr = (unsigned long)__builtin_return_address(0);
+ 	frame.pc = (unsigned long)return_address;
+ 

@@ -1,0 +1,39 @@
+From 26478380880e3501024f3e6e0e60b882db74fec0 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:27 -0400
+Subject: [PATCH] arm64: LLVMLinux: Calculate current_thread_info from
+ current_stack_pointer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the global current_stack_pointer to get the value of the stack pointer.
+This change supports being able to compile the kernel with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Reviewed-by: Olof Johansson <olof@lixom.net>
+Acked-by: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/include/asm/thread_info.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index 356e037..459bf8e 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -80,8 +80,8 @@ static inline struct thread_info *current_thread_info(void) __attribute_const__;
+ 
+ static inline struct thread_info *current_thread_info(void)
+ {
+-	register unsigned long sp asm ("sp");
+-	return (struct thread_info *)(sp & ~(THREAD_SIZE - 1));
++	return (struct thread_info *)
++		(current_stack_pointer & ~(THREAD_SIZE - 1));
+ }
+ 
+ #define thread_saved_pc(tsk)	\
+-- 
+1.9.1
+

@@ -1,0 +1,32 @@
+From 322d2837b5f9fea665f5535e1cd35eba37e87a84 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:40 +0200
+Subject: [PATCH 48/48] Unnecessary double brace.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ mm/memcontrol.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index 58a08fc..332e434 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -2123,13 +2123,13 @@ static int __cpuinit memcg_cpu_hotplug_callback(struct notifier_block *nb,
+ 	struct memcg_stock_pcp *stock;
+ 	struct mem_cgroup *iter;
+ 
+-	if ((action == CPU_ONLINE)) {
++	if (action == CPU_ONLINE) {
+ 		for_each_mem_cgroup(iter)
+ 			synchronize_mem_cgroup_on_move(iter, cpu);
+ 		return NOTIFY_OK;
+ 	}
+ 
+-	if ((action != CPU_DEAD) || action != CPU_DEAD_FROZEN)
++	if (action != CPU_DEAD || action != CPU_DEAD_FROZEN)
+ 		return NOTIFY_OK;
+ 
+ 	for_each_mem_cgroup(iter)
+-- 
+1.7.3.4
+

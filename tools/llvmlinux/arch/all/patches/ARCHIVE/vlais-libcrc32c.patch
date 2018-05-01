@@ -1,0 +1,59 @@
+From c7403eb5a490a1984174cb4e56f8018f147dbb99 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 12:54:28 +0200
+Subject: [PATCH] crypto: LLVMLinux: Remove VLAIS usage from libcrc32c.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch allocates the appropriate amount of memory
+using a char array using the SHASH_DESC_ON_STACK macro.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: pageexec@freemail.hu
+Cc: "David S. Miller" <davem@davemloft.net>
+---
+ lib/libcrc32c.c | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/lib/libcrc32c.c b/lib/libcrc32c.c
+index b3131f5..6a08ce7 100644
+--- a/lib/libcrc32c.c
++++ b/lib/libcrc32c.c
+@@ -41,20 +41,18 @@ static struct crypto_shash *tfm;
+ 
+ u32 crc32c(u32 crc, const void *address, unsigned int length)
+ {
+-	struct {
+-		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(tfm)];
+-	} desc;
++	SHASH_DESC_ON_STACK(shash, tfm);
++	u32 *ctx = (u32 *)shash_desc_ctx(shash);
+ 	int err;
+ 
+-	desc.shash.tfm = tfm;
+-	desc.shash.flags = 0;
+-	*(u32 *)desc.ctx = crc;
++	shash->tfm = tfm;
++	shash->flags = 0;
++	*ctx = crc;
+ 
+-	err = crypto_shash_update(&desc.shash, address, length);
++	err = crypto_shash_update(shash, address, length);
+ 	BUG_ON(err);
+ 
+-	return *(u32 *)desc.ctx;
++	return *ctx;
+ }
+ 
+ EXPORT_SYMBOL(crc32c);
+-- 
+1.9.1
+

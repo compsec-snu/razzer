@@ -1,0 +1,65 @@
+From 138e4ee28f78e6d29c9370b34d114f79b49fb58f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 23 Apr 2014 17:14:02 +0200
+Subject: [PATCH] WORKAROUND DO-NOT-UPSTREAM x86, boot: Work around clang
+ PR18415.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clang's intrinsics ignore -mregparm=3 when they fall back to calling the
+out-of-line implementations. Putting the args on the stack when memcpy()
+expects them in registers is not a recipe for a happy kernel.
+
+This bites with -m32 too, so clang is presumably catastrophically
+broken for the i386 kernel until this is fixed, unless I'm missing
+something.
+
+For information/testing only; do not apply. With this, I can use
+'clang -m16' to build all the kernel's 16-bit code and get a successful
+boot.
+
+Not-signed-off-by: David Woodhouse <David.Woodhouse@intel.com>
+Forward-ported-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/boot/memory.c | 7 ++++++-
+ arch/x86/boot/string.h | 2 ++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/boot/memory.c b/arch/x86/boot/memory.c
+index db75d07..7af6504 100644
+--- a/arch/x86/boot/memory.c
++++ b/arch/x86/boot/memory.c
+@@ -63,8 +63,13 @@ static int detect_memory_e820(void)
+ 			count = 0;
+ 			break;
+ 		}
+-
++#ifdef __clang__
++		/* PR18415 */
++		memcpy(desc, &buf, sizeof(*desc));
++		desc++;
++#else
+ 		*desc++ = buf;
++#endif
+ 		count++;
+ 	} while (ireg.ebx && count < ARRAY_SIZE(boot_params.e820_map));
+ 
+diff --git a/arch/x86/boot/string.h b/arch/x86/boot/string.h
+index 725e820..3e07af1 100644
+--- a/arch/x86/boot/string.h
++++ b/arch/x86/boot/string.h
+@@ -14,8 +14,10 @@ int memcmp(const void *s1, const void *s2, size_t len);
+  * Access builtin version by default. If one needs to use optimized version,
+  * do "undef memcpy" in .c file and link against right string.c
+  */
++#ifndef __clang__ /* PR18415 */
+ #define memcpy(d,s,l) __builtin_memcpy(d,s,l)
+ #define memset(d,c,l) __builtin_memset(d,c,l)
+ #define memcmp	__builtin_memcmp
++#endif
+ 
+ #endif /* BOOT_STRING_H */
+-- 
+1.9.1
+

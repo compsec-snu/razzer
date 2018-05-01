@@ -1,0 +1,29 @@
+From 2a40f9c2f3ddc418d3a1dd355723deb7e4de4a02 Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Fri, 24 Apr 2015 11:30:26 +0100
+Subject: [PATCH] DO-NOT-UPSTREAM mips: Disable -Werror for arch/mips.
+
+Sometimes, when doing development work, it can be useful to not treat warnings
+as errors.
+
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+---
+ arch/mips/Kbuild | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/mips/Kbuild b/arch/mips/Kbuild
+index dd29533..73a0140 100644
+--- a/arch/mips/Kbuild
++++ b/arch/mips/Kbuild
+@@ -1,7 +1,7 @@
+ # Fail on warnings - also for files referenced in subdirs
+ # -Werror can be disabled for specific files using:
+ # CFLAGS_<file.o> := -Wno-error
+-subdir-ccflags-y := -Werror
++# subdir-ccflags-y := -Werror
+ 
+ # platform specific definitions
+ include arch/mips/Kbuild.platforms
+-- 
+1.9.1
+

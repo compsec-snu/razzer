@@ -1,0 +1,40 @@
+From d410938f6b6a95f91d81874c2e884dd9ed739bea Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 23:09:53 -0700
+Subject: [PATCH] compiler-gcc
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ include/linux/compiler-gcc.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
+index 02ae99e..c7b98fb 100644
+--- a/include/linux/compiler-gcc.h
++++ b/include/linux/compiler-gcc.h
+@@ -53,14 +53,14 @@
+  */
+ #if !defined(CONFIG_ARCH_SUPPORTS_OPTIMIZED_INLINING) || \
+     !defined(CONFIG_OPTIMIZE_INLINING) || (__GNUC__ < 4)
+-# define inline		inline		__attribute__((always_inline))
+-# define __inline__	__inline__	__attribute__((always_inline))
+-# define __inline	__inline	__attribute__((always_inline))
++# define inline		inline		__attribute__((always_inline)) notrace __maybe_unused
++# define __inline__	__inline__	__attribute__((always_inline)) notrace __maybe_unused
++# define __inline	__inline	__attribute__((always_inline)) notrace __maybe_unused
+ #else
+ /* A lot of inline functions can cause havoc with function tracing */
+-# define inline		inline		notrace
+-# define __inline__	__inline__	notrace
+-# define __inline	__inline	notrace
++# define inline		inline		notrace __maybe_unused
++# define __inline__	__inline__	notrace __maybe_unused
++# define __inline	__inline	notrace __maybe_unused
+ #endif
+ 
+ #define __deprecated			__attribute__((deprecated))
+-- 
+1.9.1
+

@@ -1,0 +1,44 @@
+From e80a23dff69ae28c5051f92f726fc0cfbe7edf2f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:40:42 +0100
+Subject: [PATCH 18/51] Add no-integrated-as to
+ arch/x86/boot/compressed/Makefile to build with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/boot/compressed/Makefile |    3 ++-
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 8a84501..2b52a9b 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -7,7 +7,7 @@
+ targets := vmlinux.lds vmlinux vmlinux.bin vmlinux.bin.gz vmlinux.bin.bz2 vmlinux.bin.lzma vmlinux.bin.xz vmlinux.bin.lzo head_$(BITS).o misc.o string.o cmdline.o early_serial_console.o piggy.o
+ 
+ KBUILD_CFLAGS := -m$(BITS) -D__KERNEL__ $(LINUX_INCLUDE) -O2
+-KBUILD_CFLAGS += -fno-strict-aliasing -fPIC
++KBUILD_CFLAGS += -fno-strict-aliasing -fPIC -mno-sse -Wno-unused-value -no-integrated-as
+ KBUILD_CFLAGS += -DDISABLE_BRANCH_PROFILING
+ cflags-$(CONFIG_X86_32) := -march=i386
+ cflags-$(CONFIG_X86_64) := -mcmodel=small
+@@ -24,6 +24,7 @@ LDFLAGS_vmlinux := -T
+ hostprogs-y	:= mkpiggy
+ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+ 
++CFLAGS_REMOVE_misc.o := -fcatch-undefined-behavior
+ VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
+ 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
+ 	$(obj)/piggy.o
+-- 
+1.7.10.4
+

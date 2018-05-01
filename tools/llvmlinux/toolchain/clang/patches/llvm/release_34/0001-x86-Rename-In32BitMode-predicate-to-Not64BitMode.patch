@@ -1,0 +1,973 @@
+From a6be2d3d62fab6cf8e63e2b77b6f14c1743e90c1 Mon Sep 17 00:00:00 2001
+From: Eric Christopher <echristo@gmail.com>
+Date: Fri, 20 Dec 2013 02:04:49 +0000
+Subject: [PATCH 01/26] [x86] Rename In32BitMode predicate to Not64BitMode
+
+That's what it actually means, and with 16-bit support it's going to be
+a little more relevant since in a few corner cases we may actually want
+to distinguish between 16-bit and 32-bit mode (for example the bare 'push'
+aliases to pushw/pushl etc.)
+
+Patch by David Woodhouse
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@197768 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 75a8b23e1000f3db9f85f3582353f2af448f4622)
+---
+ lib/Target/X86/AsmParser/X86AsmParser.cpp |  2 +-
+ lib/Target/X86/X86InstrArithmetic.td      | 26 +++++------
+ lib/Target/X86/X86InstrCompiler.td        | 76 +++++++++++++++----------------
+ lib/Target/X86/X86InstrControl.td         | 14 +++---
+ lib/Target/X86/X86InstrFormats.td         |  2 +-
+ lib/Target/X86/X86InstrInfo.td            | 76 +++++++++++++++----------------
+ lib/Target/X86/X86InstrSSE.td             |  8 ++--
+ lib/Target/X86/X86InstrSVM.td             |  8 ++--
+ lib/Target/X86/X86InstrSystem.td          | 46 +++++++++----------
+ lib/Target/X86/X86InstrVMX.td             | 12 ++---
+ utils/TableGen/X86RecognizableInstr.cpp   |  5 +-
+ 11 files changed, 138 insertions(+), 137 deletions(-)
+
+diff --git a/lib/Target/X86/AsmParser/X86AsmParser.cpp b/lib/Target/X86/AsmParser/X86AsmParser.cpp
+index bc8f367..f24c1ef 100644
+--- a/lib/Target/X86/AsmParser/X86AsmParser.cpp
++++ b/lib/Target/X86/AsmParser/X86AsmParser.cpp
+@@ -1073,7 +1073,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
+     RegNo = MatchRegisterName(Tok.getString().lower());
+ 
+   if (!is64BitMode()) {
+-    // FIXME: This should be done using Requires<In32BitMode> and
++    // FIXME: This should be done using Requires<Not64BitMode> and
+     // Requires<In64BitMode> so "eiz" usage in 64-bit instructions can be also
+     // checked.
+     // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
+diff --git a/lib/Target/X86/X86InstrArithmetic.td b/lib/Target/X86/X86InstrArithmetic.td
+index 7fc9c44..b8d7f9a 100644
+--- a/lib/Target/X86/X86InstrArithmetic.td
++++ b/lib/Target/X86/X86InstrArithmetic.td
+@@ -24,7 +24,7 @@ def LEA32r   : I<0x8D, MRMSrcMem,
+                  (outs GR32:$dst), (ins i32mem:$src),
+                  "lea{l}\t{$src|$dst}, {$dst|$src}",
+                  [(set GR32:$dst, lea32addr:$src)], IIC_LEA>,
+-                 Requires<[In32BitMode]>;
++                 Requires<[Not64BitMode]>;
+ 
+ def LEA64_32r : I<0x8D, MRMSrcMem,
+                   (outs GR32:$dst), (ins lea64_32mem:$src),
+@@ -460,12 +460,12 @@ let isConvertibleToThreeAddress = 1, CodeSize = 1 in {  // Can xform into LEA.
+ def INC16r : I<0x40, AddRegFrm, (outs GR16:$dst), (ins GR16:$src1),
+                "inc{w}\t$dst",
+                [(set GR16:$dst, EFLAGS, (X86inc_flag GR16:$src1))], IIC_UNARY_REG>,
+-             OpSize, Requires<[In32BitMode]>;
++             OpSize, Requires<[Not64BitMode]>;
+ def INC32r : I<0x40, AddRegFrm, (outs GR32:$dst), (ins GR32:$src1),
+                "inc{l}\t$dst",
+                [(set GR32:$dst, EFLAGS, (X86inc_flag GR32:$src1))],
+                IIC_UNARY_REG>,
+-             Requires<[In32BitMode]>;
++             Requires<[Not64BitMode]>;
+ def INC64r : RI<0xFF, MRM0r, (outs GR64:$dst), (ins GR64:$src1), "inc{q}\t$dst",
+                 [(set GR64:$dst, EFLAGS, (X86inc_flag GR64:$src1))],
+                 IIC_UNARY_REG>;
+@@ -500,16 +500,16 @@ def DEC64_32r : I<0xFF, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
+ let isCodeGenOnly = 1, CodeSize = 2 in {
+ def INC32_16r : I<0xFF, MRM0r, (outs GR16:$dst), (ins GR16:$src1),
+                   "inc{w}\t$dst", [], IIC_UNARY_REG>,
+-                OpSize, Requires<[In32BitMode]>;
++                OpSize, Requires<[Not64BitMode]>;
+ def INC32_32r : I<0xFF, MRM0r, (outs GR32:$dst), (ins GR32:$src1),
+                   "inc{l}\t$dst", [], IIC_UNARY_REG>,
+-                Requires<[In32BitMode]>;
++                Requires<[Not64BitMode]>;
+ def DEC32_16r : I<0xFF, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
+                   "dec{w}\t$dst", [], IIC_UNARY_REG>,
+-                OpSize, Requires<[In32BitMode]>;
++                OpSize, Requires<[Not64BitMode]>;
+ def DEC32_32r : I<0xFF, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
+                   "dec{l}\t$dst", [], IIC_UNARY_REG>,
+-                Requires<[In32BitMode]>;
++                Requires<[Not64BitMode]>;
+ } // isCodeGenOnly = 1, CodeSize = 2
+ 
+ } // Constraints = "$src1 = $dst", SchedRW
+@@ -521,11 +521,11 @@ let CodeSize = 2, SchedRW = [WriteALULd, WriteRMW] in {
+   def INC16m : I<0xFF, MRM0m, (outs), (ins i16mem:$dst), "inc{w}\t$dst",
+                [(store (add (loadi16 addr:$dst), 1), addr:$dst),
+                 (implicit EFLAGS)], IIC_UNARY_MEM>,
+-               OpSize, Requires<[In32BitMode]>;
++               OpSize, Requires<[Not64BitMode]>;
+   def INC32m : I<0xFF, MRM0m, (outs), (ins i32mem:$dst), "inc{l}\t$dst",
+                [(store (add (loadi32 addr:$dst), 1), addr:$dst),
+                 (implicit EFLAGS)], IIC_UNARY_MEM>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+   def INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst), "inc{q}\t$dst",
+                   [(store (add (loadi64 addr:$dst), 1), addr:$dst),
+                    (implicit EFLAGS)], IIC_UNARY_MEM>;
+@@ -562,12 +562,12 @@ def DEC16r : I<0x48, AddRegFrm, (outs GR16:$dst), (ins GR16:$src1),
+                "dec{w}\t$dst",
+                [(set GR16:$dst, EFLAGS, (X86dec_flag GR16:$src1))],
+                IIC_UNARY_REG>,
+-             OpSize, Requires<[In32BitMode]>;
++             OpSize, Requires<[Not64BitMode]>;
+ def DEC32r : I<0x48, AddRegFrm, (outs GR32:$dst), (ins GR32:$src1),
+                "dec{l}\t$dst",
+                [(set GR32:$dst, EFLAGS, (X86dec_flag GR32:$src1))],
+                IIC_UNARY_REG>,
+-             Requires<[In32BitMode]>;
++             Requires<[Not64BitMode]>;
+ def DEC64r : RI<0xFF, MRM1r, (outs GR64:$dst), (ins GR64:$src1), "dec{q}\t$dst",
+                 [(set GR64:$dst, EFLAGS, (X86dec_flag GR64:$src1))],
+                 IIC_UNARY_REG>;
+@@ -582,11 +582,11 @@ let CodeSize = 2, SchedRW = [WriteALULd, WriteRMW] in {
+   def DEC16m : I<0xFF, MRM1m, (outs), (ins i16mem:$dst), "dec{w}\t$dst",
+                [(store (add (loadi16 addr:$dst), -1), addr:$dst),
+                 (implicit EFLAGS)], IIC_UNARY_MEM>,
+-               OpSize, Requires<[In32BitMode]>;
++               OpSize, Requires<[Not64BitMode]>;
+   def DEC32m : I<0xFF, MRM1m, (outs), (ins i32mem:$dst), "dec{l}\t$dst",
+                [(store (add (loadi32 addr:$dst), -1), addr:$dst),
+                 (implicit EFLAGS)], IIC_UNARY_MEM>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+   def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
+                   [(store (add (loadi64 addr:$dst), -1), addr:$dst),
+                    (implicit EFLAGS)], IIC_UNARY_MEM>;
+diff --git a/lib/Target/X86/X86InstrCompiler.td b/lib/Target/X86/X86InstrCompiler.td
+index 7d10b67..57f505c 100644
+--- a/lib/Target/X86/X86InstrCompiler.td
++++ b/lib/Target/X86/X86InstrCompiler.td
+@@ -46,11 +46,11 @@ let Defs = [ESP, EFLAGS], Uses = [ESP] in {
+ def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs), (ins i32imm:$amt),
+                            "#ADJCALLSTACKDOWN",
+                            [(X86callseq_start timm:$amt)]>,
+-                          Requires<[In32BitMode]>;
++                          Requires<[Not64BitMode]>;
+ def ADJCALLSTACKUP32   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
+                            "#ADJCALLSTACKUP",
+                            [(X86callseq_end timm:$amt1, timm:$amt2)]>,
+-                          Requires<[In32BitMode]>;
++                          Requires<[Not64BitMode]>;
+ }
+ 
+ // ADJCALLSTACKDOWN/UP implicitly use/def RSP because they may be expanded into
+@@ -117,7 +117,7 @@ def SEG_ALLOCA_32 : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$size),
+                       "# variable sized alloca for segmented stacks",
+                       [(set GR32:$dst,
+                          (X86SegAlloca GR32:$size))]>,
+-                    Requires<[In32BitMode]>;
++                    Requires<[Not64BitMode]>;
+ 
+ let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
+ def SEG_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
+@@ -139,12 +139,12 @@ let Defs = [EAX, EDX, ECX, EFLAGS], FPForm = SpecialFP in {
+   def WIN_FTOL_32 : I<0, Pseudo, (outs), (ins RFP32:$src),
+                       "# win32 fptoui",
+                       [(X86WinFTOL RFP32:$src)]>,
+-                    Requires<[In32BitMode]>;
++                    Requires<[Not64BitMode]>;
+ 
+   def WIN_FTOL_64 : I<0, Pseudo, (outs), (ins RFP64:$src),
+                       "# win32 fptoui",
+                       [(X86WinFTOL RFP64:$src)]>,
+-                    Requires<[In32BitMode]>;
++                    Requires<[Not64BitMode]>;
+ }
+ 
+ //===----------------------------------------------------------------------===//
+@@ -172,7 +172,7 @@ let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
+   def EH_SjLj_SetJmp32  : I<0, Pseudo, (outs GR32:$dst), (ins i32mem:$buf),
+                             "#EH_SJLJ_SETJMP32",
+                             [(set GR32:$dst, (X86eh_sjlj_setjmp addr:$buf))]>,
+-                          Requires<[In32BitMode]>;
++                          Requires<[Not64BitMode]>;
+   def EH_SjLj_SetJmp64  : I<0, Pseudo, (outs GR32:$dst), (ins i64mem:$buf),
+                             "#EH_SJLJ_SETJMP64",
+                             [(set GR32:$dst, (X86eh_sjlj_setjmp addr:$buf))]>,
+@@ -181,7 +181,7 @@ let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
+   def EH_SjLj_LongJmp32 : I<0, Pseudo, (outs), (ins i32mem:$buf),
+                             "#EH_SJLJ_LONGJMP32",
+                             [(X86eh_sjlj_longjmp addr:$buf)]>,
+-                          Requires<[In32BitMode]>;
++                          Requires<[Not64BitMode]>;
+   def EH_SjLj_LongJmp64 : I<0, Pseudo, (outs), (ins i64mem:$buf),
+                             "#EH_SJLJ_LONGJMP64",
+                             [(X86eh_sjlj_longjmp addr:$buf)]>,
+@@ -318,13 +318,13 @@ let SchedRW = [WriteMicrocoded] in {
+ let Defs = [ECX,EDI,ESI], Uses = [ECX,EDI,ESI], isCodeGenOnly = 1 in {
+ def REP_MOVSB_32 : I<0xA4, RawFrm, (outs), (ins), "{rep;movsb|rep movsb}",
+                     [(X86rep_movs i8)], IIC_REP_MOVS>, REP,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ def REP_MOVSW_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsw|rep movsw}",
+                     [(X86rep_movs i16)], IIC_REP_MOVS>, REP, OpSize,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ def REP_MOVSD_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsl|rep movsd}",
+                     [(X86rep_movs i32)], IIC_REP_MOVS>, REP,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ }
+ 
+ let Defs = [RCX,RDI,RSI], Uses = [RCX,RDI,RSI], isCodeGenOnly = 1 in {
+@@ -347,15 +347,15 @@ let Defs = [ECX,EDI], isCodeGenOnly = 1 in {
+   let Uses = [AL,ECX,EDI] in
+   def REP_STOSB_32 : I<0xAA, RawFrm, (outs), (ins), "{rep;stosb|rep stosb}",
+                       [(X86rep_stos i8)], IIC_REP_STOS>, REP,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+   let Uses = [AX,ECX,EDI] in
+   def REP_STOSW_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosw|rep stosw}",
+                       [(X86rep_stos i16)], IIC_REP_STOS>, REP, OpSize,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+   let Uses = [EAX,ECX,EDI] in
+   def REP_STOSD_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosl|rep stosd}",
+                       [(X86rep_stos i32)], IIC_REP_STOS>, REP,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+ }
+ 
+ let Defs = [RCX,RDI], isCodeGenOnly = 1 in {
+@@ -395,11 +395,11 @@ let Defs = [EAX, ECX, EDX, FP0, FP1, FP2, FP3, FP4, FP5, FP6, ST0,
+ def TLS_addr32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_addr32",
+                   [(X86tlsaddr tls32addr:$sym)]>,
+-                  Requires<[In32BitMode]>;
++                  Requires<[Not64BitMode]>;
+ def TLS_base_addr32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_base_addr32",
+                   [(X86tlsbaseaddr tls32baseaddr:$sym)]>,
+-                  Requires<[In32BitMode]>;
++                  Requires<[Not64BitMode]>;
+ }
+ 
+ // All calls clobber the non-callee saved registers. RSP is marked as
+@@ -431,7 +431,7 @@ let Defs = [EAX, ECX, EFLAGS],
+ def TLSCall_32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                 "# TLSCall_32",
+                 [(X86TLSCall addr:$sym)]>,
+-                Requires<[In32BitMode]>;
++                Requires<[Not64BitMode]>;
+ 
+ // For x86_64, the address of the thunk is passed in %rdi, on return
+ // the address of the variable is in %rax.  All other registers are preserved.
+@@ -590,7 +590,7 @@ defm ATOMSWAP : PSEUDO_ATOMIC_LOAD_BINOP6432<"#ATOMSWAP">;
+ let isCodeGenOnly = 1, Defs = [EFLAGS] in
+ def OR32mrLocked  : I<0x09, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$zero),
+                       "or{l}\t{$zero, $dst|$dst, $zero}",
+-                      [], IIC_ALU_MEM>, Requires<[In32BitMode]>, LOCK,
++                      [], IIC_ALU_MEM>, Requires<[Not64BitMode]>, LOCK,
+                     Sched<[WriteALULd, WriteRMW]>;
+ 
+ let hasSideEffects = 1 in
+@@ -1020,22 +1020,22 @@ def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
+ 
+ def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
+           (TCRETURNri ptr_rc_tailcall:$dst, imm:$off)>,
+-          Requires<[In32BitMode]>;
++          Requires<[Not64BitMode]>;
+ 
+ // FIXME: This is disabled for 32-bit PIC mode because the global base
+ // register which is part of the address mode may be assigned a
+ // callee-saved register.
+ def : Pat<(X86tcret (load addr:$dst), imm:$off),
+           (TCRETURNmi addr:$dst, imm:$off)>,
+-          Requires<[In32BitMode, IsNotPIC]>;
++          Requires<[Not64BitMode, IsNotPIC]>;
+ 
+ def : Pat<(X86tcret (i32 tglobaladdr:$dst), imm:$off),
+           (TCRETURNdi texternalsym:$dst, imm:$off)>,
+-          Requires<[In32BitMode]>;
++          Requires<[Not64BitMode]>;
+ 
+ def : Pat<(X86tcret (i32 texternalsym:$dst), imm:$off),
+           (TCRETURNdi texternalsym:$dst, imm:$off)>,
+-          Requires<[In32BitMode]>;
++          Requires<[Not64BitMode]>;
+ 
+ def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
+           (TCRETURNri64 ptr_rc_tailcall:$dst, imm:$off)>,
+@@ -1304,13 +1304,13 @@ def : Pat<(and GR32:$src1, 0xff),
+           (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src1,
+                                                              GR32_ABCD)),
+                                       sub_8bit))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ // r & (2^8-1) ==> movz
+ def : Pat<(and GR16:$src1, 0xff),
+            (EXTRACT_SUBREG (MOVZX32rr8 (EXTRACT_SUBREG
+             (i16 (COPY_TO_REGCLASS GR16:$src1, GR16_ABCD)), sub_8bit)),
+              sub_16bit)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ 
+ // r & (2^32-1) ==> movz
+ def : Pat<(and GR64:$src, 0x00000000FFFFFFFF),
+@@ -1345,13 +1345,13 @@ def : Pat<(sext_inreg GR32:$src, i8),
+           (MOVSX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
+                                                              GR32_ABCD)),
+                                       sub_8bit))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ 
+ def : Pat<(sext_inreg GR16:$src, i8),
+            (EXTRACT_SUBREG (i32 (MOVSX32rr8 (EXTRACT_SUBREG
+             (i32 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)), sub_8bit))),
+              sub_16bit)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ 
+ def : Pat<(sext_inreg GR64:$src, i32),
+           (MOVSX64rr32 (EXTRACT_SUBREG GR64:$src, sub_32bit))>;
+@@ -1383,11 +1383,11 @@ def : Pat<(i16 (trunc GR32:$src)),
+ def : Pat<(i8 (trunc GR32:$src)),
+           (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src, GR32_ABCD)),
+                           sub_8bit)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(i8 (trunc GR16:$src)),
+           (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
+                           sub_8bit)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(i32 (trunc GR64:$src)),
+           (EXTRACT_SUBREG GR64:$src, sub_32bit)>;
+ def : Pat<(i16 (trunc GR64:$src)),
+@@ -1405,38 +1405,38 @@ def : Pat<(i8 (trunc GR16:$src)),
+ def : Pat<(i8 (trunc (srl_su GR16:$src, (i8 8)))),
+           (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
+                           sub_8bit_hi)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(i8 (trunc (srl_su GR32:$src, (i8 8)))),
+           (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src, GR32_ABCD)),
+                           sub_8bit_hi)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(srl GR16:$src, (i8 8)),
+           (EXTRACT_SUBREG
+             (MOVZX32rr8
+               (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src, GR16_ABCD)),
+                               sub_8bit_hi)),
+             sub_16bit)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(i32 (zext (srl_su GR16:$src, (i8 8)))),
+           (MOVZX32rr8 (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src,
+                                                              GR16_ABCD)),
+                                       sub_8bit_hi))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(i32 (anyext (srl_su GR16:$src, (i8 8)))),
+           (MOVZX32rr8 (EXTRACT_SUBREG (i16 (COPY_TO_REGCLASS GR16:$src,
+                                                              GR16_ABCD)),
+                                       sub_8bit_hi))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(and (srl_su GR32:$src, (i8 8)), (i32 255)),
+           (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
+                                                              GR32_ABCD)),
+                                       sub_8bit_hi))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : Pat<(srl (and_su GR32:$src, 0xff00), (i8 8)),
+           (MOVZX32rr8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS GR32:$src,
+                                                              GR32_ABCD)),
+                                       sub_8bit_hi))>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ 
+ // h-register tricks.
+ // For now, be conservative on x86-64 and use an h-register extract only if the
+@@ -1725,17 +1725,17 @@ def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
+ 
+ // Increment reg.
+ def : Pat<(add GR8 :$src, 1), (INC8r     GR8 :$src)>;
+-def : Pat<(add GR16:$src, 1), (INC16r    GR16:$src)>, Requires<[In32BitMode]>;
++def : Pat<(add GR16:$src, 1), (INC16r    GR16:$src)>, Requires<[Not64BitMode]>;
+ def : Pat<(add GR16:$src, 1), (INC64_16r GR16:$src)>, Requires<[In64BitMode]>;
+-def : Pat<(add GR32:$src, 1), (INC32r    GR32:$src)>, Requires<[In32BitMode]>;
++def : Pat<(add GR32:$src, 1), (INC32r    GR32:$src)>, Requires<[Not64BitMode]>;
+ def : Pat<(add GR32:$src, 1), (INC64_32r GR32:$src)>, Requires<[In64BitMode]>;
+ def : Pat<(add GR64:$src, 1), (INC64r    GR64:$src)>;
+ 
+ // Decrement reg.
+ def : Pat<(add GR8 :$src, -1), (DEC8r     GR8 :$src)>;
+-def : Pat<(add GR16:$src, -1), (DEC16r    GR16:$src)>, Requires<[In32BitMode]>;
++def : Pat<(add GR16:$src, -1), (DEC16r    GR16:$src)>, Requires<[Not64BitMode]>;
+ def : Pat<(add GR16:$src, -1), (DEC64_16r GR16:$src)>, Requires<[In64BitMode]>;
+-def : Pat<(add GR32:$src, -1), (DEC32r    GR32:$src)>, Requires<[In32BitMode]>;
++def : Pat<(add GR32:$src, -1), (DEC32r    GR32:$src)>, Requires<[Not64BitMode]>;
+ def : Pat<(add GR32:$src, -1), (DEC64_32r GR32:$src)>, Requires<[In64BitMode]>;
+ def : Pat<(add GR64:$src, -1), (DEC64r    GR64:$src)>;
+ 
+diff --git a/lib/Target/X86/X86InstrControl.td b/lib/Target/X86/X86InstrControl.td
+index e4ccc06..7d610e6 100644
+--- a/lib/Target/X86/X86InstrControl.td
++++ b/lib/Target/X86/X86InstrControl.td
+@@ -94,10 +94,10 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in
+   // jecxz.
+   let Uses = [CX] in
+     def JCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+-                        "jcxz\t$dst", [], IIC_JCXZ>, AdSize, Requires<[In32BitMode]>;
++                        "jcxz\t$dst", [], IIC_JCXZ>, AdSize, Requires<[Not64BitMode]>;
+   let Uses = [ECX] in
+     def JECXZ_32 : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+-                           "jecxz\t$dst", [], IIC_JCXZ>, Requires<[In32BitMode]>;
++                           "jecxz\t$dst", [], IIC_JCXZ>, Requires<[Not64BitMode]>;
+ 
+   // J*CXZ instruction: 64-bit versions of this instruction for the asmparser.
+   // In 64-bit mode, the address size prefix is jecxz and the unprefixed version
+@@ -113,11 +113,11 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in
+ // Indirect branches
+ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+   def JMP32r     : I<0xFF, MRM4r, (outs), (ins GR32:$dst), "jmp{l}\t{*}$dst",
+-                     [(brind GR32:$dst)], IIC_JMP_REG>, Requires<[In32BitMode]>,
++                     [(brind GR32:$dst)], IIC_JMP_REG>, Requires<[Not64BitMode]>,
+                    Sched<[WriteJump]>;
+   def JMP32m     : I<0xFF, MRM4m, (outs), (ins i32mem:$dst), "jmp{l}\t{*}$dst",
+                      [(brind (loadi32 addr:$dst))], IIC_JMP_MEM>,
+-                   Requires<[In32BitMode]>, Sched<[WriteJumpLd]>;
++                   Requires<[Not64BitMode]>, Sched<[WriteJumpLd]>;
+ 
+   def JMP64r     : I<0xFF, MRM4r, (outs), (ins GR64:$dst), "jmp{q}\t{*}$dst",
+                      [(brind GR64:$dst)], IIC_JMP_REG>, Requires<[In64BitMode]>,
+@@ -166,14 +166,14 @@ let isCall = 1 in
+     def CALLpcrel32 : Ii32PCRel<0xE8, RawFrm,
+                            (outs), (ins i32imm_pcrel:$dst),
+                            "call{l}\t$dst", [], IIC_CALL_RI>,
+-                      Requires<[In32BitMode]>, Sched<[WriteJump]>;
++                      Requires<[Not64BitMode]>, Sched<[WriteJump]>;
+     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
+                         "call{l}\t{*}$dst", [(X86call GR32:$dst)], IIC_CALL_RI>,
+-                      Requires<[In32BitMode]>, Sched<[WriteJump]>;
++                      Requires<[Not64BitMode]>, Sched<[WriteJump]>;
+     def CALL32m     : I<0xFF, MRM2m, (outs), (ins i32mem:$dst),
+                         "call{l}\t{*}$dst", [(X86call (loadi32 addr:$dst))],
+                         IIC_CALL_MEM>,
+-                      Requires<[In32BitMode,FavorMemIndirectCall]>,
++                      Requires<[Not64BitMode,FavorMemIndirectCall]>,
+                       Sched<[WriteJumpLd]>;
+ 
+     def FARCALL16i  : Iseg16<0x9A, RawFrmImm16, (outs),
+diff --git a/lib/Target/X86/X86InstrFormats.td b/lib/Target/X86/X86InstrFormats.td
+index 0fd9011..5022259 100644
+--- a/lib/Target/X86/X86InstrFormats.td
++++ b/lib/Target/X86/X86InstrFormats.td
+@@ -784,7 +784,7 @@ class MMXI<bits<8> o, Format F, dag outs, dag ins, string asm,
+       : I<o, F, outs, ins, asm, pattern, itin>, TB, Requires<[HasMMX]>;
+ class MMXI32<bits<8> o, Format F, dag outs, dag ins, string asm, 
+              list<dag> pattern, InstrItinClass itin = NoItinerary>
+-      : I<o, F, outs, ins, asm, pattern, itin>, TB, Requires<[HasMMX,In32BitMode]>;
++      : I<o, F, outs, ins, asm, pattern, itin>, TB, Requires<[HasMMX,Not64BitMode]>;
+ class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm, 
+              list<dag> pattern, InstrItinClass itin = NoItinerary>
+       : I<o, F, outs, ins, asm, pattern, itin>, TB, Requires<[HasMMX,In64BitMode]>;
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index 6e5d543..577e861 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -691,8 +691,8 @@ def HasPrefetchW : Predicate<"Subtarget->hasPRFCHW()">;
+ def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
+ def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
+ def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
+-def In32BitMode  : Predicate<"!Subtarget->is64Bit()">,
+-                             AssemblerPredicate<"!Mode64Bit", "32-bit mode">;
++def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
++                             AssemblerPredicate<"!Mode64Bit", "Not 64-bit mode">;
+ def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
+                              AssemblerPredicate<"Mode64Bit", "64-bit mode">;
+ def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;
+@@ -860,7 +860,7 @@ let SchedRW = [WriteALU] in {
+ let Defs = [EBP, ESP], Uses = [EBP, ESP], mayLoad = 1, neverHasSideEffects=1 in
+ def LEAVE    : I<0xC9, RawFrm,
+                  (outs), (ins), "leave", [], IIC_LEAVE>,
+-                 Requires<[In32BitMode]>;
++                 Requires<[Not64BitMode]>;
+ 
+ let Defs = [RBP,RSP], Uses = [RBP,RSP], mayLoad = 1, neverHasSideEffects = 1 in
+ def LEAVE64  : I<0xC9, RawFrm,
+@@ -889,7 +889,7 @@ def POP32rmm: I<0x8F, MRM0m, (outs), (ins i32mem:$dst), "pop{l}\t$dst", [],
+ 
+ def POPF16   : I<0x9D, RawFrm, (outs), (ins), "popf{w}", [], IIC_POP_F>, OpSize;
+ def POPF32   : I<0x9D, RawFrm, (outs), (ins), "popf{l|d}", [], IIC_POP_FD>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+ } // mayLoad, SchedRW
+ 
+ let mayStore = 1, SchedRW = [WriteStore] in {
+@@ -917,7 +917,7 @@ def PUSHi32  : Ii32<0x68, RawFrm, (outs), (ins i32imm:$imm),
+ def PUSHF16  : I<0x9C, RawFrm, (outs), (ins), "pushf{w}", [], IIC_PUSH_F>,
+                  OpSize;
+ def PUSHF32  : I<0x9C, RawFrm, (outs), (ins), "pushf{l|d}", [], IIC_PUSH_F>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+ 
+ } // mayStore, SchedRW
+ }
+@@ -961,12 +961,12 @@ def PUSHF64    : I<0x9C, RawFrm, (outs), (ins), "pushfq", [], IIC_PUSH_F>,
+ let Defs = [EDI, ESI, EBP, EBX, EDX, ECX, EAX, ESP], Uses = [ESP],
+     mayLoad = 1, neverHasSideEffects = 1, SchedRW = [WriteLoad] in {
+ def POPA32   : I<0x61, RawFrm, (outs), (ins), "popa{l}", [], IIC_POP_A>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+ }
+ let Defs = [ESP], Uses = [EDI, ESI, EBP, EBX, EDX, ECX, EAX, ESP],
+     mayStore = 1, neverHasSideEffects = 1, SchedRW = [WriteStore] in {
+ def PUSHA32  : I<0x60, RawFrm, (outs), (ins), "pusha{l}", [], IIC_PUSH_A>,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+ }
+ 
+ let Constraints = "$src = $dst", SchedRW = [WriteALU] in {
+@@ -1125,24 +1125,24 @@ let SchedRW = [WriteALU] in {
+ let mayLoad = 1 in {
+ def MOV8o8a : Ii32 <0xA0, RawFrm, (outs), (ins offset8:$src),
+                    "mov{b}\t{$src, %al|al, $src}", [], IIC_MOV_MEM>,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ def MOV16o16a : Ii32 <0xA1, RawFrm, (outs), (ins offset16:$src),
+                       "mov{w}\t{$src, %ax|ax, $src}", [], IIC_MOV_MEM>, OpSize,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+ def MOV32o32a : Ii32 <0xA1, RawFrm, (outs), (ins offset32:$src),
+                       "mov{l}\t{$src, %eax|eax, $src}", [], IIC_MOV_MEM>,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+ }
+ let mayStore = 1 in {
+ def MOV8ao8 : Ii32 <0xA2, RawFrm, (outs offset8:$dst), (ins),
+                    "mov{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>,
+-                  Requires<[In32BitMode]>;
++                  Requires<[Not64BitMode]>;
+ def MOV16ao16 : Ii32 <0xA3, RawFrm, (outs offset16:$dst), (ins),
+                       "mov{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>, OpSize,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+ def MOV32ao32 : Ii32 <0xA3, RawFrm, (outs offset32:$dst), (ins),
+                       "mov{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
+-                     Requires<[In32BitMode]>;
++                     Requires<[Not64BitMode]>;
+ }
+ }
+ 
+@@ -1513,7 +1513,7 @@ def XCHG16ar : I<0x90, AddRegFrm, (outs), (ins GR16:$src),
+                   "xchg{w}\t{$src, %ax|ax, $src}", [], IIC_XCHG_REG>, OpSize;
+ def XCHG32ar : I<0x90, AddRegFrm, (outs), (ins GR32:$src),
+                   "xchg{l}\t{$src, %eax|eax, $src}", [], IIC_XCHG_REG>,
+-                  Requires<[In32BitMode]>;
++                  Requires<[Not64BitMode]>;
+ // Uses GR32_NOAX in 64-bit mode to prevent encoding using the 0x90 NOP encoding.
+ // xchg %eax, %eax needs to clear upper 32-bits of RAX so is not a NOP.
+ def XCHG32ar64 : I<0x90, AddRegFrm, (outs), (ins GR32_NOAX:$src),
+@@ -1644,50 +1644,50 @@ let SchedRW = [WriteMicrocoded] in {
+ // ASCII Adjust After Addition
+ // sets AL, AH and CF and AF of EFLAGS and uses AL and AF of EFLAGS
+ def AAA : I<0x37, RawFrm, (outs), (ins), "aaa", [], IIC_AAA>,
+-            Requires<[In32BitMode]>;
++            Requires<[Not64BitMode]>;
+ 
+ // ASCII Adjust AX Before Division
+ // sets AL, AH and EFLAGS and uses AL and AH
+ def AAD8i8 : Ii8<0xD5, RawFrm, (outs), (ins i8imm:$src),
+-                 "aad\t$src", [], IIC_AAD>, Requires<[In32BitMode]>;
++                 "aad\t$src", [], IIC_AAD>, Requires<[Not64BitMode]>;
+ 
+ // ASCII Adjust AX After Multiply
+ // sets AL, AH and EFLAGS and uses AL
+ def AAM8i8 : Ii8<0xD4, RawFrm, (outs), (ins i8imm:$src),
+-                 "aam\t$src", [], IIC_AAM>, Requires<[In32BitMode]>;
++                 "aam\t$src", [], IIC_AAM>, Requires<[Not64BitMode]>;
+ 
+ // ASCII Adjust AL After Subtraction - sets
+ // sets AL, AH and CF and AF of EFLAGS and uses AL and AF of EFLAGS
+ def AAS : I<0x3F, RawFrm, (outs), (ins), "aas", [], IIC_AAS>,
+-            Requires<[In32BitMode]>;
++            Requires<[Not64BitMode]>;
+ 
+ // Decimal Adjust AL after Addition
+ // sets AL, CF and AF of EFLAGS and uses AL, CF and AF of EFLAGS
+ def DAA : I<0x27, RawFrm, (outs), (ins), "daa", [], IIC_DAA>,
+-            Requires<[In32BitMode]>;
++            Requires<[Not64BitMode]>;
+ 
+ // Decimal Adjust AL after Subtraction
+ // sets AL, CF and AF of EFLAGS and uses AL, CF and AF of EFLAGS
+ def DAS : I<0x2F, RawFrm, (outs), (ins), "das", [], IIC_DAS>,
+-            Requires<[In32BitMode]>;
++            Requires<[Not64BitMode]>;
+ } // SchedRW
+ 
+ let SchedRW = [WriteSystem] in {
+ // Check Array Index Against Bounds
+ def BOUNDS16rm : I<0x62, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                    "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>, OpSize,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ def BOUNDS32rm : I<0x62, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
+                    "bound\t{$src, $dst|$dst, $src}", [], IIC_BOUND>,
+-                   Requires<[In32BitMode]>;
++                   Requires<[Not64BitMode]>;
+ 
+ // Adjust RPL Field of Segment Selector
+ def ARPL16rr : I<0x63, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
+                  "arpl\t{$src, $dst|$dst, $src}", [], IIC_ARPL_REG>,
+-                 Requires<[In32BitMode]>;
++                 Requires<[Not64BitMode]>;
+ def ARPL16mr : I<0x63, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
+                  "arpl\t{$src, $dst|$dst, $src}", [], IIC_ARPL_MEM>,
+-                 Requires<[In32BitMode]>;
++                 Requires<[Not64BitMode]>;
+ } // SchedRW
+ 
+ //===----------------------------------------------------------------------===//
+@@ -2088,7 +2088,7 @@ include "X86InstrCompiler.td"
+ // Assembler Mnemonic Aliases
+ //===----------------------------------------------------------------------===//
+ 
+-def : MnemonicAlias<"call", "calll", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"call", "calll", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"call", "callq", "att">, Requires<[In64BitMode]>;
+ 
+ def : MnemonicAlias<"cbw",  "cbtw", "att">;
+@@ -2101,35 +2101,35 @@ def : MnemonicAlias<"cqo",  "cqto", "att">;
+ // lret maps to lretl, it is not ambiguous with lretq.
+ def : MnemonicAlias<"lret", "lretl", "att">;
+ 
+-def : MnemonicAlias<"leavel", "leave", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"leavel", "leave", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"leaveq", "leave", "att">, Requires<[In64BitMode]>;
+ 
+ def : MnemonicAlias<"loopz",  "loope",  "att">;
+ def : MnemonicAlias<"loopnz", "loopne", "att">;
+ 
+-def : MnemonicAlias<"pop",   "popl",  "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"pop",   "popl",  "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"pop",   "popq",  "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"popf",  "popfl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"popf",  "popfl", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"popf",  "popfq", "att">, Requires<[In64BitMode]>;
+ def : MnemonicAlias<"popfd", "popfl", "att">;
+ 
+ // FIXME: This is wrong for "push reg".  "push %bx" should turn into pushw in
+ // all modes.  However: "push (addr)" and "push $42" should default to
+ // pushl/pushq depending on the current mode.  Similar for "pop %bx"
+-def : MnemonicAlias<"push",   "pushl",  "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"push",   "pushl",  "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"push",   "pushq",  "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"pushf",  "pushfl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"pushf",  "pushfl", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"pushf",  "pushfq", "att">, Requires<[In64BitMode]>;
+ def : MnemonicAlias<"pushfd", "pushfl", "att">;
+ 
+-def : MnemonicAlias<"popad",   "popa", "intel">, Requires<[In32BitMode]>;
+-def : MnemonicAlias<"pushad",  "pusha", "intel">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"popad",   "popa", "intel">, Requires<[Not64BitMode]>;
++def : MnemonicAlias<"pushad",  "pusha", "intel">, Requires<[Not64BitMode]>;
+ 
+ def : MnemonicAlias<"repe",  "rep",   "att">;
+ def : MnemonicAlias<"repz",  "rep",   "att">;
+ def : MnemonicAlias<"repnz", "repne", "att">;
+ 
+-def : MnemonicAlias<"retl", "ret", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"retl", "ret", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"retq", "ret", "att">, Requires<[In64BitMode]>;
+ 
+ def : MnemonicAlias<"salb", "shlb", "att">;
+@@ -2150,13 +2150,13 @@ def : MnemonicAlias<"iret",    "iretl",    "att">;
+ def : MnemonicAlias<"sysret",  "sysretl",  "att">;
+ def : MnemonicAlias<"sysexit", "sysexitl", "att">;
+ 
+-def : MnemonicAlias<"lgdtl", "lgdt", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"lgdtl", "lgdt", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"lgdtq", "lgdt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"lidtl", "lidt", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"lidtl", "lidt", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"lidtq", "lidt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"sgdtl", "sgdt", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"sgdtl", "sgdt", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"sgdtq", "sgdt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"sidtl", "sidt", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"sidtl", "sidt", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"sidtq", "sidt", "att">, Requires<[In64BitMode]>;
+ 
+ 
+@@ -2462,6 +2462,6 @@ def : InstAlias<"xchg{q}\t{$mem, $val|$val, $mem}", (XCHG64rm GR64:$val, i64mem:
+ 
+ // xchg: We accept "xchgX <reg>, %eax" and "xchgX %eax, <reg>" as synonyms.
+ def : InstAlias<"xchg{w}\t{%ax, $src|$src, ax}", (XCHG16ar GR16:$src)>;
+-def : InstAlias<"xchg{l}\t{%eax, $src|$src, eax}", (XCHG32ar GR32:$src)>, Requires<[In32BitMode]>;
++def : InstAlias<"xchg{l}\t{%eax, $src|$src, eax}", (XCHG32ar GR32:$src)>, Requires<[Not64BitMode]>;
+ def : InstAlias<"xchg{l}\t{%eax, $src|$src, eax}", (XCHG32ar64 GR32_NOAX:$src)>, Requires<[In64BitMode]>;
+ def : InstAlias<"xchg{q}\t{%rax, $src|$src, rax}", (XCHG64ar GR64:$src)>;
+diff --git a/lib/Target/X86/X86InstrSSE.td b/lib/Target/X86/X86InstrSSE.td
+index a5debc0..08b4a65 100644
+--- a/lib/Target/X86/X86InstrSSE.td
++++ b/lib/Target/X86/X86InstrSSE.td
+@@ -4320,7 +4320,7 @@ def PMOVMSKBrr : PDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst), (ins VR128:$src),
+ 
+ let ExeDomain = SSEPackedInt, SchedRW = [WriteStore] in {
+ 
+-let Uses = [EDI], Predicates = [HasAVX,In32BitMode] in
++let Uses = [EDI], Predicates = [HasAVX,Not64BitMode] in
+ def VMASKMOVDQU : VPDI<0xF7, MRMSrcReg, (outs),
+            (ins VR128:$src, VR128:$mask),
+            "maskmovdqu\t{$mask, $src|$src, $mask}",
+@@ -4333,7 +4333,7 @@ def VMASKMOVDQU64 : VPDI<0xF7, MRMSrcReg, (outs),
+            [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, RDI)],
+            IIC_SSE_MASKMOV>, VEX;
+ 
+-let Uses = [EDI], Predicates = [UseSSE2,In32BitMode] in
++let Uses = [EDI], Predicates = [UseSSE2,Not64BitMode] in
+ def MASKMOVDQU : PDI<0xF7, MRMSrcReg, (outs), (ins VR128:$src, VR128:$mask),
+            "maskmovdqu\t{$mask, $src|$src, $mask}",
+            [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)],
+@@ -5426,11 +5426,11 @@ def MWAITrr   : I<0x01, MRM_C9, (outs), (ins), "mwait",
+                 TB, Requires<[HasSSE3]>;
+ } // SchedRW
+ 
+-def : InstAlias<"mwait\t{%eax, %ecx|ecx, eax}", (MWAITrr)>, Requires<[In32BitMode]>;
++def : InstAlias<"mwait\t{%eax, %ecx|ecx, eax}", (MWAITrr)>, Requires<[Not64BitMode]>;
+ def : InstAlias<"mwait\t{%rax, %rcx|rcx, rax}", (MWAITrr)>, Requires<[In64BitMode]>;
+ 
+ def : InstAlias<"monitor\t{%eax, %ecx, %edx|edx, ecx, eax}", (MONITORrrr)>,
+-      Requires<[In32BitMode]>;
++      Requires<[Not64BitMode]>;
+ def : InstAlias<"monitor\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITORrrr)>,
+       Requires<[In64BitMode]>;
+ 
+diff --git a/lib/Target/X86/X86InstrSVM.td b/lib/Target/X86/X86InstrSVM.td
+index 0191c01..c847be7 100644
+--- a/lib/Target/X86/X86InstrSVM.td
++++ b/lib/Target/X86/X86InstrSVM.td
+@@ -31,7 +31,7 @@ def SKINIT : I<0x01, MRM_DE, (outs), (ins), "skinit\t{%eax|eax}", []>, TB;
+ // 0F 01 D8
+ let Uses = [EAX] in
+ def VMRUN32 : I<0x01, MRM_D8, (outs), (ins),
+-                "vmrun\t{%eax|eax}", []>, TB, Requires<[In32BitMode]>;
++                "vmrun\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+ let Uses = [RAX] in
+ def VMRUN64 : I<0x01, MRM_D8, (outs), (ins),
+                 "vmrun\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+@@ -39,7 +39,7 @@ def VMRUN64 : I<0x01, MRM_D8, (outs), (ins),
+ // 0F 01 DA
+ let Uses = [EAX] in
+ def VMLOAD32 : I<0x01, MRM_DA, (outs), (ins),
+-                "vmload\t{%eax|eax}", []>, TB, Requires<[In32BitMode]>;
++                "vmload\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+ let Uses = [RAX] in
+ def VMLOAD64 : I<0x01, MRM_DA, (outs), (ins),
+                 "vmload\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+@@ -47,7 +47,7 @@ def VMLOAD64 : I<0x01, MRM_DA, (outs), (ins),
+ // 0F 01 DB
+ let Uses = [EAX] in
+ def VMSAVE32 : I<0x01, MRM_DB, (outs), (ins),
+-                "vmsave\t{%eax|eax}", []>, TB, Requires<[In32BitMode]>;
++                "vmsave\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+ let Uses = [RAX] in
+ def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins),
+                 "vmsave\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+@@ -55,7 +55,7 @@ def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins),
+ // 0F 01 DF
+ let Uses = [EAX, ECX] in
+ def INVLPGA32 : I<0x01, MRM_DF, (outs), (ins),
+-                "invlpga\t{%ecx, %eax|eax, ecx}", []>, TB, Requires<[In32BitMode]>;
++                "invlpga\t{%ecx, %eax|eax, ecx}", []>, TB, Requires<[Not64BitMode]>;
+ let Uses = [RAX, ECX] in
+ def INVLPGA64 : I<0x01, MRM_DF, (outs), (ins),
+                 "invlpga\t{%ecx, %rax|rax, ecx}", []>, TB, Requires<[In64BitMode]>;
+diff --git a/lib/Target/X86/X86InstrSystem.td b/lib/Target/X86/X86InstrSystem.td
+index 2196dc3..27f753d 100644
+--- a/lib/Target/X86/X86InstrSystem.td
++++ b/lib/Target/X86/X86InstrSystem.td
+@@ -248,34 +248,34 @@ def LTRm : I<0x00, MRM3m, (outs), (ins i16mem:$src),
+              "ltr{w}\t$src", [], IIC_LTR>, TB;
+              
+ def PUSHCS16 : I<0x0E, RawFrm, (outs), (ins),
+-                 "push{w}\t{%cs|cs}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>,
++                 "push{w}\t{%cs|cs}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>,
+                OpSize;
+ def PUSHCS32 : I<0x0E, RawFrm, (outs), (ins),
+-                 "push{l}\t{%cs|cs}", [], IIC_PUSH_CS>, Requires<[In32BitMode]>;
++                 "push{l}\t{%cs|cs}", [], IIC_PUSH_CS>, Requires<[Not64BitMode]>;
+ def PUSHSS16 : I<0x16, RawFrm, (outs), (ins),
+-                 "push{w}\t{%ss|ss}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>,
++                 "push{w}\t{%ss|ss}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>,
+                OpSize;
+ def PUSHSS32 : I<0x16, RawFrm, (outs), (ins),
+-                 "push{l}\t{%ss|ss}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>;
++                 "push{l}\t{%ss|ss}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>;
+ def PUSHDS16 : I<0x1E, RawFrm, (outs), (ins),
+-                 "push{w}\t{%ds|ds}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>,
++                 "push{w}\t{%ds|ds}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>,
+                OpSize;
+ def PUSHDS32 : I<0x1E, RawFrm, (outs), (ins),
+-                 "push{l}\t{%ds|ds}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>;
++                 "push{l}\t{%ds|ds}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>;
+ def PUSHES16 : I<0x06, RawFrm, (outs), (ins),
+-                 "push{w}\t{%es|es}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>,
++                 "push{w}\t{%es|es}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>,
+                OpSize;
+ def PUSHES32 : I<0x06, RawFrm, (outs), (ins),
+-                 "push{l}\t{%es|es}", [], IIC_PUSH_SR>, Requires<[In32BitMode]>;
++                 "push{l}\t{%es|es}", [], IIC_PUSH_SR>, Requires<[Not64BitMode]>;
+                  
+ def PUSHFS16 : I<0xa0, RawFrm, (outs), (ins),
+                  "push{w}\t{%fs|fs}", [], IIC_PUSH_SR>, OpSize, TB;
+ def PUSHFS32 : I<0xa0, RawFrm, (outs), (ins),
+-                 "push{l}\t{%fs|fs}", [], IIC_PUSH_SR>, TB, Requires<[In32BitMode]>;
++                 "push{l}\t{%fs|fs}", [], IIC_PUSH_SR>, TB, Requires<[Not64BitMode]>;
+ def PUSHGS16 : I<0xa8, RawFrm, (outs), (ins),
+                  "push{w}\t{%gs|gs}", [], IIC_PUSH_SR>, OpSize, TB;
+ def PUSHGS32 : I<0xa8, RawFrm, (outs), (ins),
+-                 "push{l}\t{%gs|gs}", [], IIC_PUSH_SR>, TB, Requires<[In32BitMode]>;
++                 "push{l}\t{%gs|gs}", [], IIC_PUSH_SR>, TB, Requires<[Not64BitMode]>;
+ 
+ def PUSHFS64 : I<0xa0, RawFrm, (outs), (ins),
+                  "push{q}\t{%fs|fs}", [], IIC_PUSH_SR>, TB;
+@@ -285,36 +285,36 @@ def PUSHGS64 : I<0xa8, RawFrm, (outs), (ins),
+ // No "pop cs" instruction.
+ def POPSS16 : I<0x17, RawFrm, (outs), (ins),
+                 "pop{w}\t{%ss|ss}", [], IIC_POP_SR_SS>,
+-              OpSize, Requires<[In32BitMode]>;
++              OpSize, Requires<[Not64BitMode]>;
+ def POPSS32 : I<0x17, RawFrm, (outs), (ins),
+                 "pop{l}\t{%ss|ss}", [], IIC_POP_SR_SS>,
+-                      Requires<[In32BitMode]>;
++                      Requires<[Not64BitMode]>;
+                 
+ def POPDS16 : I<0x1F, RawFrm, (outs), (ins),
+                 "pop{w}\t{%ds|ds}", [], IIC_POP_SR>,
+-              OpSize, Requires<[In32BitMode]>;
++              OpSize, Requires<[Not64BitMode]>;
+ def POPDS32 : I<0x1F, RawFrm, (outs), (ins),
+                 "pop{l}\t{%ds|ds}", [], IIC_POP_SR>,
+-                      Requires<[In32BitMode]>;
++                      Requires<[Not64BitMode]>;
+                 
+ def POPES16 : I<0x07, RawFrm, (outs), (ins),
+                 "pop{w}\t{%es|es}", [], IIC_POP_SR>,
+-              OpSize, Requires<[In32BitMode]>;
++              OpSize, Requires<[Not64BitMode]>;
+ def POPES32 : I<0x07, RawFrm, (outs), (ins),
+                 "pop{l}\t{%es|es}", [], IIC_POP_SR>,
+-                      Requires<[In32BitMode]>;
++                      Requires<[Not64BitMode]>;
+                 
+ def POPFS16 : I<0xa1, RawFrm, (outs), (ins),
+                 "pop{w}\t{%fs|fs}", [], IIC_POP_SR>, OpSize, TB;
+ def POPFS32 : I<0xa1, RawFrm, (outs), (ins),
+-                "pop{l}\t{%fs|fs}", [], IIC_POP_SR>, TB, Requires<[In32BitMode]>;
++                "pop{l}\t{%fs|fs}", [], IIC_POP_SR>, TB, Requires<[Not64BitMode]>;
+ def POPFS64 : I<0xa1, RawFrm, (outs), (ins),
+                 "pop{q}\t{%fs|fs}", [], IIC_POP_SR>, TB;
+                 
+ def POPGS16 : I<0xa9, RawFrm, (outs), (ins),
+                 "pop{w}\t{%gs|gs}", [], IIC_POP_SR>, OpSize, TB;
+ def POPGS32 : I<0xa9, RawFrm, (outs), (ins),
+-                "pop{l}\t{%gs|gs}", [], IIC_POP_SR>, TB, Requires<[In32BitMode]>;
++                "pop{l}\t{%gs|gs}", [], IIC_POP_SR>, TB, Requires<[Not64BitMode]>;
+ def POPGS64 : I<0xa9, RawFrm, (outs), (ins),
+                 "pop{q}\t{%gs|gs}", [], IIC_POP_SR>, TB;
+                  
+@@ -367,11 +367,11 @@ def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg),
+ 
+ let SchedRW = [WriteSystem] in {
+ def SGDT16m : I<0x01, MRM0m, (outs opaque48mem:$dst), (ins),
+-              "sgdt{w}\t$dst", [], IIC_SGDT>, TB, OpSize, Requires<[In32BitMode]>;
++              "sgdt{w}\t$dst", [], IIC_SGDT>, TB, OpSize, Requires<[Not64BitMode]>;
+ def SGDTm : I<0x01, MRM0m, (outs opaque48mem:$dst), (ins),
+               "sgdt\t$dst", [], IIC_SGDT>, TB;
+ def SIDT16m : I<0x01, MRM1m, (outs opaque48mem:$dst), (ins),
+-              "sidt{w}\t$dst", [], IIC_SIDT>, TB, OpSize, Requires<[In32BitMode]>;
++              "sidt{w}\t$dst", [], IIC_SIDT>, TB, OpSize, Requires<[Not64BitMode]>;
+ def SIDTm : I<0x01, MRM1m, (outs opaque48mem:$dst), (ins),
+               "sidt\t$dst", []>, TB;
+ def SLDT16r : I<0x00, MRM0r, (outs GR16:$dst), (ins),
+@@ -389,11 +389,11 @@ def SLDT64m : RI<0x00, MRM0m, (outs i16mem:$dst), (ins),
+                  "sldt{q}\t$dst", [], IIC_SLDT>, TB;
+ 
+ def LGDT16m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+-              "lgdt{w}\t$src", [], IIC_LGDT>, TB, OpSize, Requires<[In32BitMode]>;
++              "lgdt{w}\t$src", [], IIC_LGDT>, TB, OpSize, Requires<[Not64BitMode]>;
+ def LGDTm : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+               "lgdt\t$src", [], IIC_LGDT>, TB;
+ def LIDT16m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+-              "lidt{w}\t$src", [], IIC_LIDT>, TB, OpSize, Requires<[In32BitMode]>;
++              "lidt{w}\t$src", [], IIC_LIDT>, TB, OpSize, Requires<[Not64BitMode]>;
+ def LIDTm : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+               "lidt\t$src", [], IIC_LIDT>, TB;
+ def LLDT16r : I<0x00, MRM2r, (outs), (ins GR16:$src),
+@@ -516,7 +516,7 @@ let Predicates = [HasFSGSBase, In64BitMode] in {
+ // INVPCID Instruction
+ def INVPCID32 : I<0x82, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
+                 "invpcid\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+-                Requires<[In32BitMode]>;
++                Requires<[Not64BitMode]>;
+ def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
+                 "invpcid\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+                 Requires<[In64BitMode]>;
+diff --git a/lib/Target/X86/X86InstrVMX.td b/lib/Target/X86/X86InstrVMX.td
+index 6d3548f..5bf46d1 100644
+--- a/lib/Target/X86/X86InstrVMX.td
++++ b/lib/Target/X86/X86InstrVMX.td
+@@ -18,14 +18,14 @@
+ // 66 0F 38 80
+ def INVEPT32 : I<0x80, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
+                "invept\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+-               Requires<[In32BitMode]>;
++               Requires<[Not64BitMode]>;
+ def INVEPT64 : I<0x80, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
+                "invept\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+                Requires<[In64BitMode]>;
+ // 66 0F 38 81
+ def INVVPID32 : I<0x81, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
+                 "invvpid\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+-                Requires<[In32BitMode]>;
++                Requires<[Not64BitMode]>;
+ def INVVPID64 : I<0x81, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
+                 "invvpid\t{$src2, $src1|$src1, $src2}", []>, OpSize, T8,
+                 Requires<[In64BitMode]>;
+@@ -48,17 +48,17 @@ def VMREAD64rm : I<0x78, MRMDestMem, (outs i64mem:$dst), (ins GR64:$src),
+ def VMREAD64rr : I<0x78, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
+   "vmread{q}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In64BitMode]>;
+ def VMREAD32rm : I<0x78, MRMDestMem, (outs i32mem:$dst), (ins GR32:$src),
+-  "vmread{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In32BitMode]>;
++  "vmread{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[Not64BitMode]>;
+ def VMREAD32rr : I<0x78, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
+-  "vmread{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In32BitMode]>;
++  "vmread{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[Not64BitMode]>;
+ def VMWRITE64rm : I<0x79, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
+   "vmwrite{q}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In64BitMode]>;
+ def VMWRITE64rr : I<0x79, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
+   "vmwrite{q}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In64BitMode]>;
+ def VMWRITE32rm : I<0x79, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
+-  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In32BitMode]>;
++  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[Not64BitMode]>;
+ def VMWRITE32rr : I<0x79, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
+-  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[In32BitMode]>;
++  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, TB, Requires<[Not64BitMode]>;
+ // 0F 01 C4
+ def VMXOFF : I<0x01, MRM_C4, (outs), (ins), "vmxoff", []>, TB;
+ def VMXON : I<0xC7, MRM6m, (outs), (ins i64mem:$vmxon),
+diff --git a/utils/TableGen/X86RecognizableInstr.cpp b/utils/TableGen/X86RecognizableInstr.cpp
+index 708e72d..97ed24f 100644
+--- a/utils/TableGen/X86RecognizableInstr.cpp
++++ b/utils/TableGen/X86RecognizableInstr.cpp
+@@ -265,11 +265,12 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
+   // FIXME: Is there some better way to check for In64BitMode?
+   std::vector<Record*> Predicates = Rec->getValueAsListOfDefs("Predicates");
+   for (unsigned i = 0, e = Predicates.size(); i != e; ++i) {
+-    if (Predicates[i]->getName().find("32Bit") != Name.npos) {
++    if (Predicates[i]->getName().find("Not64Bit") != Name.npos ||
++	Predicates[i]->getName().find("In32Bit") != Name.npos) {
+       Is32Bit = true;
+       break;
+     }
+-    if (Predicates[i]->getName().find("64Bit") != Name.npos) {
++    if (Predicates[i]->getName().find("In64Bit") != Name.npos) {
+       Is64Bit = true;
+       break;
+     }
+-- 
+1.8.4
+

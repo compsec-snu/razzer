@@ -1,0 +1,168 @@
+From aed57fc4285d94c2d5e9aa69c7b5b97946d95a4f Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:57:49 +0000
+Subject: [PATCH 10/26] [x86] Add JMP16[rm],CALL16[rm] instructions, and fix up
+ aliases
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198754 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit ce8d7befbf01bcd6160398088799124b84be62e7)
+---
+ lib/Target/X86/X86InstrControl.td | 15 +++++++++++++++
+ lib/Target/X86/X86InstrInfo.td    | 29 ++++++++++++++++++++++-------
+ test/MC/X86/x86-16.s              | 24 ++++++++++++++++++++++++
+ test/MC/X86/x86-32.s              | 10 ++++++++++
+ 4 files changed, 71 insertions(+), 7 deletions(-)
+
+diff --git a/lib/Target/X86/X86InstrControl.td b/lib/Target/X86/X86InstrControl.td
+index 9ca188c..da2fdf0 100644
+--- a/lib/Target/X86/X86InstrControl.td
++++ b/lib/Target/X86/X86InstrControl.td
+@@ -113,6 +113,13 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in
+ 
+ // Indirect branches
+ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
++  def JMP16r     : I<0xFF, MRM4r, (outs), (ins GR16:$dst), "jmp{w}\t{*}$dst",
++                     [(brind GR16:$dst)], IIC_JMP_REG>, Requires<[Not64BitMode]>,
++                   OpSize, Sched<[WriteJump]>;
++  def JMP16m     : I<0xFF, MRM4m, (outs), (ins i16mem:$dst), "jmp{w}\t{*}$dst",
++                     [(brind (loadi16 addr:$dst))], IIC_JMP_MEM>,
++                   Requires<[Not64BitMode]>, OpSize, Sched<[WriteJumpLd]>;
++
+   def JMP32r     : I<0xFF, MRM4r, (outs), (ins GR32:$dst), "jmp{l}\t{*}$dst",
+                      [(brind GR32:$dst)], IIC_JMP_REG>, Requires<[Not64BitMode]>,
+                    OpSize16, Sched<[WriteJump]>;
+@@ -168,6 +175,14 @@ let isCall = 1 in
+                            (outs), (ins i32imm_pcrel:$dst),
+                            "call{l}\t$dst", [], IIC_CALL_RI>, OpSize16,
+                       Requires<[Not64BitMode]>, Sched<[WriteJump]>;
++    def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
++                        "call{w}\t{*}$dst", [(X86call GR16:$dst)], IIC_CALL_RI>,
++                      OpSize, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
++    def CALL16m     : I<0xFF, MRM2m, (outs), (ins i16mem:$dst),
++                        "call{w}\t{*}$dst", [(X86call (loadi16 addr:$dst))],
++                        IIC_CALL_MEM>, OpSize,
++                      Requires<[Not64BitMode,FavorMemIndirectCall]>,
++                      Sched<[WriteJumpLd]>;
+     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
+                         "call{l}\t{*}$dst", [(X86call GR32:$dst)], IIC_CALL_RI>,
+                       OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index dd5903c..29aaaf7 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -2117,7 +2117,8 @@ include "X86InstrCompiler.td"
+ // Assembler Mnemonic Aliases
+ //===----------------------------------------------------------------------===//
+ 
+-def : MnemonicAlias<"call", "calll", "att">, Requires<[Not64BitMode]>;
++def : MnemonicAlias<"call", "callw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"call", "calll", "att">, Requires<[In32BitMode]>;
+ def : MnemonicAlias<"call", "callq", "att">, Requires<[In64BitMode]>;
+ 
+ def : MnemonicAlias<"cbw",  "cbtw", "att">;
+@@ -2367,10 +2368,22 @@ def : InstAlias<"fnstsw"     , (FNSTSW16r)>;
+ 
+ // lcall and ljmp aliases.  This seems to be an odd mapping in 64-bit mode, but
+ // this is compatible with what GAS does.
+-def : InstAlias<"lcall $seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>;
+-def : InstAlias<"ljmp $seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>;
+-def : InstAlias<"lcall *$dst",      (FARCALL32m opaque48mem:$dst)>;
+-def : InstAlias<"ljmp *$dst",       (FARJMP32m  opaque48mem:$dst)>;
++def : InstAlias<"lcall $seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>, Requires<[Not16BitMode]>;
++def : InstAlias<"ljmp $seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not16BitMode]>;
++def : InstAlias<"lcall *$dst",      (FARCALL32m opaque48mem:$dst)>, Requires<[Not16BitMode]>;
++def : InstAlias<"ljmp *$dst",       (FARJMP32m  opaque48mem:$dst)>, Requires<[Not16BitMode]>;
++def : InstAlias<"lcall $seg, $off", (FARCALL16i i16imm:$off, i16imm:$seg)>, Requires<[In16BitMode]>;
++def : InstAlias<"ljmp $seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg)>, Requires<[In16BitMode]>;
++def : InstAlias<"lcall *$dst",      (FARCALL16m opaque32mem:$dst)>, Requires<[In16BitMode]>;
++def : InstAlias<"ljmp *$dst",       (FARJMP16m  opaque32mem:$dst)>, Requires<[In16BitMode]>;
++
++def : InstAlias<"call *$dst",       (CALL64m i16mem:$dst)>, Requires<[In64BitMode]>;
++def : InstAlias<"jmp *$dst",        (JMP64m  i16mem:$dst)>, Requires<[In64BitMode]>;
++def : InstAlias<"call *$dst",       (CALL32m i16mem:$dst)>, Requires<[In32BitMode]>;
++def : InstAlias<"jmp *$dst",        (JMP32m  i16mem:$dst)>, Requires<[In32BitMode]>;
++def : InstAlias<"call *$dst",       (CALL16m i16mem:$dst)>, Requires<[In16BitMode]>;
++def : InstAlias<"jmp *$dst",        (JMP16m  i16mem:$dst)>, Requires<[In16BitMode]>;
++
+ 
+ // "imul <imm>, B" is an alias for "imul <imm>, B, B".
+ def : InstAlias<"imulw $imm, $r", (IMUL16rri  GR16:$r, GR16:$r, i16imm:$imm)>;
+@@ -2390,8 +2403,10 @@ def : InstAlias<"inl\t$port", (IN32ri i8imm:$port), 0>;
+ 
+ 
+ // jmp and call aliases for lcall and ljmp.  jmp $42,$5 -> ljmp
+-def : InstAlias<"call $seg, $off",  (FARCALL32i i32imm:$off, i16imm:$seg)>;
+-def : InstAlias<"jmp $seg, $off",   (FARJMP32i  i32imm:$off, i16imm:$seg)>;
++def : InstAlias<"call $seg, $off",  (FARCALL16i i16imm:$off, i16imm:$seg)>, Requires<[In16BitMode]>;
++def : InstAlias<"jmp $seg, $off",   (FARJMP16i  i16imm:$off, i16imm:$seg)>, Requires<[In16BitMode]>;
++def : InstAlias<"call $seg, $off",  (FARCALL32i i32imm:$off, i16imm:$seg)>, Requires<[Not16BitMode]>;
++def : InstAlias<"jmp $seg, $off",   (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not16BitMode]>;
+ def : InstAlias<"callw $seg, $off", (FARCALL16i i16imm:$off, i16imm:$seg)>;
+ def : InstAlias<"jmpw $seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg)>;
+ def : InstAlias<"calll $seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>;
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 75611bf..082e5d0 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -339,6 +339,10 @@ cmovnae	%bx,%bx
+ // CHECK:  encoding: [0x66,0x61]
+         	popal
+ 
++// CHECK: jmpw *8(%eax)
++// CHECK:   encoding: [0x67,0xff,0x60,0x08]
++	jmp	*8(%eax)
++
+ // CHECK: jmpl *8(%eax)
+ // CHECK:   encoding: [0x67,0x66,0xff,0x60,0x08]
+         jmpl	*8(%eax)
+@@ -476,6 +480,26 @@ lcalll	$0x7ace,$0x7ace
+ jmpl	$0x7ace,$0x7ace
+ ljmpl	$0x7ace,$0x7ace
+ 
++// CHECK: lcallw	$31438, $31438
++// CHECK: lcallw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++
++callw	$0x7ace,$0x7ace
++lcallw	$0x7ace,$0x7ace
++jmpw	$0x7ace,$0x7ace
++ljmpw	$0x7ace,$0x7ace
++
++// CHECK: lcallw	$31438, $31438
++// CHECK: lcallw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++
++call	$0x7ace,$0x7ace
++lcall	$0x7ace,$0x7ace
++jmp	$0x7ace,$0x7ace
++ljmp	$0x7ace,$0x7ace
++
+ // CHECK: calll a
+  calll a
+ 
+diff --git a/test/MC/X86/x86-32.s b/test/MC/X86/x86-32.s
+index fa88f28..d224e35 100644
+--- a/test/MC/X86/x86-32.s
++++ b/test/MC/X86/x86-32.s
+@@ -601,6 +601,16 @@ lcalll	$0x7ace,$0x7ace
+ jmpl	$0x7ace,$0x7ace
+ ljmpl	$0x7ace,$0x7ace
+ 
++// CHECK: lcallw	$31438, $31438
++// CHECK: lcallw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++// CHECK: ljmpw	$31438, $31438
++
++callw	$0x7ace,$0x7ace
++lcallw	$0x7ace,$0x7ace
++jmpw	$0x7ace,$0x7ace
++ljmpw	$0x7ace,$0x7ace
++
+ // CHECK: lcalll	$31438, $31438
+ // CHECK: lcalll	$31438, $31438
+ // CHECK: ljmpl	$31438, $31438
+-- 
+1.8.4
+

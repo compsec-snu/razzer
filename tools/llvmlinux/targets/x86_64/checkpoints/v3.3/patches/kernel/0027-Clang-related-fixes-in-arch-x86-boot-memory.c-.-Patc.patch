@@ -1,0 +1,25 @@
+From 82821b9050701ba4436d1a439b29f8bf4667a22b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:00:25 +0200
+Subject: [PATCH 27/48] Clang related fixes in arch/x86/boot/memory.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/memory.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/x86/boot/memory.c b/arch/x86/boot/memory.c
+index db75d07..65607e5 100644
+--- a/arch/x86/boot/memory.c
++++ b/arch/x86/boot/memory.c
+@@ -64,7 +64,7 @@ static int detect_memory_e820(void)
+ 			break;
+ 		}
+ 
+-		*desc++ = buf;
++		memcpy(desc++, &buf, sizeof buf);
+ 		count++;
+ 	} while (ireg.ebx && count < ARRAY_SIZE(boot_params.e820_map));
+ 
+-- 
+1.7.3.4
+

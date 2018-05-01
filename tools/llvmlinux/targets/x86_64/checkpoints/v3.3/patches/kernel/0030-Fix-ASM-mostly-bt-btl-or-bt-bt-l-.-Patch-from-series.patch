@@ -1,0 +1,25 @@
+From 14d23c63f2a1f8ba1d27c6f3c52753f2c9718aa1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:06:05 +0200
+Subject: [PATCH 30/48] Fix ASM - mostly bt->btl or bt?->bt?l  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/include/asm/percpu.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/x86/include/asm/percpu.h b/arch/x86/include/asm/percpu.h
+index 7a11910..21e37ce 100644
+--- a/arch/x86/include/asm/percpu.h
++++ b/arch/x86/include/asm/percpu.h
+@@ -501,7 +501,7 @@ do {									\
+ #define x86_test_and_clear_bit_percpu(bit, var)				\
+ ({									\
+ 	int old__;							\
+-	asm volatile("btr %2,"__percpu_arg(1)"\n\tsbbl %0,%0"		\
++	asm volatile("btrl %2,"__percpu_arg(1)"\n\tsbbl %0,%0"		\
+ 		     : "=r" (old__), "+m" (var)				\
+ 		     : "dIr" (bit));					\
+ 	old__;								\
+-- 
+1.7.3.4
+

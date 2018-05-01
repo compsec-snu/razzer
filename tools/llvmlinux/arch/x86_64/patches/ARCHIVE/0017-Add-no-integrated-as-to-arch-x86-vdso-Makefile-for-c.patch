@@ -1,0 +1,40 @@
+From e0d10b741558b7008c4fbc290cf8242711a54ecb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:39:40 +0100
+Subject: [PATCH 17/51] Add no-integrated-as to arch/x86/vdso/Makefile for
+ compilation with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/vdso/Makefile |    6 ++++++
+ 1 Datei geändert, 6 Zeilen hinzugefügt(+)
+
+diff --git a/arch/x86/vdso/Makefile b/arch/x86/vdso/Makefile
+index fd14be1..3da8e90 100644
+--- a/arch/x86/vdso/Makefile
++++ b/arch/x86/vdso/Makefile
+@@ -37,6 +37,12 @@ VDSO_LDFLAGS_vdso.lds = -m64 -Wl,-soname=linux-vdso.so.1 \
+ 			-Wl,--no-undefined \
+ 		      	-Wl,-z,max-page-size=4096 -Wl,-z,common-page-size=4096
+ 
++AFLAGS_vdso.o = -no-integrated-as
++AFLAGS_vdso32.o = -no-integrated-as
++AFLAGS_int80.o = -no-integrated-as
++AFLAGS_syscall.o = -no-integrated-as
++AFLAGS_sysenter.o = -no-integrated-as
++
+ $(obj)/vdso.o: $(src)/vdso.S $(obj)/vdso.so
+ 
+ $(obj)/vdso.so.dbg: $(src)/vdso.lds $(vobjs) FORCE
+-- 
+1.7.10.4
+

@@ -1,0 +1,44 @@
+From 5dd40b9e710ccc64656823d0651f9b95e094c87e Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:17 -0700
+Subject: [PATCH] md, raid10, LLVMLinux: Remove VLAIS from raid10 driver
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch instead allocates the appropriate amount of
+memory using a char array through a VLA which is compliant with C99 and gcc
+extensions.
+
+This could be also implemented using memory allocations on heap but the
+original implementation was using stack allocation then it is safer to
+keep this way.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/md/raid10.c | 16 ++++++----------
+ 1 file changed, 6 insertions(+), 10 deletions(-)
+
+--- linux.orig/drivers/md/raid10.c
++++ linux/drivers/md/raid10.c
+@@ -4427,11 +4427,9 @@
+ 	/* Use sync reads to get the blocks from somewhere else */
+ 	int sectors = r10_bio->sectors;
+ 	struct r10conf *conf = mddev->private;
+-	struct {
+-		struct r10bio r10_bio;
+-		struct r10dev devs[conf->copies];
+-	} on_stack;
+-	struct r10bio *r10b = &on_stack.r10_bio;
++	/* Allocate space for r10bio on stack */
++	u8 r10bio_on_stack[sizeof(struct r10bio) + conf->copies * sizeof(struct r10dev)];
++	struct r10bio *r10b = (struct r10bio *) r10bio_on_stack;
+ 	int slot = 0;
+ 	int idx = 0;
+ 	struct bio_vec *bvec = r10_bio->master_bio->bi_io_vec;

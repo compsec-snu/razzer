@@ -1,0 +1,44 @@
+From 01019133d4109b8f49541d1cd19d8f17e9beee2b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:11:40 +0100
+Subject: [PATCH 47/51] Fix braces for compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ drivers/scsi/in2000.h |    4 ++--
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+diff --git a/drivers/scsi/in2000.h b/drivers/scsi/in2000.h
+index 5821e1f..cd8d852 100644
+--- a/drivers/scsi/in2000.h
++++ b/drivers/scsi/in2000.h
+@@ -72,7 +72,7 @@ int __dummy_1,__dummy_2; \
+    orl %%ecx, %%ecx       \n \
+    jz 1f                  \n \
+    rep                    \n \
+-   insw (%%dx),%%es:(%%edi) \n \
++   insw %%dx,%%es:(%%edi) \n \
+ 1: "                       \
+    : "=D" (sp) ,"=c" (__dummy_1) ,"=d" (__dummy_2)  /* output */   \
+    : "2" (f), "0" (sp), "1" (i)  /* input */    \
+@@ -87,7 +87,7 @@ int __dummy_1,__dummy_2; \
+    orl %%ecx, %%ecx       \n \
+    jz 1f                  \n \
+    rep                    \n \
+-   outsw %%ds:(%%esi),(%%dx) \n \
++   outsw %%ds:(%%esi),%%dx \n \
+ 1: "                       \
+    : "=S" (sp) ,"=c" (__dummy_1) ,"=d" (__dummy_2)/* output */   \
+    : "2" (f), "0" (sp), "1" (i)  /* input */    \
+-- 
+1.7.10.4
+

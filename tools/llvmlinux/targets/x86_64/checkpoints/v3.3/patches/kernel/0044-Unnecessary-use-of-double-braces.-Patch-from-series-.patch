@@ -1,0 +1,25 @@
+From fb5afb90dd147b435f6e73ddb208385003b3fa7a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:38 +0200
+Subject: [PATCH 44/48] Unnecessary use of double braces.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ drivers/vhost/vhost.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index c14c42b..9035ba3 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -421,7 +421,7 @@ int vhost_zerocopy_signal_used(struct vhost_virtqueue *vq)
+ 	int j = 0;
+ 
+ 	for (i = vq->done_idx; i != vq->upend_idx; i = (i + 1) % UIO_MAXIOV) {
+-		if ((vq->heads[i].len == VHOST_DMA_DONE_LEN)) {
++		if (vq->heads[i].len == VHOST_DMA_DONE_LEN) {
+ 			vq->heads[i].len = VHOST_DMA_CLEAR_LEN;
+ 			vhost_add_used_and_signal(vq->dev, vq,
+ 						  vq->heads[i].id, 0);
+-- 
+1.7.3.4
+

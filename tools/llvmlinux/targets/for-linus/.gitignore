@@ -1,0 +1,7 @@
+patches/series.for-aarch64
+patches/series.for-arm
+patches/series.for-linus
+patches/series.for-next
+patches/series.for-submit
+patches/series.for-upstream
+patches/series.tmp

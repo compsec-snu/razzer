@@ -1,0 +1,29 @@
+From 1719dc0c430ad037f221582bc68d79ddd43011b4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:33 +0200
+Subject: [PATCH 36/48] CFI_STARTPROC32 takes a parameter which has no default value,
+ so it has to be provided at each invocation.
+
+Ppotential for cleanup in upstream.
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ arch/x86/ia32/ia32entry.S |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/x86/ia32/ia32entry.S b/arch/x86/ia32/ia32entry.S
+index e3e7340..e6961cf 100644
+--- a/arch/x86/ia32/ia32entry.S
++++ b/arch/x86/ia32/ia32entry.S
+@@ -457,7 +457,7 @@ GLOBAL(\label)
+ 	jmp  ia32_ptregs_common	
+ 	.endm
+ 
+-	CFI_STARTPROC32
++	CFI_STARTPROC32 simple
+ 
+ 	PTREGSCALL stub32_rt_sigreturn, sys32_rt_sigreturn, %rdi
+ 	PTREGSCALL stub32_sigreturn, sys32_sigreturn, %rdi
+-- 
+1.7.3.4
+

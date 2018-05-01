@@ -1,0 +1,64 @@
+diff --git a/lib/CodeGen/TargetInfo.cpp b/lib/CodeGen/TargetInfo.cpp
+index 3ed1778..4efd899 100644
+--- a/lib/CodeGen/TargetInfo.cpp
++++ b/lib/CodeGen/TargetInfo.cpp
+@@ -2442,7 +2442,8 @@ private:
+   ABIKind getABIKind() const { return Kind; }
+ 
+   ABIArgInfo classifyReturnType(QualType RetTy) const;
+-  ABIArgInfo classifyArgumentType(QualType RetTy) const;
++  ABIArgInfo classifyArgumentType(QualType RetTy, uint64_t& Offset) const;
++  llvm::Type* getPaddingType(const QualType& Ty, uint64_t Offset) const;
+ 
+   virtual void computeInfo(CGFunctionInfo &FI) const;
+ 
+@@ -2485,10 +2486,11 @@ public:
+ }
+ 
+ void ARMABIInfo::computeInfo(CGFunctionInfo &FI) const {
++  uint64_t Offset = 0;
+   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+   for (CGFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
+        it != ie; ++it)
+-    it->info = classifyArgumentType(it->type);
++    it->info = classifyArgumentType(it->type, Offset);
+ 
+   // Always honor user-specified calling convention.
+   if (FI.getCallingConvention() != llvm::CallingConv::C)
+@@ -2587,14 +2589,34 @@ static bool isHomogeneousAggregate(QualType Ty, const Type *&Base,
+   return (Members <= 4);
+ }
+ 
+-ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty) const {
++llvm::Type*
++ARMABIInfo::getPaddingType(const QualType& Ty, uint64_t Offset) const {
++  // Padding is inserted only for 64.
++  if ((Offset & 0x7) && getContext().getTypeSize(Ty)>32)
++    return llvm::IntegerType::get(getVMContext(), 32);
++  else
++    return 0;
++}
++
++ABIArgInfo
++ARMABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
++  uint64_t OrigOffset = Offset;
++  uint64_t TySize =
++    llvm::RoundUpToAlignment(getContext().getTypeSize(Ty), 32) / 8;
++  Offset += TySize;
++
++
+   if (!isAggregateTypeForABI(Ty)) {
+     // Treat an enum type as its underlying type.
+     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+       Ty = EnumTy->getDecl()->getIntegerType();
+ 
++    llvm::Type * PaddingType = getPaddingType(Ty, OrigOffset);
++    if (PaddingType)
++      Offset += llvm::RoundUpToAlignment(PaddingType->getIntegerBitWidth(), 32) /8;
+     return (Ty->isPromotableIntegerType() ?
+-            ABIArgInfo::getExtend() : ABIArgInfo::getDirect());
++            ABIArgInfo::getExtend() : ABIArgInfo::getDirect(0, 0,
++              PaddingType));
+   }
+ 
+   // Ignore empty records.

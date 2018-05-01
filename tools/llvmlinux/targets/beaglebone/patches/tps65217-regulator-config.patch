@@ -1,0 +1,27 @@
+From 4165310013a75e3dfd02ad5f3e27e668db838250 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 30 May 2014 11:35:52 -0700
+Subject: [PATCH] multi_v7, tps65217, ti, LLVMLinux: Enable TPS65217 regulator
+
+Beaglebone White/Black don't work without these enabled.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+
+--- linux.orig/arch/arm/configs/multi_v7_defconfig
++++ linux/arch/arm/configs/multi_v7_defconfig
+@@ -212,6 +212,7 @@
+ CONFIG_MFD_MAX8907=y
+ CONFIG_MFD_PALMAS=y
+ CONFIG_MFD_TPS65090=y
++CONFIG_MFD_TPS65217=y
+ CONFIG_MFD_TPS6586X=y
+ CONFIG_MFD_TPS65910=y
+ CONFIG_REGULATOR_VIRTUAL_CONSUMER=y
+@@ -223,6 +224,7 @@
+ CONFIG_REGULATOR_TPS51632=y
+ CONFIG_REGULATOR_TPS62360=y
+ CONFIG_REGULATOR_TPS65090=y
++CONFIG_REGULATOR_TPS65217=y
+ CONFIG_REGULATOR_TPS6586X=y
+ CONFIG_REGULATOR_TPS65910=y
+ CONFIG_REGULATOR_TWL4030=y

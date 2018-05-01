@@ -1,0 +1,6 @@
+kbuild-mips-disable-unicode-warnings-for-asm.patch
+kbuild-mips-enable-ias.patch
+mips-disable-werror.patch
+mips-revert-a6335fa.patch
+mips-fix-ebb5e78cc634-clang.patch
+mips-revert-380cd58.patch

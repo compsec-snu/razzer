@@ -1,0 +1,75 @@
+From da2ac92ab5a6225fdc04c28462fd8d1dfceacd34 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 19:22:13 +0100
+Subject: [PATCH] Revert "x86/nmi: Clean up register_nmi_handler() usage"
+
+This reverts commit 0718467c859f5571dc48d294596f841096f6a47a.
+---
+ arch/x86/include/asm/nmi.h     |   20 +++++++++++++++++---
+ arch/x86/kernel/nmi_selftest.c |    7 +++----
+ 2 Dateien geändert, 20 Zeilen hinzugefügt(+), 7 Zeilen entfernt(-)
+
+diff --git a/arch/x86/include/asm/nmi.h b/arch/x86/include/asm/nmi.h
+index c0fa356..dc580c4 100644
+--- a/arch/x86/include/asm/nmi.h
++++ b/arch/x86/include/asm/nmi.h
+@@ -44,14 +44,28 @@ struct nmiaction {
+ 	const char		*name;
+ };
+ 
+-#define register_nmi_handler(t, fn, fg, n, init...)	\
++#define register_nmi_handler(t, fn, fg, n)		\
+ ({							\
+-	static struct nmiaction init fn##_na = {	\
++	static struct nmiaction fn##_na = {		\
+ 		.handler = (fn),			\
+ 		.name = (n),				\
+ 		.flags = (fg),				\
+ 	};						\
+-	__register_nmi_handler((t), &fn##_na);		\
++	__register_nmi_handler((t), &fn##_na);	\
++})
++
++/*
++ * For special handlers that register/unregister in the
++ * init section only.  This should be considered rare.
++ */
++#define register_nmi_handler_initonly(t, fn, fg, n)		\
++({							\
++	static struct nmiaction fn##_na __initdata = {		\
++		.handler = (fn),			\
++		.name = (n),				\
++		.flags = (fg),				\
++	};						\
++	__register_nmi_handler((t), &fn##_na);	\
+ })
+ 
+ int __register_nmi_handler(unsigned int, struct nmiaction *);
+diff --git a/arch/x86/kernel/nmi_selftest.c b/arch/x86/kernel/nmi_selftest.c
+index 6d9582e..149b8d9 100644
+--- a/arch/x86/kernel/nmi_selftest.c
++++ b/arch/x86/kernel/nmi_selftest.c
+@@ -42,8 +42,7 @@ static int __init nmi_unk_cb(unsigned int val, struct pt_regs *regs)
+ static void __init init_nmi_testsuite(void)
+ {
+ 	/* trap all the unknown NMIs we may generate */
+-	register_nmi_handler(NMI_UNKNOWN, nmi_unk_cb, 0, "nmi_selftest_unk",
+-			__initdata);
++	register_nmi_handler_initonly(NMI_UNKNOWN, nmi_unk_cb, 0, "nmi_selftest_unk");
+ }
+ 
+ static void __init cleanup_nmi_testsuite(void)
+@@ -65,8 +64,8 @@ static void __init test_nmi_ipi(struct cpumask *mask)
+ {
+ 	unsigned long timeout;
+ 
+-	if (register_nmi_handler(NMI_LOCAL, test_nmi_ipi_callback,
+-				 NMI_FLAG_FIRST, "nmi_selftest", __initdata)) {
++	if (register_nmi_handler_initonly(NMI_LOCAL, test_nmi_ipi_callback,
++				 NMI_FLAG_FIRST, "nmi_selftest")) {
+ 		nmi_fail = FAILURE;
+ 		return;
+ 	}
+-- 
+1.7.10.4
+

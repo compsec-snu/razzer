@@ -1,0 +1,85 @@
+From 9621108ada2a8ee7b8f3180a37ed37cb846e3b14 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Vin=C3=ADcius=20Tinti?= <viniciustinti@gmail.com>
+Date: Mon, 13 Oct 2014 14:29:51 -0300
+Subject: [PATCH] DO-NOT-UPSTREAM arm, psci, LLVMLinux: enforce register
+ variable allocation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Force register assignment for variables used in Extended Asm. The two functions
+were expecting and checking for GCC specific behavior in register allocation.
+
+By defining a local register variable:
+
+  void foo(int arg0) {
+    register int arg0_in_r0 asm ("r0") = arg0;
+
+    // extended asm
+    ...
+  }
+
+It is possible to guarantee that 'arg0' will be placed in 'r0' and avoid
+checking for correct register assignment with 'asmeq'. The asm code generated
+is the same with -O2 except for the checks that are not needed.
+
+Not-signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+---
+ arch/arm/kernel/psci.c | 30 ++++++++++++++++--------------
+ 1 file changed, 16 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/kernel/psci.c b/arch/arm/kernel/psci.c
+index f73891b..824809e 100644
+--- a/arch/arm/kernel/psci.c
++++ b/arch/arm/kernel/psci.c
+@@ -78,31 +78,33 @@ static u32 psci_power_state_pack(struct psci_power_state state)
+ static noinline int __invoke_psci_fn_hvc(u32 function_id, u32 arg0, u32 arg1,
+ 					 u32 arg2)
+ {
++	register u32 function_id_r0 asm ("r0") = function_id;
++	register u32 arg0_r1 asm ("r1") = arg0;
++	register u32 arg1_r2 asm ("r2") = arg1;
++	register u32 arg2_r3 asm ("r3") = arg2;
++
+ 	asm volatile(
+-			__asmeq("%0", "r0")
+-			__asmeq("%1", "r1")
+-			__asmeq("%2", "r2")
+-			__asmeq("%3", "r3")
+ 			__HVC(0)
+-		: "+r" (function_id)
+-		: "r" (arg0), "r" (arg1), "r" (arg2));
++		: "+r" (function_id_r0)
++		: "r" (arg0_r1), "r" (arg1_r2), "r" (arg2_r3));
+ 
+-	return function_id;
++	return function_id_r0;
+ }
+ 
+ static noinline int __invoke_psci_fn_smc(u32 function_id, u32 arg0, u32 arg1,
+ 					 u32 arg2)
+ {
++	register u32 function_id_r0 asm ("r0") = function_id;
++	register u32 arg0_r1 asm ("r1") = arg0;
++	register u32 arg1_r2 asm ("r2") = arg1;
++	register u32 arg2_r3 asm ("r3") = arg2;
++
+ 	asm volatile(
+-			__asmeq("%0", "r0")
+-			__asmeq("%1", "r1")
+-			__asmeq("%2", "r2")
+-			__asmeq("%3", "r3")
+ 			__SMC(0)
+-		: "+r" (function_id)
+-		: "r" (arg0), "r" (arg1), "r" (arg2));
++		: "+r" (function_id_r0)
++		: "r" (arg0_r1), "r" (arg1_r2), "r" (arg2_r3));
+ 
+-	return function_id;
++	return function_id_r0;
+ }
+ 
+ static int psci_get_version(void)
+-- 
+1.9.1
+

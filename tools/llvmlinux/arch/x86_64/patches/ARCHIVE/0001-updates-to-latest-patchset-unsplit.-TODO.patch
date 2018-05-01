@@ -1,0 +1,99 @@
+From dc22094eacca3faaa438aad595ec714a642d0c48 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Sun, 3 Mar 2013 16:47:18 +0100
+Subject: [PATCH] updates to latest patchset - unsplit. TODO.
+
+---
+ arch/x86/include/asm/thread_info.h |    1 +
+ arch/x86/kernel/cpu/intel.c        |    2 +-
+ arch/x86/kernel/entry_64.S         |   14 +++++++-------
+ arch/x86/kernel/rtc.c              |    2 +-
+ arch/x86/realmode/init.c           |    2 +-
+ 5 Dateien geändert, 11 Zeilen hinzugefügt(+), 10 Zeilen entfernt(-)
+
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index bf6a56d..36d96da 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -203,6 +203,7 @@ static inline struct thread_info *current_thread_info(void)
+  */
+ #ifndef __ASSEMBLY__
+ DECLARE_PER_CPU(unsigned long, kernel_stack);
++#define current_stack_pointer ({ unsigned long rsp; asm("mov %%rsp, %0" : "=r"(rsp)); rsp; })
+ 
+ static inline struct thread_info *current_thread_info(void)
+ {
+diff --git a/arch/x86/kernel/cpu/intel.c b/arch/x86/kernel/cpu/intel.c
+index 1905ce9..8a2136d 100644
+--- a/arch/x86/kernel/cpu/intel.c
++++ b/arch/x86/kernel/cpu/intel.c
+@@ -655,7 +655,7 @@ static void __cpuinit intel_detect_tlb(struct cpuinfo_x86 *c)
+ 
+ 		/* If bit 31 is set, this is an unknown format */
+ 		for (j = 0 ; j < 3 ; j++)
+-			if (regs[j] & (1 << 31))
++			if (regs[j] & (1U << 31))
+ 				regs[j] = 0;
+ 
+ 		/* Byte 0 is level count, not a descriptor */
+diff --git a/arch/x86/kernel/entry_64.S b/arch/x86/kernel/entry_64.S
+index d714cfc..d77216a 100644
+--- a/arch/x86/kernel/entry_64.S
++++ b/arch/x86/kernel/entry_64.S
+@@ -505,7 +505,7 @@ END(save_rest)
+ /* save complete stack frame */
+ 	.pushsection .kprobes.text, "ax"
+ ENTRY(save_paranoid)
+-	XCPT_FRAME 1 RDI+8
++	XCPT_FRAME 1, RDI+8
+ 	cld
+ 	movq_cfi rdi, RDI+8
+ 	movq_cfi rsi, RSI+8
+@@ -864,12 +864,12 @@ END(\label)
+ ENTRY(ptregscall_common)
+ 	DEFAULT_FRAME 1 8	/* offset 8: return address */
+ 	RESTORE_TOP_OF_STACK %r11, 8
+-	movq_cfi_restore R15+8, r15
+-	movq_cfi_restore R14+8, r14
+-	movq_cfi_restore R13+8, r13
+-	movq_cfi_restore R12+8, r12
+-	movq_cfi_restore RBP+8, rbp
+-	movq_cfi_restore RBX+8, rbx
++	movq_cfi_restore (R15+8), r15
++	movq_cfi_restore (R14+8), r14
++	movq_cfi_restore (R13+8), r13
++	movq_cfi_restore (R12+8), r12
++	movq_cfi_restore (RBP+8), rbp
++	movq_cfi_restore (RBX+8), rbx
+ 	ret $REST_SKIP		/* pop extended registers */
+ 	CFI_ENDPROC
+ END(ptregscall_common)
+diff --git a/arch/x86/kernel/rtc.c b/arch/x86/kernel/rtc.c
+index 2e8f3d3..abed519 100644
+--- a/arch/x86/kernel/rtc.c
++++ b/arch/x86/kernel/rtc.c
+@@ -218,7 +218,7 @@ static struct platform_device rtc_device = {
+ static __init int add_rtc_cmos(void)
+ {
+ #ifdef CONFIG_PNP
+-	static const char * const  const ids[] __initconst =
++	static const char * const ids[] __initconst =
+ 	    { "PNP0b00", "PNP0b01", "PNP0b02", };
+ 	struct pnp_dev *dev;
+ 	struct pnp_id *id;
+diff --git a/arch/x86/realmode/init.c b/arch/x86/realmode/init.c
+index b93187f..0819db1 100644
+--- a/arch/x86/realmode/init.c
++++ b/arch/x86/realmode/init.c
+@@ -58,7 +58,7 @@ void __init setup_real_mode(void)
+ 	count = rel[i];
+ 	rel =  &rel[i + 1];
+ 	for (i = 0; i < count; i++) {
+-		ptr = (u32)__pa(base);
++		ptr = (u32)__pa(base) + *(u32 *)(base + rel[i]);
+ 		memcpy(base + rel[i], &ptr, sizeof ptr);
+ 	}
+ 
+-- 
+1.7.10.4
+

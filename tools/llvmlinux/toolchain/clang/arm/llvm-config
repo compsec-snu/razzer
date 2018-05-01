@@ -1,0 +1,4 @@
+#!/bin/bash
+CWD=`dirname $0`
+LLVM_CONFIG=${CWD}/../install/bin/llvm-config
+${LLVM_CONFIG} $* | sed "s/install/arm\/install/"

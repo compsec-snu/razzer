@@ -1,0 +1,63 @@
+From 28394cc6f24fdeb05e767d4c5af9564933f89186 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:26 -0700
+Subject: [PATCH] media, platform, LLVMLinux: Remove nested function from
+ ti-vpe
+
+Replace the use of nested functions where a normal function will suffice.
+
+Nested functions are not liked by upstream kernel developers in general. Their
+use breaks the use of clang as a compiler, and doesn't make the code any
+better.
+
+This code now works for both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/media/platform/ti-vpe/csc.c | 8 ++------
+ drivers/media/platform/ti-vpe/sc.c  | 8 ++------
+ 2 files changed, 4 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/media/platform/ti-vpe/csc.c b/drivers/media/platform/ti-vpe/csc.c
+index 940df40..44fbf41 100644
+--- a/drivers/media/platform/ti-vpe/csc.c
++++ b/drivers/media/platform/ti-vpe/csc.c
+@@ -93,12 +93,8 @@ void csc_dump_regs(struct csc_data *csc)
+ {
+ 	struct device *dev = &csc->pdev->dev;
+ 
+-	u32 read_reg(struct csc_data *csc, int offset)
+-	{
+-		return ioread32(csc->base + offset);
+-	}
+-
+-#define DUMPREG(r) dev_dbg(dev, "%-35s %08x\n", #r, read_reg(csc, CSC_##r))
++#define DUMPREG(r) dev_dbg(dev, "%-35s %08x\n", #r, \
++	ioread32(csc->base + CSC_##r))
+ 
+ 	DUMPREG(CSC00);
+ 	DUMPREG(CSC01);
+diff --git a/drivers/media/platform/ti-vpe/sc.c b/drivers/media/platform/ti-vpe/sc.c
+index 6314171..1088381 100644
+--- a/drivers/media/platform/ti-vpe/sc.c
++++ b/drivers/media/platform/ti-vpe/sc.c
+@@ -24,12 +24,8 @@ void sc_dump_regs(struct sc_data *sc)
+ {
+ 	struct device *dev = &sc->pdev->dev;
+ 
+-	u32 read_reg(struct sc_data *sc, int offset)
+-	{
+-		return ioread32(sc->base + offset);
+-	}
+-
+-#define DUMPREG(r) dev_dbg(dev, "%-35s %08x\n", #r, read_reg(sc, CFG_##r))
++#define DUMPREG(r) dev_dbg(dev, "%-35s %08x\n", #r, \
++	ioread32(sc->base + CFG_##r))
+ 
+ 	DUMPREG(SC0);
+ 	DUMPREG(SC1);
+-- 
+1.9.1
+

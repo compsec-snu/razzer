@@ -1,0 +1,37 @@
+From 928672d7ee45d3c99ad8ec5bd1e875b4b089c2c2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:55:48 +0100
+Subject: [PATCH] kbuild: LLVMLinux: Fix LINUX_COMPILER definition script for
+ compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When building the LINUX_COMPILER definition, instead of merely taking the last
+line from "$(CC) -v", grep for ' version ' in the output. This supports both
+gcc and clang.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ scripts/mkcompile_h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
+index f221ddf..cfb8440 100755
+--- a/scripts/mkcompile_h
++++ b/scripts/mkcompile_h
+@@ -76,7 +76,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
+   echo \#define LINUX_COMPILE_BY \"`echo $LINUX_COMPILE_BY | $UTS_TRUNCATE`\"
+   echo \#define LINUX_COMPILE_HOST \"`echo $LINUX_COMPILE_HOST | $UTS_TRUNCATE`\"
+ 
+-  echo \#define LINUX_COMPILER \"`$CC -v 2>&1 | tail -n 1`\"
++  echo \#define LINUX_COMPILER \"`$CC -v 2>&1 | grep ' version '`\"
+ ) > .tmpcompile
+ 
+ # Only replace the real compile.h if the new one is different,
+-- 
+1.8.3.2
+

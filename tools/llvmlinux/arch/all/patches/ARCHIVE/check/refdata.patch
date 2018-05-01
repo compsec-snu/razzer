@@ -1,0 +1,115 @@
+Add __refdata to fix section mismatches in drivers.
+
+Added to serio, mmc, smc91xx, and aaci drivers
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ drivers/input/serio/ambakmi.c        |    2 +-
+ drivers/mmc/host/mmci.c              |   10 ++++++++--
+ drivers/mmc/host/sdhci-pxav2.c       |    2 +-
+ drivers/mmc/host/sdhci-pxav3.c       |    2 +-
+ drivers/net/ethernet/smsc/smc911x.c  |    2 +-
+ drivers/net/ethernet/smsc/smc91x.c   |    2 +-
+ drivers/net/ethernet/smsc/smsc911x.c |    2 +-
+ sound/arm/aaci.c                     |    9 +++++++--
+ 8 files changed, 21 insertions(+), 10 deletions(-)
+
+Index: linux/drivers/input/serio/ambakmi.c
+===================================================================
+--- linux.orig/drivers/input/serio/ambakmi.c
++++ linux/drivers/input/serio/ambakmi.c
+@@ -197,7 +197,7 @@
+ 
+ MODULE_DEVICE_TABLE(amba, amba_kmi_idtable);
+ 
+-static struct amba_driver ambakmi_driver = {
++static struct amba_driver ambakmi_driver __refdata = {
+ 	.drv		= {
+ 		.name	= "kmi-pl050",
+ 		.owner	= THIS_MODULE,
+Index: linux/drivers/mmc/host/sdhci-pxav2.c
+===================================================================
+--- linux.orig/drivers/mmc/host/sdhci-pxav2.c
++++ linux/drivers/mmc/host/sdhci-pxav2.c
+@@ -265,7 +265,7 @@
+ 	return 0;
+ }
+ 
+-static struct platform_driver sdhci_pxav2_driver = {
++static struct platform_driver sdhci_pxav2_driver __refdata = {
+ 	.driver		= {
+ 		.name	= "sdhci-pxav2",
+ 		.owner	= THIS_MODULE,
+Index: linux/drivers/mmc/host/sdhci-pxav3.c
+===================================================================
+--- linux.orig/drivers/mmc/host/sdhci-pxav3.c
++++ linux/drivers/mmc/host/sdhci-pxav3.c
+@@ -309,7 +309,7 @@
+ 	return 0;
+ }
+ 
+-static struct platform_driver sdhci_pxav3_driver = {
++static struct platform_driver sdhci_pxav3_driver __refdata = {
+ 	.driver		= {
+ 		.name	= "sdhci-pxav3",
+ #ifdef CONFIG_OF
+Index: linux/drivers/net/ethernet/smsc/smc91x.c
+===================================================================
+--- linux.orig/drivers/net/ethernet/smsc/smc91x.c
++++ linux/drivers/net/ethernet/smsc/smc91x.c
+@@ -2405,7 +2405,7 @@
+ 	.resume		= smc_drv_resume,
+ };
+ 
+-static struct platform_driver smc_driver = {
++static struct platform_driver smc_driver __refdata = {
+ 	.probe		= smc_drv_probe,
+ 	.remove		= __devexit_p(smc_drv_remove),
+ 	.driver		= {
+Index: linux/sound/arm/aaci.c
+===================================================================
+--- linux.orig/sound/arm/aaci.c
++++ linux/sound/arm/aaci.c
+@@ -1097,9 +1097,14 @@
+ 	{ 0, 0 },
+ };
+ 
+-MODULE_DEVICE_TABLE(amba, aaci_ids);
++// FIXME
++// MODULE_DEVICE_TABLE(amba, aaci_ids);
++// Which expands to:
++// extern const struct amba_device_id __mod_amba_device_table __attribute__ ((unused, __alias__("aaci_ids")));
++// causes the following error in LLVM:
++// ERROR: "__unnamed_1" [sound/arm/snd-aaci.ko] undefined!
+ 
+-static struct amba_driver aaci_driver = {
++static struct amba_driver aaci_driver __refdata = {
+ 	.drv		= {
+ 		.name	= DRIVER_NAME,
+ 	},
+Index: linux/drivers/net/ethernet/smsc/smsc911x.c
+===================================================================
+--- linux.orig/drivers/net/ethernet/smsc/smsc911x.c
++++ linux/drivers/net/ethernet/smsc/smsc911x.c
+@@ -2574,7 +2574,7 @@
+ };
+ MODULE_DEVICE_TABLE(of, smsc911x_dt_ids);
+ 
+-static struct platform_driver smsc911x_driver = {
++static struct platform_driver smsc911x_driver __refdata = {
+ 	.probe = smsc911x_drv_probe,
+ 	.remove = __devexit_p(smsc911x_drv_remove),
+ 	.driver = {
+Index: linux/drivers/net/ethernet/smsc/smc911x.c
+===================================================================
+--- linux.orig/drivers/net/ethernet/smsc/smc911x.c
++++ linux/drivers/net/ethernet/smsc/smc911x.c
+@@ -2184,7 +2184,7 @@
+ 	return 0;
+ }
+ 
+-static struct platform_driver smc911x_driver = {
++static struct platform_driver smc911x_driver __refdata = {
+ 	.probe		 = smc911x_drv_probe,
+ 	.remove	 = __devexit_p(smc911x_drv_remove),
+ 	.suspend	 = smc911x_drv_suspend,

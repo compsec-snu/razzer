@@ -1,0 +1,25 @@
+From 4e3bbfabc7ace6fa87c984b3e269b75e202045f3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:24:07 +0200
+Subject: [PATCH 18/48] Fix assembly. btr -> btrl  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/kernel/entry_64.S |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/x86/kernel/entry_64.S b/arch/x86/kernel/entry_64.S
+index 1333d98..e74f7b7 100644
+--- a/arch/x86/kernel/entry_64.S
++++ b/arch/x86/kernel/entry_64.S
+@@ -400,7 +400,7 @@ END(save_paranoid)
+ ENTRY(ret_from_fork)
+ 	DEFAULT_FRAME
+ 
+-	LOCK ; btr $TIF_FORK,TI_flags(%r8)
++	LOCK ; btrl $TIF_FORK,TI_flags(%r8)
+ 
+ 	pushq_cfi kernel_eflags(%rip)
+ 	popfq_cfi				# reset kernel eflags
+-- 
+1.7.3.4
+

@@ -1,0 +1,55 @@
+From bdb820d0c55e623b2a029c6578f5a91835f54d3c Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Thu, 14 Aug 2014 08:12:08 -0500
+Subject: [PATCH] DO-NOT-UPSTREAM kbuild: LLVMLinux: Optionally include flags
+ not supported by clang
+
+Clang doesn't support -fno-delete-null-pointer-checks or
+ -fno-inline-functions-called-once and they cannot be
+diabled by cc-option because cc-option doesnt work for
+flags, ony for warnings.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ Makefile | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 7b60c0a..5aeb72a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -308,7 +308,7 @@ HOSTCXXFLAGS = -O2
+ 
+ ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
+ HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
+-		-Wno-missing-field-initializers -fno-delete-null-pointer-checks
++		-Wno-missing-field-initializers
+ endif
+ 
+ # Decide whether to build built-in, modular, or both.
+@@ -625,7 +625,9 @@ all: vmlinux
+ 
+ include $(srctree)/arch/$(SRCARCH)/Makefile
+ 
+-KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
++ifneq ($(COMPILER),clang)
++KBUILD_CFLAGS	+= -fno-delete-null-pointer-checks
++endif
+ 
+ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
+ KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
+@@ -755,7 +757,9 @@ endif
+ 
+ # We trigger additional mismatches with less inlining
+ ifdef CONFIG_DEBUG_SECTION_MISMATCH
+-KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
++ifneq ($(COMPILER),clang)
++KBUILD_CFLAGS += -fno-inline-functions-called-once
++endif
+ endif
+ 
+ # arch Makefile may override CC so keep this after arch Makefile is included
+-- 
+1.9.1
+

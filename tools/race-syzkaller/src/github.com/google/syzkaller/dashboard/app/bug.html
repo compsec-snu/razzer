@@ -1,0 +1,69 @@
+{{/*
+Copyright 2017 syzkaller project authors. All rights reserved.
+Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+
+Page with details about a single bug.
+*/}}
+
+<!doctype html>
+<html>
+<head>
+	{{template "head" .Header}}
+	<title>{{.Bug.Title}}</title>
+</head>
+<body>
+	{{template "header" .Header}}
+
+	<b>[{{.Bug.Namespace}}] {{.Bug.Title}}</b><br>
+	Status: {{if .Bug.ExternalLink}}<a href="{{.Bug.ExternalLink}}">{{.Bug.Status}}</a>{{else}}{{.Bug.Status}}{{end}}<br>
+	Reported-by: {{.Bug.CreditEmail}}<br>
+	{{if .Bug.Commits}}
+		Commits: {{.Bug.Commits}}<br>
+		{{if .Bug.ClosedTime.IsZero}}
+			Patched on: {{.Bug.PatchedOn}}, missing on: {{.Bug.MissingOn}}<br>
+		{{end}}
+	{{end}}
+	First: {{formatLateness $.Now $.Bug.FirstTime}}, last: {{formatLateness $.Now $.Bug.LastTime}}<br>
+
+	{{template "bug_list" .DupOf}}
+	{{template "bug_list" .Dups}}
+	{{template "bug_list" .Similar}}
+
+	{{if .SampleReport}}
+	<br><b>Sample crash report:</b><br>
+	<textarea id="log_textarea" readonly rows="25" wrap=off>{{printf "%s" .SampleReport}}</textarea><br>
+	{{end}}
+
+	<table class="list_table">
+		<caption>All crashes ({{.Bug.NumCrashes}}):</caption>
+		<tr>
+			<th><a onclick="return sortTable('Manager', textSort)" href="#">Manager</a></th>
+			<th><a onclick="return sortTable('Time', dateSort)" href="#">Time</a></th>
+			<th><a onclick="return sortTable('Kernel', textSort)" href="#">Kernel</a></th>
+			<th><a onclick="return sortTable('Commit', textSort)" href="#">Commit</a></th>
+			<th><a onclick="return sortTable('Syzkaller', textSort)" href="#">Syzkaller</a></th>
+			<th><a onclick="return sortTable('Config', textSort)" href="#">Config</a></th>
+			<th><a onclick="return sortTable('Log', textSort)" href="#">Log</a></th>
+			<th><a onclick="return sortTable('Report', reproSort)" href="#">Report</a></th>
+			<th><a onclick="return sortTable('Syz repro', reproSort)" href="#">Syz repro</a></th>
+			<th><a onclick="return sortTable('C repro', textSort)" href="#">C repro</a></th>
+			<th><a onclick="return sortTable('Maintainers', textSort)" href="#">Maintainers</a></th>
+		</tr>
+		{{range $c := $.Crashes}}
+			<tr>
+				<td class="manager">{{$c.Manager}}</td>
+				<td class="time">{{formatTime $c.Time}}</td>
+				<td class="kernel" title="{{$c.KernelAlias}}">{{$c.KernelAlias}}</td>
+				<td class="tag">{{$c.KernelCommit}}</td>
+				<td class="tag">{{$c.SyzkallerCommit}}</td>
+				<td class="config"><a href="{{$c.KernelConfigLink}}">.config</a></td>
+				<td class="repro">{{if $c.LogLink}}<a href="{{$c.LogLink}}">log</a>{{end}}</td>
+				<td class="repro">{{if $c.ReportLink}}<a href="{{$c.ReportLink}}">report</a>{{end}}</td>
+				<td class="repro">{{if $c.ReproSyzLink}}<a href="{{$c.ReproSyzLink}}">syz</a>{{end}}</td>
+				<td class="repro">{{if $c.ReproCLink}}<a href="{{$c.ReproCLink}}">C</a>{{end}}</td>
+				<td class="maintainers" title="{{$c.Maintainers}}">{{$c.Maintainers}}</td>
+			</tr>
+		{{end}}
+	</table>
+</body>
+</html>

@@ -1,0 +1,43 @@
+From 4c0a705a0f712add69e517f3096ab4aa98ca2897 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:27 -0400
+Subject: [PATCH] arm: LLVMLinux: Use current_stack_pointer in
+ save_stack_trace_tsk
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the global current_stack_pointer to get the value of the stack pointer.
+This change supports being able to compile the kernel with both gcc and clang.
+
+KernelVersion: 3.17.0-rc6
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Acked-by: Will Deacon <will.deacon@arm.com>
+Acked-by: Nicolas Pitre <nico@linaro.org>
+---
+ arch/arm/kernel/stacktrace.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/arch/arm/kernel/stacktrace.c b/arch/arm/kernel/stacktrace.c
+index f065eb0..92b7237 100644
+--- a/arch/arm/kernel/stacktrace.c
++++ b/arch/arm/kernel/stacktrace.c
+@@ -134,12 +134,10 @@ static noinline void __save_stack_trace(struct task_struct *tsk,
+ 		frame.pc = thread_saved_pc(tsk);
+ #endif
+ 	} else {
+-		register unsigned long current_sp asm ("sp");
+-
+ 		/* We don't want this function nor the caller */
+ 		data.skip += 2;
+ 		frame.fp = (unsigned long)__builtin_frame_address(0);
+-		frame.sp = current_sp;
++		frame.sp = current_stack_pointer;
+ 		frame.lr = (unsigned long)__builtin_return_address(0);
+ 		frame.pc = (unsigned long)__save_stack_trace;
+ 	}
+-- 
+1.9.1
+

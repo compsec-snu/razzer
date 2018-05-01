@@ -1,0 +1,36 @@
+From 99acf58c3fc6df0556d5090f67a26e744da12485 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Sun, 20 Oct 2013 00:36:47 +0200
+Subject: [PATCH] clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/Makefile | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- linux.orig/arch/x86/Makefile
++++ linux/arch/x86/Makefile
+@@ -86,7 +86,7 @@
+ 
+         # this works around some issues with generating unwind tables in older gccs
+         # newer gccs do it by default
+-        KBUILD_CFLAGS += -maccumulate-outgoing-args
++        KBUILD_CFLAGS += $(call cc-option,-maccumulate-outgoing-args)
+ endif
+ 
+ ifdef CONFIG_CC_STACKPROTECTOR
+@@ -124,6 +124,11 @@
+ sp-$(CONFIG_X86_32) := esp
+ sp-$(CONFIG_X86_64) := rsp
+ 
++# enforce no-sse atm for clang
++ifneq ($(COMPILER),clang)
++        KBUILD_CFLAGS += $(call cc-option,-mno-sse -mpreferred-stack-boundary=3)
++endif
++
+ # do binutils support CFI?
+ cfi := $(call as-instr,.cfi_startproc\n.cfi_rel_offset $(sp-y)$(comma)0\n.cfi_endproc,-DCONFIG_AS_CFI=1)
+ # is .cfi_signal_frame supported too?

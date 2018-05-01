@@ -1,0 +1,13 @@
+dwarf2.patch
+kbuild-clang-arm.patch
+kbuild-clang.patch
+named_register-percpu.patch
+named_register-ptrace.patch
+named_register-return_address.patch
+percpu.patch
+register-var.patch
+vlais-dm-crypt.patch
+vlais-gadget.patch
+vlais-libcrc32c.patch
+vlais-mac80211.patch
+vlais-netfilter.patch

@@ -1,0 +1,36 @@
+From 56c6c8500e762d60d595d121377f17b8a9282c76 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Wed, 14 Nov 2012 12:55:28 +0100
+Subject: [PATCH] x86: LLVMLinux: Reimplement current_stack_pointer without
+ register usage.
+
+Use asm to make the globally named register work again for gcc and clang.
+Much more efficient than copying the stack pointer to a variable and back again.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/x86/include/asm/thread_info.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index e1940c0..e27ccc1 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -163,10 +163,10 @@ struct thread_info {
+  */
+ #ifndef __ASSEMBLY__
+ 
+-#define current_stack_pointer ({		\
+-	unsigned long sp;			\
+-	asm("mov %%esp,%0" : "=g" (sp));	\
+-	sp;					\
++#define current_stack_pointer ({			\
++	register unsigned long sp asm("esp") __used;	\
++	asm("" : "=r" (sp));				\
++	sp;						\
+ })
+ 
+ /* how to get the thread information struct from C */
+-- 
+1.8.1.4
+

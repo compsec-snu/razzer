@@ -1,0 +1,37 @@
+From 4ca45c0db0945a04c8292273b0ccd42a4932de95 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Tue, 20 Nov 2012 21:18:16 +0100
+Subject: [PATCH] crypto: LLVMLinux: aligned-attribute.patch
+
+__attribute__((aligned)) applies the default alignment for the largest scalar
+type for the target ABI. gcc allows it to be applied inline to a defined type.
+Clang only allows it to be applied to a type definition (PR11071).
+
+Making it into 2 lines makes it more readable and works with both compilers.
+
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Cc: Steven Rostedt <rostedt@goodmis.org>
+Cc: Jonathan Corbet <corbet@lwn.net>
+---
+ crypto/shash.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/crypto/shash.c b/crypto/shash.c
+index 929058a..47c7139 100644
+--- a/crypto/shash.c
++++ b/crypto/shash.c
+@@ -67,7 +67,8 @@ EXPORT_SYMBOL_GPL(crypto_shash_setkey);
+ static inline unsigned int shash_align_buffer_size(unsigned len,
+ 						   unsigned long mask)
+ {
+-	return len + (mask & ~(__alignof__(u8 __attribute__ ((aligned))) - 1));
++	typedef u8 __attribute__ ((aligned)) u8_aligned;
++	return len + (mask & ~(__alignof__(u8_aligned) - 1));
+ }
+ 
+ static int shash_update_unaligned(struct shash_desc *desc, const u8 *data,
+-- 
+1.8.3.2
+

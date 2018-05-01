@@ -1,0 +1,53 @@
+From af4af8a4a5fc7f5a75bf3f2de921672a30cd05b4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:56:45 +0200
+Subject: [PATCH 23/48] Add __used flag for arch/x86/boo/video-{bios,vesa,vga}.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/video-bios.c |    2 +-
+ arch/x86/boot/video-vesa.c |    2 +-
+ arch/x86/boot/video-vga.c  |    2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/x86/boot/video-bios.c b/arch/x86/boot/video-bios.c
+index 49e0c18..efd3bb3 100644
+--- a/arch/x86/boot/video-bios.c
++++ b/arch/x86/boot/video-bios.c
+@@ -117,7 +117,7 @@ static int bios_probe(void)
+ 	return nmodes;
+ }
+ 
+-static __videocard video_bios =
++static __videocard __used video_bios =
+ {
+ 	.card_name	= "BIOS",
+ 	.probe		= bios_probe,
+diff --git a/arch/x86/boot/video-vesa.c b/arch/x86/boot/video-vesa.c
+index 11e8c6e..075812c 100644
+--- a/arch/x86/boot/video-vesa.c
++++ b/arch/x86/boot/video-vesa.c
+@@ -270,7 +270,7 @@ void vesa_store_edid(void)
+ 
+ #endif /* not _WAKEUP */
+ 
+-static __videocard video_vesa =
++static __videocard __used video_vesa =
+ {
+ 	.card_name	= "VESA",
+ 	.probe		= vesa_probe,
+diff --git a/arch/x86/boot/video-vga.c b/arch/x86/boot/video-vga.c
+index 45bc940..82882ac 100644
+--- a/arch/x86/boot/video-vga.c
++++ b/arch/x86/boot/video-vga.c
+@@ -281,7 +281,7 @@ static int vga_probe(void)
+ 	return mode_count[adapter];
+ }
+ 
+-static __videocard video_vga = {
++static __videocard __used video_vga = {
+ 	.card_name	= "VGA",
+ 	.probe		= vga_probe,
+ 	.set_mode	= vga_set_mode,
+-- 
+1.7.3.4
+

@@ -1,0 +1,59 @@
+From 8331ede777bf7b3c254f867fb53505d6d3d2c8e5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:38:47 +0100
+Subject: [PATCH 26/39] KBuild, x86: LLVMLinux: Ad no-integrated-as to
+ arch/x86/realmode/rm/Makefile.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clangs integrated assembler does not know how to handle 16bit x86.
+
+arch/x86/realmode/rm/trampoline_64.S:37:2: error: unexpected directive .code16
+ .code16
+
+Add -no-integrated-as with cc-option. This is transparent for gcc.
+
+Author:  PaX Team <pageexec@freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+Merge:   Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/realmode/rm/Makefile | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+--- linux.orig/arch/x86/realmode/rm/Makefile
++++ linux/arch/x86/realmode/rm/Makefile
+@@ -19,6 +19,14 @@
+ wakeup-objs	+= video-vesa.o
+ wakeup-objs	+= video-bios.o
+ 
++# For clang, we need to enforce not to use the integrated assembler
++AFLAGS_wakeup_asm.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_bioscall.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_copy.o		= $(call cc-option,-no-integrated-as,)
++AFLAGS_trampoline_32.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_trampoline_64.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_reboot_32.o	= $(call cc-option,-no-integrated-as,)
++
+ realmode-y			+= header.o
+ realmode-y			+= trampoline_$(BITS).o
+ realmode-y			+= stack.o
+@@ -70,7 +78,7 @@
+ 		   -I$(srctree)/arch/x86/boot \
+ 		   -DDISABLE_BRANCH_PROFILING \
+ 		   -Wall -Wstrict-prototypes \
+-		   -march=i386 -mregparm=3 \
++		   -march=i586 -mregparm=3 \
+ 		   -include $(srctree)/$(src)/../../boot/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   -mno-mmx -mno-sse \
+@@ -78,6 +86,7 @@
+ 		   $(call cc-option, -fno-toplevel-reorder,\
+ 		   $(call cc-option, -fno-unit-at-a-time)) \
+ 		   $(call cc-option, -fno-stack-protector) \
++		   $(call cc-option,-no-integrated-as,) \
+ 		   $(call cc-option, -mpreferred-stack-boundary=2)
+ KBUILD_AFLAGS	:= $(KBUILD_CFLAGS) -D__ASSEMBLY__
+ GCOV_PROFILE := n

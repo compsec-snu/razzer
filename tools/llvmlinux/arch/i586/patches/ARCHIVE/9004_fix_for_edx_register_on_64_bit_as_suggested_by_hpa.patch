@@ -1,0 +1,24 @@
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 5ee2687..d40760e 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -159,10 +159,18 @@ __typeof__(__builtin_choose_expr(sizeof(x) > sizeof(0UL), 0ULL, 0UL))
+  * (%ecx being the next register in gcc's x86 register sequence), and
+  * %rdx on 64 bits.
+  */
++/* Note: Workaround for clang until resolved
++ * 
++ */
++#if defined(__clang__) && defined(__x86_64__)
++#define GET_USER_REG "%rdx"
++#else
++#define GET_USER_REG "%edx"
++#endif
+ #define get_user(x, ptr)						\
+ ({									\
+ 	int __ret_gu;							\
+-	register __inttype(*(ptr)) __val_gu asm("%edx");		\
++	register __inttype(*(ptr)) __val_gu asm(GET_USER_REG);		\
+ 	__chk_user_ptr(ptr);						\
+ 	might_fault();							\
+ 	asm volatile("call __get_user_%P3"				\

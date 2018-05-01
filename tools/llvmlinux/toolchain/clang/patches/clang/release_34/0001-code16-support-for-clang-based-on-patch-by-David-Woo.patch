@@ -1,0 +1,50 @@
+From 6a8c3594a30a5cf3367638aac1d13d44c3592cde Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Wed, 8 Jan 2014 18:45:32 +0000
+Subject: [PATCH] Add -m16 option for using x86-*-*-code16 triple
+
+---
+ include/clang/Driver/Options.td | 1 +
+ lib/Driver/Driver.cpp           | 8 ++++++--
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/include/clang/Driver/Options.td b/include/clang/Driver/Options.td
+index 9e7dc78..c7239e2 100644
+--- a/include/clang/Driver/Options.td
++++ b/include/clang/Driver/Options.td
+@@ -945,6 +945,7 @@ def lazy__framework : Separate<["-"], "lazy_framework">, Flags<[LinkerInput]>;
+ def lazy__library : Separate<["-"], "lazy_library">, Flags<[LinkerInput]>;
+ def EL : Flag<["-"], "EL">, Flags<[DriverOption]>;
+ def EB : Flag<["-"], "EB">, Flags<[DriverOption]>;
++def m16 : Flag<["-"], "m16">, Group<m_Group>, Flags<[DriverOption, CoreOption]>;
+ def m32 : Flag<["-"], "m32">, Group<m_Group>, Flags<[DriverOption, CoreOption]>;
+ def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>, Flags<[DriverOption,CC1Option]>,
+   HelpText<"Enable hexagon-qdsp6 backward compatibility">;
+diff --git a/lib/Driver/Driver.cpp b/lib/Driver/Driver.cpp
+index 5307910..96a1eda 100644
+--- a/lib/Driver/Driver.cpp
++++ b/lib/Driver/Driver.cpp
+@@ -1895,17 +1895,21 @@ static llvm::Triple computeTargetTriple(StringRef DefaultTargetTriple,
+ 
+   // Handle pseudo-target flags '-m32' and '-m64'.
+   // FIXME: Should this information be in llvm::Triple?
+-  if (Arg *A = Args.getLastArg(options::OPT_m32, options::OPT_m64)) {
++  if (Arg *A = Args.getLastArg(options::OPT_m32, options::OPT_m64, options::OPT_m16)) {
+     if (A->getOption().matches(options::OPT_m32)) {
+       if (Target.getArch() == llvm::Triple::x86_64)
+         Target.setArch(llvm::Triple::x86);
+       if (Target.getArch() == llvm::Triple::ppc64)
+         Target.setArch(llvm::Triple::ppc);
+-    } else {
++    } else if (A->getOption().matches(options::OPT_m64)) {
+       if (Target.getArch() == llvm::Triple::x86)
+         Target.setArch(llvm::Triple::x86_64);
+       if (Target.getArch() == llvm::Triple::ppc)
+         Target.setArch(llvm::Triple::ppc64);
++    } else {
++      if (Target.getArch() == llvm::Triple::x86_64)
++        Target.setArch(llvm::Triple::x86);
++      Target.setEnvironment(llvm::Triple::CODE16);
+     }
+   }
+ 

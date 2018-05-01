@@ -1,0 +1,30 @@
+From 597d1735e2679256998f767676443daa643db558 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:13 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM scsi, osd, LLVMLinux: Remove __weak attribute
+
+FIXME
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ include/scsi/osd_types.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/scsi/osd_types.h b/include/scsi/osd_types.h
+index bd0be7e..ea2b505 100644
+--- a/include/scsi/osd_types.h
++++ b/include/scsi/osd_types.h
+@@ -28,7 +28,7 @@ struct osd_obj_id {
+ 	osd_id id;
+ };
+ 
+-static const struct __weak osd_obj_id osd_root_object = {0, 0};
++static const struct osd_obj_id osd_root_object __maybe_unused = {0, 0};
+ 
+ struct osd_attr {
+ 	u32 attr_page;
+-- 
+1.9.1
+

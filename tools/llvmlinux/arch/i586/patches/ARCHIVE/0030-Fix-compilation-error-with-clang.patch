@@ -1,0 +1,35 @@
+From 938bfe7514687d1a0fd7032e6a70c4f7bf246914 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:53:48 +0100
+Subject: [PATCH 30/51] Fix compilation error with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/include/asm/dma-mapping.h |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/include/asm/dma-mapping.h b/arch/x86/include/asm/dma-mapping.h
+index f7b4c79..919668a 100644
+--- a/arch/x86/include/asm/dma-mapping.h
++++ b/arch/x86/include/asm/dma-mapping.h
+@@ -106,7 +106,7 @@ static inline unsigned long dma_alloc_coherent_mask(struct device *dev,
+ 
+ 	dma_mask = dev->coherent_dma_mask;
+ 	if (!dma_mask)
+-		dma_mask = (gfp & GFP_DMA) ? DMA_BIT_MASK(24) : DMA_BIT_MASK(32);
++		dma_mask = (gfp & GFP_DMA) ? (unsigned long)DMA_BIT_MASK(24) : (unsigned long)DMA_BIT_MASK(32);
+ 
+ 	return dma_mask;
+ }
+-- 
+1.7.10.4
+

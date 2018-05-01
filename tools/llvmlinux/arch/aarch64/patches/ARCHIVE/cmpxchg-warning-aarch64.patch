@@ -1,0 +1,38 @@
+From 845e8d29f2287dd24028f11a6d6eb17451832d7a Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Wed, 12 Feb 2014 12:16:55 -0800
+Subject: [PATCH] arm64: LLVMLinux: Remove cmpxchg warning about uninitialized
+ return variable
+
+For the arm64 version of cmpxchg clang complains that the return value isn't
+set in the default case. Using __compiletime_error() solves the probblem.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm64/include/asm/cmpxchg.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/include/asm/cmpxchg.h b/arch/arm64/include/asm/cmpxchg.h
+index ddb9d78..8f7bcf5b 100644
+--- a/arch/arm64/include/asm/cmpxchg.h
++++ b/arch/arm64/include/asm/cmpxchg.h
+@@ -65,6 +65,7 @@ static inline unsigned long __xchg(unsigned long x, volatile void *ptr, int size
+ 		break;
+ 	default:
+ 		BUILD_BUG();
++		__compiletime_error();
+ 	}
+ 
+ 	smp_mb();
+@@ -147,6 +148,7 @@ static inline unsigned long __cmpxchg(volatile void *ptr, unsigned long old,
+ 
+ 	default:
+ 		BUILD_BUG();
++		__compiletime_error();
+ 	}
+ 
+ 	return oldval;
+-- 
+1.9.1
+

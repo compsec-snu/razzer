@@ -1,0 +1,31 @@
+From 0e31533251937dac79465b68301a62125a03a4e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 20 Nov 2012 21:19:50 +0100
+Subject: [PATCH 1001/1005] cmpxchg-local-fix-uninitialized-return-code.patch
+
+Fix uninitialized return code in default case in cmpxchg-local.h
+
+This patch fixes warning when compiling the Linux kernel with Clang
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+
+---
+ include/asm-generic/cmpxchg-local.h |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/asm-generic/cmpxchg-local.h b/include/asm-generic/cmpxchg-local.h
+index 2533fdd..48ddd574 100644
+--- a/include/asm-generic/cmpxchg-local.h
++++ b/include/asm-generic/cmpxchg-local.h
+@@ -14,6 +14,7 @@ static inline unsigned long __cmpxchg_local_generic(volatile void *ptr,
+ 		unsigned long old, unsigned long new, int size)
+ {
+ 	unsigned long flags, prev;
++	uninitialized_var(prev);
+ 
+ 	/*
+ 	 * Sanity checking, compile-time.
+-- 
+1.7.10.4
+

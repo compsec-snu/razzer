@@ -1,0 +1,8 @@
+*.dat
+*.log
+*.o
+*.o.asm
+*.svg
+test-vlais
+*_clang
+*_gcc

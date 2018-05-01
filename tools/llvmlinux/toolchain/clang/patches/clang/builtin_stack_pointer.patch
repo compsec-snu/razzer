@@ -1,0 +1,28 @@
+diff --git a/include/clang/Basic/Builtins.def b/include/clang/Basic/Builtins.def
+index 0a513ef..ca68f7e 100644
+--- a/include/clang/Basic/Builtins.def
++++ b/include/clang/Basic/Builtins.def
+@@ -437,6 +437,7 @@ BUILTIN(__builtin_strstr, "c*cC*cC*", "nF")
+ BUILTIN(__builtin_return_address, "v*IUi", "n")
+ BUILTIN(__builtin_extract_return_addr, "v*v*", "n")
+ BUILTIN(__builtin_frame_address, "v*IUi", "n")
++BUILTIN(__builtin_stack_pointer, "v*", "n")
+ BUILTIN(__builtin_flt_rounds, "i", "nc")
+ BUILTIN(__builtin_setjmp, "iv**", "j")
+ BUILTIN(__builtin_longjmp, "vv**i", "r")
+diff --git a/lib/CodeGen/CGBuiltin.cpp b/lib/CodeGen/CGBuiltin.cpp
+index d187678..f66f506 100644
+--- a/lib/CodeGen/CGBuiltin.cpp
++++ b/lib/CodeGen/CGBuiltin.cpp
+@@ -736,6 +736,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
+     Value *F = CGM.getIntrinsic(Intrinsic::frameaddress);
+     return RValue::get(Builder.CreateCall(F, Depth));
+   }
++  case Builtin::BI__builtin_stack_pointer: {
++    Value *StackAddr =
++      Builder.CreateCall(CGM.getIntrinsic(Intrinsic::stacksave));
++    return RValue::get(StackAddr);
++  }
+   case Builtin::BI__builtin_extract_return_addr: {
+     Value *Address = EmitScalarExpr(E->getArg(0));
+     Value *Result = getTargetHooks().decodeReturnAddress(*this, Address);

@@ -1,0 +1,35 @@
+From cc92b579a083edc160c8f2cfec48ccd3a59a78c2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:42:19 +0100
+Subject: [PATCH 24/51] Add __used flag to arch/x86/kernel/apm_32.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/kernel/apm_32.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/kernel/apm_32.c b/arch/x86/kernel/apm_32.c
+index d65464e..2104a2d 100644
+--- a/arch/x86/kernel/apm_32.c
++++ b/arch/x86/kernel/apm_32.c
+@@ -373,7 +373,7 @@ struct apm_user {
+ static struct {
+ 	unsigned long	offset;
+ 	unsigned short	segment;
+-} apm_bios_entry;
++} apm_bios_entry __used;
+ static int clock_slowed;
+ static int idle_threshold __read_mostly = DEFAULT_IDLE_THRESHOLD;
+ static int idle_period __read_mostly = DEFAULT_IDLE_PERIOD;
+-- 
+1.7.10.4
+

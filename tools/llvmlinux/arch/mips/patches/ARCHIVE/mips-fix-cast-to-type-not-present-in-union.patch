@@ -1,0 +1,52 @@
+From 23e3ca1f65efec4a92637b8104a43889dd425675 Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Wed, 14 Jan 2015 16:05:27 +0000
+Subject: [PATCH v2 2/4] MIPS: LLVMLinux: Fix a 'cast to type not present in
+ union' error.
+
+Remove a cast to the 'mips16e_instruction' union inside an if
+condition and instead do an assignment to a local
+'union mips16e_instruction' variable's 'full' member before the if
+statement and use this variable in the if condition.
+
+This is the error message reported by clang:
+arch/mips/kernel/branch.c:38:8: error: cast to union type from type 'unsigned short' not present in union
+                if (((union mips16e_instruction)inst).ri.opcode
+                     ^                          ~~~~
+
+The changed code can be compiled successfully by both gcc and clang.
+
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+Signed-off-by: Daniel Sanders <daniel.sanders@imgtec.com>
+Cc: Ralf Baechle <ralf@linux-mips.org>
+Cc: Andreas Herrmann <andreas.herrmann@caviumnetworks.com>
+Cc: David Daney <david.daney@cavium.com>
+Cc: Manuel Lauss <manuel.lauss@gmail.com>
+Cc: linux-mips@linux-mips.org
+Cc: linux-kernel@vger.kernel.org
+---
+v2 refreshes the patch.
+
+ arch/mips/kernel/branch.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/kernel/branch.c b/arch/mips/kernel/branch.c
+index c2e0f45..c0c5e59 100644
+--- a/arch/mips/kernel/branch.c
++++ b/arch/mips/kernel/branch.c
+@@ -36,8 +36,10 @@ int __isa_exception_epc(struct pt_regs *regs)
+ 		return epc;
+ 	}
+ 	if (cpu_has_mips16) {
+-		if (((union mips16e_instruction)inst).ri.opcode
+-				== MIPS16e_jal_op)
++		union mips16e_instruction inst_mips16e;
++
++		inst_mips16e.full = inst;
++		if (inst_mips16e.ri.opcode == MIPS16e_jal_op)
+ 			epc += 4;
+ 		else
+ 			epc += 2;
+-- 
+2.1.4
+

@@ -1,0 +1,6 @@
+# This file needs to be in the same dir as patchstatus, or ~/.patchstatus.conf or ~/.config/patchstatus/patchstatus.conf
+# Your google password will need to be an application specific password if you use 2 factor authentication
+[spreadsheet]
+userid = googleid
+password = googlepassword
+filename = llvmlinux-patch-triage

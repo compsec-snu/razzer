@@ -1,0 +1,30 @@
+From 71b6321fee86fb9eebd9e679823a35306f33bef0 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:12 -0700
+Subject: [PATCH] scsi, megaraid, sas, LLVMLinux: Remove inline
+
+FIXME
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/scsi/megaraid/megaraid_sas_base.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/megaraid/megaraid_sas_base.c b/drivers/scsi/megaraid/megaraid_sas_base.c
+index ff283d2..1c142f2 100644
+--- a/drivers/scsi/megaraid/megaraid_sas_base.c
++++ b/drivers/scsi/megaraid/megaraid_sas_base.c
+@@ -261,7 +261,7 @@ __megasas_return_cmd(struct megasas_instance *instance, struct megasas_cmd *cmd)
+  * @instance:		Adapter soft state
+  * @cmd:		Command packet to be returned to free command pool
+  */
+-inline void
++void
+ megasas_return_cmd(struct megasas_instance *instance, struct megasas_cmd *cmd)
+ {
+ 	unsigned long flags;
+-- 
+1.9.1
+

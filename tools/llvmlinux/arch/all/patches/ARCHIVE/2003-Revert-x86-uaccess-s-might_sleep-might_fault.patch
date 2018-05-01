@@ -1,0 +1,26 @@
+From ae70d8d57ea98ebd3a2d5493d08bf88af5feba61 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:40 +0200
+Subject: [PATCH 03/11] Revert "x86: uaccess s/might_sleep/might_fault/"
+
+This reverts commit 016be2e55d98aee0b97b94b200d6e0e110c8392a.
+---
+ arch/x86/include/asm/uaccess_64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
+index 4f7923d..142810c 100644
+--- a/arch/x86/include/asm/uaccess_64.h
++++ b/arch/x86/include/asm/uaccess_64.h
+@@ -235,7 +235,7 @@ extern long __copy_user_nocache(void *dst, const void __user *src,
+ static inline int
+ __copy_from_user_nocache(void *dst, const void __user *src, unsigned size)
+ {
+-	might_fault();
++	might_sleep();
+ 	return __copy_user_nocache(dst, src, size, 1);
+ }
+ 
+-- 
+1.8.1.4
+

@@ -1,0 +1,35 @@
+From cd4ca8d1d9a0fd084c2dce1405daeab8343199de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:11:08 +0100
+Subject: [PATCH 46/51] Remove unneeded braces.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ drivers/misc/vmw_balloon.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/drivers/misc/vmw_balloon.c b/drivers/misc/vmw_balloon.c
+index cb56e27..2421835 100644
+--- a/drivers/misc/vmw_balloon.c
++++ b/drivers/misc/vmw_balloon.c
+@@ -133,7 +133,7 @@ MODULE_LICENSE("GPL");
+ #define VMWARE_BALLOON_CMD(cmd, data, result)		\
+ ({							\
+ 	unsigned long __stat, __dummy1, __dummy2;	\
+-	__asm__ __volatile__ ("inl (%%dx)" :		\
++	__asm__ __volatile__ ("inl %%dx" :		\
+ 		"=a"(__stat),				\
+ 		"=c"(__dummy1),				\
+ 		"=d"(__dummy2),				\
+-- 
+1.7.10.4
+

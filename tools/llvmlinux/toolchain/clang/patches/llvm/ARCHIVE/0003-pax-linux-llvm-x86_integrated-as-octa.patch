@@ -1,0 +1,150 @@
+From 82f3cc0f20a24bc705fdf5ddf3e7b882c0ddca13 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 10 Jul 2012 13:39:58 +0200
+Subject: [PATCH 3/6] pax-linux-llvm x86_integrated-as-octa.patch
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ include/llvm/MC/MCParser/MCAsmLexer.h |   17 +++++++++++++----
+ lib/MC/MCParser/AsmLexer.cpp          |    4 ++--
+ lib/MC/MCParser/AsmParser.cpp         |    3 +++
+ 3 files changed, 18 insertions(+), 6 deletions(-)
+
+--- llvm.orig/include/llvm/MC/MCParser/MCAsmLexer.h
++++ llvm/include/llvm/MC/MCParser/MCAsmLexer.h
+@@ -10,6 +10,7 @@
+ #ifndef LLVM_MC_MCPARSER_MCASMLEXER_H
+ #define LLVM_MC_MCPARSER_MCASMLEXER_H
+ 
++#include "llvm/ADT/APInt.h"
+ #include "llvm/ADT/StringRef.h"
+ #include "llvm/Support/Compiler.h"
+ #include "llvm/Support/DataTypes.h"
+@@ -57,12 +58,14 @@
+   /// a memory buffer owned by the source manager.
+   StringRef Str;
+ 
+-  int64_t IntVal;
++  APInt IntVal;
+ 
+ public:
+   AsmToken() {}
+-  AsmToken(TokenKind _Kind, StringRef _Str, int64_t _IntVal = 0)
++  AsmToken(TokenKind _Kind, StringRef _Str, APInt _IntVal)
+     : Kind(_Kind), Str(_Str), IntVal(_IntVal) {}
++  AsmToken(TokenKind _Kind, StringRef _Str, int64_t _IntVal = 0)
++    : Kind(_Kind), Str(_Str), IntVal(64, _IntVal, true) {}
+ 
+   TokenKind getKind() const { return Kind; }
+   bool is(TokenKind K) const { return Kind == K; }
+@@ -99,6 +102,18 @@
+   // as a single token, then diagnose as an invalid number).
+   int64_t getIntVal() const {
+     assert(Kind == Integer && "This token isn't an integer!");
++    return IntVal.getZExtValue();
++  }
++
++  /// getRegVal - Get the register number for the current token, which should
++  /// be a register.
++  unsigned getRegVal() const {
++    assert(Kind == Register && "This token isn't a register!");
++    return static_cast<unsigned>(IntVal.getZExtValue());
++  }
++
++  APInt getAPIntVal() const {
++    assert(Kind == Integer && "This token isn't an integer!");
+     return IntVal;
+   }
+ };
+--- llvm.orig/lib/MC/MCParser/AsmLexer.cpp
++++ llvm/lib/MC/MCParser/AsmLexer.cpp
+@@ -239,7 +239,7 @@
+     if (CurPtr == NumStart)
+       return ReturnError(CurPtr-2, "invalid hexadecimal number");
+ 
+-    unsigned long long Result;
++    APInt Result(128, 0);
+     if (StringRef(TokStart, CurPtr - TokStart).getAsInteger(0, Result))
+       return ReturnError(TokStart, "invalid hexadecimal number");
+ 
+@@ -248,7 +248,7 @@
+     SkipIgnoredIntegerSuffix(CurPtr);
+ 
+     return AsmToken(AsmToken::Integer, StringRef(TokStart, CurPtr - TokStart),
+-                    (int64_t)Result);
++                    Result);
+   }
+ 
+   // Must be an octal number, it starts with 0.
+--- llvm.orig/lib/MC/MCParser/AsmParser.cpp
++++ llvm/lib/MC/MCParser/AsmParser.cpp
+@@ -284,8 +284,8 @@
+   enum DirectiveKind {
+     DK_NO_DIRECTIVE, // Placeholder
+     DK_SET, DK_EQU, DK_EQUIV, DK_ASCII, DK_ASCIZ, DK_STRING, DK_BYTE, DK_SHORT,
+-    DK_VALUE, DK_2BYTE, DK_LONG, DK_INT, DK_4BYTE, DK_QUAD, DK_8BYTE, DK_SINGLE,
+-    DK_FLOAT, DK_DOUBLE, DK_ALIGN, DK_ALIGN32, DK_BALIGN, DK_BALIGNW,
++    DK_VALUE, DK_2BYTE, DK_LONG, DK_INT, DK_4BYTE, DK_QUAD, DK_8BYTE, DK_OCTA,
++    DK_SINGLE, DK_FLOAT, DK_DOUBLE, DK_ALIGN, DK_ALIGN32, DK_BALIGN, DK_BALIGNW,
+     DK_BALIGNL, DK_P2ALIGN, DK_P2ALIGNW, DK_P2ALIGNL, DK_ORG, DK_FILL, DK_ENDR,
+     DK_BUNDLE_ALIGN_MODE, DK_BUNDLE_LOCK, DK_BUNDLE_UNLOCK,
+     DK_ZERO, DK_EXTERN, DK_GLOBL, DK_GLOBAL, DK_INDIRECT_SYMBOL,
+@@ -313,6 +313,7 @@
+   // ".ascii", ".asciz", ".string"
+   bool ParseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+   bool ParseDirectiveValue(unsigned Size); // ".byte", ".long", ...
++  bool ParseDirectiveOctaValue(); // ".octa"
+   bool ParseDirectiveRealValue(const fltSemantics &); // ".single", ...
+   bool ParseDirectiveFill(); // ".fill"
+   bool ParseDirectiveZero(); // ".zero"
+@@ -2191,6 +2192,42 @@
+   return false;
+ }
+ 
++/// ParseDirectiveOctaValue
++///  ::= .octa [ hexconstant (, hexconstant)* ]
++bool AsmParser::ParseDirectiveOctaValue() {
++  if (getLexer().isNot(AsmToken::EndOfStatement)) {
++    checkForValidSection();
++
++    for (;;) {
++      if (Lexer.getKind() != AsmToken::Integer)
++        return TokError("unknown token in expression");
++
++      APInt IntValue = getTok().getAPIntVal();
++      Lex();
++
++      assert(IntValue.isIntN(128) && "Invalid .octa constant");
++      if (MAI.isLittleEndian()) {
++        getStreamer().EmitIntValue(IntValue.getLoBits(64).getZExtValue(), 8, DEFAULT_ADDRSPACE);
++        getStreamer().EmitIntValue(IntValue.getHiBits(64).getZExtValue(), 8, DEFAULT_ADDRSPACE);
++      } else {
++        getStreamer().EmitIntValue(IntValue.getHiBits(64).getZExtValue(), 8, DEFAULT_ADDRSPACE);
++        getStreamer().EmitIntValue(IntValue.getLoBits(64).getZExtValue(), 8, DEFAULT_ADDRSPACE);
++      }
++
++      if (getLexer().is(AsmToken::EndOfStatement))
++        break;
++
++      // FIXME: Improve diagnostic.
++      if (getLexer().isNot(AsmToken::Comma))
++        return TokError("unexpected token in directive");
++      Lex();
++    }
++  }
++
++  Lex();
++  return false;
++}
++
+ /// ParseDirectiveRealValue
+ ///  ::= (.single | .double) [ expression (, expression)* ]
+ bool AsmParser::ParseDirectiveRealValue(const fltSemantics &Semantics) {
+@@ -3544,6 +3581,7 @@
+   DirectiveKindMap[".4byte"] = DK_4BYTE;
+   DirectiveKindMap[".quad"] = DK_QUAD;
+   DirectiveKindMap[".8byte"] = DK_8BYTE;
++  DirectiveKindMap[".octa"] = DK_OCTA;
+   DirectiveKindMap[".single"] = DK_SINGLE;
+   DirectiveKindMap[".float"] = DK_FLOAT;
+   DirectiveKindMap[".double"] = DK_DOUBLE;

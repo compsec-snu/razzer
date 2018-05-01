@@ -1,0 +1,2 @@
+KERNEL_CFG=configs/config-v4.16-rc3-syzkaller
+KERNELDIR=${STATIC_ANALYSIS_KERNEL_DIR}

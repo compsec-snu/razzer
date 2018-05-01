@@ -1,0 +1,357 @@
+# Copyright 2015 syzkaller project authors. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+
+# Note these sysctls have radical effect on code paths inside of kernel:
+# net.core.bpf_jit_enable  = { 0, 1, 2 }
+# net.core.bpf_jit_harden  = { 0, 1, 2 }
+
+include <linux/bpf.h>
+
+resource fd_bpf_map[fd]: BPF_PSEUDO_MAP_FD
+resource fd_bpf_prog[fd]
+resource bpf_prog_id[int32]: 0, 0xffffffff
+resource bpf_map_id[int32]: 0, 0xffffffff
+
+bpf$MAP_CREATE(cmd const[BPF_MAP_CREATE], arg ptr[in, bpf_map_create_arg], size len[arg]) fd_bpf_map
+bpf$MAP_LOOKUP_ELEM(cmd const[BPF_MAP_LOOKUP_ELEM], arg ptr[in, bpf_map_lookup_arg], size len[arg])
+bpf$MAP_UPDATE_ELEM(cmd const[BPF_MAP_UPDATE_ELEM], arg ptr[in, bpf_map_update_arg], size len[arg])
+bpf$MAP_DELETE_ELEM(cmd const[BPF_MAP_DELETE_ELEM], arg ptr[in, bpf_map_delete_arg], size len[arg])
+bpf$MAP_GET_NEXT_KEY(cmd const[BPF_MAP_GET_NEXT_KEY], arg ptr[in, bpf_map_get_next_arg], size len[arg])
+bpf$PROG_LOAD(cmd const[BPF_PROG_LOAD], arg ptr[in, bpf_prog], size len[arg]) fd_bpf_prog
+bpf$OBJ_PIN_MAP(cmd const[BPF_OBJ_PIN], arg ptr[in, bpf_obj_pin_map], size len[arg])
+bpf$OBJ_PIN_PROG(cmd const[BPF_OBJ_PIN], arg ptr[in, bpf_obj_pin_prog], size len[arg])
+bpf$OBJ_GET_MAP(cmd const[BPF_OBJ_GET], arg ptr[in, bpf_obj_get], size len[arg]) fd_bpf_map
+bpf$OBJ_GET_PROG(cmd const[BPF_OBJ_GET], arg ptr[in, bpf_obj_get], size len[arg]) fd_bpf_prog
+bpf$BPF_PROG_ATTACH(cmd const[BPF_PROG_ATTACH], arg ptr[in, bpf_attach_arg], size len[arg])
+bpf$BPF_PROG_DETACH(cmd const[BPF_PROG_DETACH], arg ptr[in, bpf_detach_arg], size len[arg])
+bpf$BPF_PROG_TEST_RUN(cmd const[BPF_PROG_TEST_RUN], arg ptr[in, bpf_test_prog_arg], size len[arg])
+bpf$BPF_PROG_GET_NEXT_ID(cmd const[BPF_PROG_GET_NEXT_ID], arg ptr[in, int32], size len[arg])
+bpf$BPF_MAP_GET_NEXT_ID(cmd const[BPF_MAP_GET_NEXT_ID], arg ptr[in, int32], size len[arg])
+bpf$BPF_PROG_GET_FD_BY_ID(cmd const[BPF_PROG_GET_FD_BY_ID], arg ptr[in, bpf_prog_id], size len[arg]) fd_bpf_prog
+bpf$BPF_MAP_GET_FD_BY_ID(cmd const[BPF_MAP_GET_FD_BY_ID], arg ptr[in, bpf_map_get_fd_by_id_arg], size len[arg]) fd_bpf_map
+bpf$BPF_GET_PROG_INFO(cmd const[BPF_OBJ_GET_INFO_BY_FD], arg ptr[in, bpf_get_prog_info_arg], size len[arg])
+bpf$BPF_GET_MAP_INFO(cmd const[BPF_OBJ_GET_INFO_BY_FD], arg ptr[in, bpf_get_map_info_arg], size len[arg])
+bpf$BPF_PROG_QUERY(cmd const[BPF_PROG_QUERY], arg ptr[in, bpf_prog_query], size len[arg])
+bpf$BPF_RAW_TRACEPOINT_OPEN(cmd const[BPF_RAW_TRACEPOINT_OPEN], arg ptr[in, bpf_raw_tracepoint], size len[arg]) fd
+
+bpf_map_create_arg {
+	type		flags[bpf_map_type, int32]
+	ksize		int32
+	vsize		int32
+	max		int32
+	flags		flags[map_flags, int32]
+	inner		fd_bpf_map[opt]
+	node		int32
+	map_name	array[const[0, int8], BPF_OBJ_NAME_LEN]
+}
+
+bpf_map_get_fd_by_id_arg {
+	map_id		bpf_map_id
+	next_id		int32
+	open_flags	flags[bpf_open_flags, int32]
+}
+
+bpf_map_lookup_arg {
+	map	fd_bpf_map
+	key	ptr64[in, array[int8]]
+	val	ptr64[out, array[int8]]
+}
+
+bpf_map_update_arg {
+	map	fd_bpf_map
+	key	ptr64[in, array[int8]]
+	val	ptr64[in, array[int8]]
+	flags	flags[bpf_map_flags, int64]
+}
+
+bpf_map_delete_arg {
+	map	fd_bpf_map
+	key	ptr64[in, array[int8]]
+}
+
+bpf_map_get_next_arg {
+	map	fd_bpf_map
+	key	ptr64[in, array[int8]]
+	next	ptr64[out, array[int8]]
+}
+
+bpf_prog {
+	type			flags[bpf_prog_type, int32]
+	ninsn			bytesize8[insns, int32]
+	insns			ptr64[in, bpf_instructions]
+	license			ptr64[in, string[bpf_licenses]]
+	loglev			int32
+	logsize			len[log, int32]
+	log			ptr64[out, array[int8], opt]
+	kern_version		flags[bpf_kern_version, int32]
+	flags			flags[bpf_prog_load_flags, int32]
+	prog_name		array[const[0, int8], BPF_OBJ_NAME_LEN]
+	prog_ifindex		ifindex[opt]
+	expected_attach_type	flags[bpf_attach_type, int32]
+}
+
+bpf_licenses = "GPL", "syzkaller"
+bpf_kern_version = 0x40f00, 0x41000, 0x41100
+
+bpf_instructions [
+	framed	bpf_framed_program
+	raw	array[bpf_insn]
+] [varlen]
+
+bpf_framed_program {
+	initr0	bpf_insn_init_r0
+	body	array[bpf_insn]
+	exit	bpf_insn_exit
+} [packed]
+
+bpf_insn [
+	generic	bpf_insn_generic
+	ldst	bpf_insn_ldst
+	alu	bpf_insn_alu
+	jmp	bpf_insn_jmp
+	call	bpf_insn_call
+	exit	bpf_insn_exit
+	initr0	bpf_insn_init_r0
+	map	bpf_insn_map
+]
+
+bpf_insn_generic {
+	code	int8
+	regs	int8
+	off	int16
+	imm	int32
+}
+
+bpf_insn_ldst {
+	code_class	flags[bpf_ldst_insn, int8:3]
+	code_size	flags[bpf_ldst_size, int8:2]
+	code_mode	flags[bpf_ldst_mode, int8:3]
+	dst		flags[bpf_reg, int8:4]
+	src		flags[bpf_reg, int8:4]
+	off		flags[bpf_insn_offsets, int16]
+	imm		flags[bpf_insn_immediates, int32]
+}
+
+bpf_ldst_insn = BPF_LD, BPF_LDX, BPF_ST, BPF_STX
+bpf_ldst_size = BPF_W0, BPF_H0, BPF_B0, BPF_DW0
+bpf_ldst_mode = BPF_IMM0, BPF_ABS0, BPF_IND0, BPF_MEM0, BPF_XADD0
+
+define BPF_W0	BPF_W >> 3
+define BPF_H0	BPF_H >> 3
+define BPF_B0	BPF_B >> 3
+define BPF_DW0	BPF_DW >> 3
+
+define BPF_IMM0	BPF_IMM >> 5
+define BPF_ABS0	BPF_ABS >> 5
+define BPF_IND0	BPF_IND >> 5
+define BPF_MEM0	BPF_MEM >> 5
+define BPF_XADD0	BPF_XADD >> 5
+
+bpf_insn_alu {
+	code_class	flags[bpf_alu_insn, int8:3]
+	code_s		int8:1
+	code_op		flags[bpf_alu_op, int8:4]
+	dst		flags[bpf_reg, int8:4]
+	src		flags[bpf_reg, int8:4]
+	off		flags[bpf_insn_offsets, int16]
+	imm		flags[bpf_insn_immediates, int32]
+}
+
+bpf_alu_insn = BPF_ALU, BPF_ALU64
+bpf_alu_op = BPF_ADD0, BPF_SUB0, BPF_MUL0, BPF_DIV0, BPF_OR0, BPF_AND0, BPF_LSH0, BPF_RSH0, BPF_NEG0, BPF_MOD0, BPF_XOR0, BPF_MOV0, BPF_ARSH0, BPF_END0
+
+define BPF_ADD0	BPF_ADD >> 4
+define BPF_SUB0	BPF_SUB >> 4
+define BPF_MUL0	BPF_MUL >> 4
+define BPF_DIV0	BPF_DIV >> 4
+define BPF_OR0	BPF_OR >> 4
+define BPF_AND0	BPF_AND >> 4
+define BPF_LSH0	BPF_LSH >> 4
+define BPF_RSH0	BPF_RSH >> 4
+define BPF_NEG0	BPF_NEG >> 4
+define BPF_MOD0	BPF_MOD >> 4
+define BPF_XOR0	BPF_XOR >> 4
+define BPF_MOV0	BPF_MOV >> 4
+define BPF_ARSH0	BPF_ARSH >> 4
+define BPF_END0	BPF_END >> 4
+
+bpf_insn_jmp {
+	code_class	const[BPF_JMP, int8:3]
+	code_s		int8:1
+	code_op		flags[bpf_jmp_op, int8:4]
+	dst		flags[bpf_reg, int8:4]
+	src		flags[bpf_reg, int8:4]
+	off		flags[bpf_insn_offsets, int16]
+	imm		flags[bpf_insn_immediates, int32]
+}
+
+bpf_jmp_op = BPF_JA0, BPF_JEQ0, BPF_JGT0, BPF_JGE0, BPF_JSET0, BPF_JNE0, BPF_JSGT0, BPF_JSGE0, BPF_CALL0, BPF_EXIT0, BPF_JLT0, BPF_JLE0, BPF_JSLT0, BPF_JSLE0
+
+define BPF_JA0	BPF_JA >> 4
+define BPF_JEQ0	BPF_JEQ >> 4
+define BPF_JGT0	BPF_JGT >> 4
+define BPF_JGE0	BPF_JGE >> 4
+define BPF_JSET0	BPF_JSET >> 4
+define BPF_JNE0	BPF_JNE >> 4
+define BPF_JSGT0	BPF_JSGT >> 4
+define BPF_JSGE0	BPF_JSGE >> 4
+define BPF_CALL0	BPF_CALL >> 4
+define BPF_EXIT0	BPF_EXIT >> 4
+define BPF_JLT0	BPF_JLT >> 4
+define BPF_JLE0	BPF_JLE >> 4
+define BPF_JSLT0	BPF_JSLT >> 4
+define BPF_JSLE0	BPF_JSLE >> 4
+
+bpf_insn_call {
+	code	const[bpf_call_code, int8]
+	regs	const[0, int8]
+	off	const[0, int16]
+	func	int32[0:__BPF_FUNC_MAX_ID]
+}
+
+define bpf_call_code	BPF_JMP | BPF_CALL
+
+bpf_insn_exit {
+	code	const[bpf_exit_code, int8]
+	regs	const[0, int8]
+	off	const[0, int16]
+	imm	const[0, int32]
+}
+
+define bpf_exit_code	BPF_JMP | BPF_EXIT
+
+bpf_insn_init_r0 {
+	code	const[bpf_insn_load_imm_dw, int8]
+	dst	const[BPF_REG_0, int8:4]
+	src	const[0, int8:4]
+	off	const[0, int16]
+	imm	int32
+	code2	const[0, int8]
+	regs2	const[0, int8]
+	off2	const[0, int16]
+	imm2	int32
+}
+
+bpf_insn_map {
+	code	const[bpf_insn_load_imm_dw, int8]
+	dst	flags[bpf_reg, int8:4]
+	src	const[BPF_PSEUDO_MAP_FD, int8:4]
+	off	const[0, int16]
+	imm	fd_bpf_map
+	code2	const[0, int8]
+	regs2	const[0, int8]
+	off2	const[0, int16]
+	imm2	const[0, int32]
+}
+
+define bpf_insn_load_imm_dw	BPF_LD | BPF_DW | BPF_IMM
+
+# Slightly prune state space, these values frequently must be 0.
+bpf_insn_offsets = 0, 1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 80, 128, 256, 0xffffffff, 0xfffffffe, 0xfffffffc, 0xfffffff8, 0xfffffff4, 0xfffffff0, 0xffffffc0
+bpf_insn_immediates = 0, 1, 4, 8, 16, 0xffffffffffffffff, 0xfffffffffffffffc, 0xfffffffffffffff0
+bpf_reg = BPF_REG_0, BPF_REG_1, BPF_REG_2, BPF_REG_3, BPF_REG_4, BPF_REG_5, BPF_REG_6, BPF_REG_7, BPF_REG_8, BPF_REG_9, BPF_REG_10
+
+# TODO: these filenames must be on bpf filesystem
+bpf_obj_pin_map {
+	path	ptr64[in, filename]
+	fd	fd_bpf_map
+}
+
+bpf_obj_pin_prog {
+	path	ptr64[in, filename]
+	fd	fd_bpf_prog
+}
+
+bpf_obj_get {
+	path		ptr64[in, filename]
+	fd		const[0, int32]
+	file_flags	flags[bpf_open_flags, int32]
+}
+
+bpf_attach_arg {
+	target_fd	fd_cgroup
+	attach_bpf_fd	fd_bpf_prog
+	type		flags[bpf_attach_type, int32]
+	flags		flags[bpf_attach_flags, int32]
+}
+
+bpf_detach_arg {
+	target	const[0, int32]
+	prog	fd_bpf_prog
+	type	flags[bpf_attach_type, int32]
+	flags	flags[bpf_attach_flags, int32]
+	prog2	const[0, int32]
+}
+
+bpf_test_prog_arg {
+	prog	fd_bpf_prog
+	retval	const[0, int32]
+	insize	len[indata, int32]
+	outsize	len[outdata, int32]
+	indata	ptr64[in, array[int8]]
+	outdata	ptr64[out, array[int8]]
+	repeat	int32
+	dur	const[0, int32]
+}
+
+bpf_get_prog_info_arg {
+	prog	fd_bpf_prog
+	len	len[info, int32]
+	info	ptr64[out, bpf_prog_info]
+}
+
+bpf_prog_info {
+	type			int32
+	id			bpf_prog_id
+	tag			int64
+	jited_prog_len		int32
+	xlated_prog_len		int32
+	jited_prog_insns	int64
+	xlated_prog_insns	int64
+	load_time		int64
+	created_by_uid		int32
+	nr_map_ids		int32
+	map_ids			int64
+	name			array[int8, BPF_OBJ_NAME_LEN]
+} [align_8]
+
+bpf_get_map_info_arg {
+	prog	fd_bpf_map
+	len	len[info, int32]
+	info	ptr64[out, bpf_map_info]
+}
+
+bpf_map_info {
+	type		int32
+	id		bpf_map_id
+	key_size	int32
+	value_size	int32
+	max_entries	int32
+	map_flags	int32
+	name		array[int8, BPF_OBJ_NAME_LEN]
+} [align_8]
+
+bpf_prog_query {
+	target_fd	fd_cgroup
+	attach_type	flags[bpf_prog_query_attach_type, int32]
+	query_flags	flags[bpf_prog_query_flags, int32]
+	attach_flags	int32
+	prog_ids	ptr64[out, array[int32]]
+	prog_cnt	len[prog_ids, int32]
+} [align_8]
+
+bpf_raw_tracepoint {
+	name	ptr64[in, string]
+	prog_fd	fd_bpf_prog
+} [align_8]
+
+bpf_map_type = BPF_MAP_TYPE_HASH, BPF_MAP_TYPE_ARRAY, BPF_MAP_TYPE_PROG_ARRAY, BPF_MAP_TYPE_PERF_EVENT_ARRAY, BPF_MAP_TYPE_STACK_TRACE, BPF_MAP_TYPE_CGROUP_ARRAY, BPF_MAP_TYPE_PERCPU_HASH, BPF_MAP_TYPE_PERCPU_ARRAY, BPF_MAP_TYPE_LRU_HASH, BPF_MAP_TYPE_LRU_PERCPU_HASH, BPF_MAP_TYPE_LPM_TRIE, BPF_MAP_TYPE_ARRAY_OF_MAPS, BPF_MAP_TYPE_HASH_OF_MAPS, BPF_MAP_TYPE_DEVMAP, BPF_MAP_TYPE_SOCKMAP, BPF_MAP_TYPE_CPUMAP
+bpf_map_flags = BPF_ANY, BPF_NOEXIST, BPF_EXIST
+bpf_prog_type = BPF_PROG_TYPE_SOCKET_FILTER, BPF_PROG_TYPE_KPROBE, BPF_PROG_TYPE_SCHED_CLS, BPF_PROG_TYPE_SCHED_ACT, BPF_PROG_TYPE_TRACEPOINT, BPF_PROG_TYPE_XDP, BPF_PROG_TYPE_PERF_EVENT, BPF_PROG_TYPE_CGROUP_SKB, BPF_PROG_TYPE_CGROUP_SOCK, BPF_PROG_TYPE_LWT_IN, BPF_PROG_TYPE_LWT_OUT, BPF_PROG_TYPE_LWT_XMIT, BPF_PROG_TYPE_SOCK_OPS, BPF_PROG_TYPE_SK_SKB, BPF_PROG_TYPE_CGROUP_DEVICE, BPF_PROG_TYPE_SK_MSG, BPF_PROG_TYPE_RAW_TRACEPOINT, BPF_PROG_TYPE_CGROUP_SOCK_ADDR
+map_flags = BPF_F_NO_PREALLOC, BPF_F_NO_COMMON_LRU, BPF_F_NUMA_NODE, BPF_F_RDONLY, BPF_F_WRONLY, BPF_F_STACK_BUILD_ID
+bpf_attach_type = BPF_CGROUP_INET_INGRESS, BPF_CGROUP_INET_EGRESS, BPF_CGROUP_INET_SOCK_CREATE, BPF_CGROUP_SOCK_OPS, BPF_SK_SKB_STREAM_PARSER, BPF_SK_SKB_STREAM_VERDICT, BPF_CGROUP_DEVICE, BPF_SK_MSG_VERDICT, BPF_CGROUP_INET4_BIND, BPF_CGROUP_INET6_BIND, BPF_CGROUP_INET4_CONNECT, BPF_CGROUP_INET6_CONNECT, BPF_CGROUP_INET4_POST_BIND, BPF_CGROUP_INET6_POST_BIND
+bpf_prog_load_flags = BPF_F_STRICT_ALIGNMENT
+bpf_attach_flags = BPF_F_ALLOW_OVERRIDE, BPF_F_ALLOW_MULTI
+bpf_prog_query_flags = BPF_F_QUERY_EFFECTIVE
+bpf_prog_query_attach_type = BPF_CGROUP_INET_INGRESS, BPF_CGROUP_INET_EGRESS, BPF_CGROUP_INET_SOCK_CREATE, BPF_CGROUP_SOCK_OPS, BPF_CGROUP_DEVICE
+bpf_open_flags = BPF_F_RDONLY, BPF_F_WRONLY

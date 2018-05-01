@@ -1,0 +1,23 @@
+# This is the official list of the syzkaller project authors for copyright purposes.
+# This file is distinct from the CONTRIBUTORS file. See the latter for an explanation.
+
+# Names should be added to this file as
+#	Name or Organization
+# Email addresses for individuals are tracked elsewhere to avoid spam.
+
+Google Inc.
+Baozeng Ding
+Lorenzo Stoakes
+Jeremy Huang
+Shuai Bai
+Alexander Popov
+Jean-Baptiste Cayrou
+Yuzhe Han
+Utkarsh Anand
+Tobias Klauser
+Tim Tianyang Chen
+Ed Maste
+Sumukha PK
+Mitchell Horne
+Hangbin Liu
+Denis Efremov

@@ -1,0 +1,79 @@
+Delivered-To: behanw@converseincode.com
+Received: by 10.112.155.8 with SMTP id vs8csp108864lbb;
+        Wed, 17 Apr 2013 12:10:34 -0700 (PDT)
+X-Received: by 10.52.25.8 with SMTP id y8mr5016514vdf.88.1366225833827;
+        Wed, 17 Apr 2013 12:10:33 -0700 (PDT)
+Return-Path: <rostedt@goodmis.org>
+Received: from hrndva-omtalb.mail.rr.com (hrndva-omtalb.mail.rr.com. [71.74.56.122])
+        by mx.google.com with ESMTP id b4si4644411vdw.122.2013.04.17.12.10.33;
+        Wed, 17 Apr 2013 12:10:33 -0700 (PDT)
+Received-SPF: neutral (google.com: 71.74.56.122 is neither permitted nor denied by best guess record for domain of rostedt@goodmis.org) client-ip=71.74.56.122;
+Authentication-Results: mx.google.com;
+       spf=neutral (google.com: 71.74.56.122 is neither permitted nor denied by best guess record for domain of rostedt@goodmis.org) smtp.mail=rostedt@goodmis.org
+Return-Path: <rostedt@goodmis.org>
+X-Authority-Analysis: v=2.0 cv=aOZyWMBm c=1 sm=0 a=rXTBtCOcEpjy1lPqhTCpEQ==:17 a=mNMOxpOpBa8A:10 a=P9tYZ7KxwnoA:10 a=5SG0PmZfjMsA:10 a=IkcTkHD0fZMA:10 a=meVymXHHAAAA:8 a=d4Hf9CRHXzMA:10 a=CVF7XyKItEI0EC762UMA:9 a=QEXdDO2ut3YA:10 a=jeBq3FmKZ4MA:10 a=rXTBtCOcEpjy1lPqhTCpEQ==:117
+X-Cloudmark-Score: 0
+X-Authenticated-User: 
+X-Originating-IP: 74.67.115.198
+Received: from [74.67.115.198] ([74.67.115.198:52334] helo=[127.0.0.1])
+	by hrndva-oedge03.mail.rr.com (envelope-from <rostedt@goodmis.org>)
+	(ecelerity 2.2.3.46 r()) with ESMTP
+	id 94/F6-09862-6A3FE615; Wed, 17 Apr 2013 19:10:32 +0000
+Subject: [PATCH] slab: Remove unnecessary __builtin_constant_p()
+From: Steven Rostedt <rostedt@goodmis.org>
+To: LKML <linux-kernel@vger.kernel.org>, linux-mm@kvack.org
+Cc: Christoph Lameter <cl@linux.com>, Behan Webster
+ <behanw@converseincode.com>,  Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset="UTF-8"
+Date: Wed, 17 Apr 2013 15:09:36 -0400
+Message-ID: <1366225776.8817.28.camel@pippen.local.home>
+Mime-Version: 1.0
+X-Mailer: Evolution 2.30.3 
+Content-Transfer-Encoding: 7bit
+
+The slab.c code has a size check macro that checks the size of the
+following structs:
+
+struct arraycache_init
+struct kmem_list3
+
+The index_of() function that takes the sizeof() of the above two structs
+and does an unnecessary __builtin_constant_p() on that. As sizeof() will
+always end up being a constant making this always be true. The code is
+not incorrect, but it just adds added complexity, and confuses users and
+wastes the time of reviewers of the code, who spends time trying to
+figure out why the builtin_constant_p() was used.
+
+This patch is just a clean up that makes the index_of() code a little
+bit less complex.
+
+Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
+
+diff --git a/mm/slab.c b/mm/slab.c
+index 856e4a1..6047900 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -325,9 +325,7 @@ static void cache_reap(struct work_struct *unused);
+ static __always_inline int index_of(const size_t size)
+ {
+ 	extern void __bad_size(void);
+-
+-	if (__builtin_constant_p(size)) {
+-		int i = 0;
++	int i = 0;
+ 
+ #define CACHE(x) \
+ 	if (size <=x) \
+@@ -336,9 +334,7 @@ static __always_inline int index_of(const size_t size)
+ 		i++;
+ #include <linux/kmalloc_sizes.h>
+ #undef CACHE
+-		__bad_size();
+-	} else
+-		__bad_size();
++	__bad_size();
+ 	return 0;
+ }
+ 
+
+

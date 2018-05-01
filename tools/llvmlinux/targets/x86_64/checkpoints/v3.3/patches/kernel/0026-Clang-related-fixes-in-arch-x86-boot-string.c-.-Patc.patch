@@ -1,0 +1,43 @@
+From feb9c68d3345510f0db361baff5152f782c256af Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:59:31 +0200
+Subject: [PATCH 26/48] Clang related fixes in arch/x86/boot/string.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/string.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/x86/boot/string.c b/arch/x86/boot/string.c
+index 574dedf..476ddea 100644
+--- a/arch/x86/boot/string.c
++++ b/arch/x86/boot/string.c
+@@ -14,7 +14,7 @@
+ 
+ #include "boot.h"
+ 
+-int strcmp(const char *str1, const char *str2)
++asmlinkage int strcmp(const char *str1, const char *str2)
+ {
+ 	const unsigned char *s1 = (const unsigned char *)str1;
+ 	const unsigned char *s2 = (const unsigned char *)str2;
+@@ -30,7 +30,7 @@ int strcmp(const char *str1, const char *str2)
+ 	return 0;
+ }
+ 
+-int strncmp(const char *cs, const char *ct, size_t count)
++asmlinkage int strncmp(const char *cs, const char *ct, size_t count)
+ {
+ 	unsigned char c1, c2;
+ 
+@@ -46,7 +46,7 @@ int strncmp(const char *cs, const char *ct, size_t count)
+ 	return 0;
+ }
+ 
+-size_t strnlen(const char *s, size_t maxlen)
++asmlinkage size_t strnlen(const char *s, size_t maxlen)
+ {
+ 	const char *es = s;
+ 	while (*es && maxlen) {
+-- 
+1.7.3.4
+

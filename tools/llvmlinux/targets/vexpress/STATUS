@@ -1,0 +1,5 @@
+General:
+
+-Wno-unused-value must be set or there are thousands of warnings for unused return values (mainly from macros)
+
+

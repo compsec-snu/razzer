@@ -1,0 +1,40 @@
+http://patchwork.linux-mips.org/patch/9828/
+
+diff --git a/arch/mips/include/asm/smp.h b/arch/mips/include/asm/smp.h
+index bb02fac9b4fa..2b25d1ba1ea0 100644
+--- a/arch/mips/include/asm/smp.h
++++ b/arch/mips/include/asm/smp.h
+@@ -45,7 +45,7 @@ extern int __cpu_logical_map[NR_CPUS];
+ #define SMP_DUMP		0x8
+ #define SMP_ASK_C0COUNT		0x10
+ 
+-extern volatile cpumask_t cpu_callin_map;
++extern cpumask_t cpu_callin_map;
+ 
+ /* Mask of CPUs which are currently definitely operating coherently */
+ extern cpumask_t cpu_coherent_mask;
+diff --git a/arch/mips/kernel/smp.c b/arch/mips/kernel/smp.c
+index 193ace7955fb..158191394770 100644
+--- a/arch/mips/kernel/smp.c
++++ b/arch/mips/kernel/smp.c
+@@ -43,7 +43,7 @@
+ #include <asm/time.h>
+ #include <asm/setup.h>
+ 
+-volatile cpumask_t cpu_callin_map;	/* Bitmask of started secondaries */
++cpumask_t cpu_callin_map;		/* Bitmask of started secondaries */
+ 
+ int __cpu_number_map[NR_CPUS];		/* Map physical to logical */
+ EXPORT_SYMBOL(__cpu_number_map);
+@@ -218,8 +218,10 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
+ 	/*
+ 	 * Trust is futile.  We should really have timeouts ...
+ 	 */
+-	while (!cpumask_test_cpu(cpu, &cpu_callin_map))
++	while (!cpumask_test_cpu(cpu, &cpu_callin_map)) {
+ 		udelay(100);
++		mb();
++	}
+ 
+ 	synchronise_count_master(cpu);
+ 	return 0;

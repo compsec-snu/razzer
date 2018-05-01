@@ -1,0 +1,214 @@
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 5ee2687..33267fe 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -311,39 +311,65 @@ do {									\
+ 	}								\
+ } while (0)
+ 
+-#ifdef CONFIG_X86_32
+-#define __get_user_asm_u64(x, ptr, retval, errret)	(x) = __get_user_bad()
+-#define __get_user_asm_ex_u64(x, ptr)			(x) = __get_user_bad()
+-#else
++//#ifdef CONFIG_X86_32
++//#define __get_user_asm_u64(x, ptr, retval, errret)	(x) = __get_user_bad()
++//#define __get_user_asm_ex_u64(x, ptr)			(x) = __get_user_bad()
++//#else
+ #define __get_user_asm_u64(x, ptr, retval, errret) \
+-	 __get_user_asm(x, ptr, retval, "q", "", "=r", errret)
++do { \
++	printk("----- __get_user_asm_u64\n"); \
++	printk("----- x: 0x%lu, ptr: 0x%p, retval: %d, erret %d\n", x, ptr, retval, errret); \
++	__get_user_asm(x, ptr, retval, "q", "", "=r", errret); \
++} while (0)
++
+ #define __get_user_asm_ex_u64(x, ptr) \
+ 	 __get_user_asm_ex(x, ptr, "q", "", "=r")
+-#endif
++//#endif
+ 
+ #define __get_user_size(x, ptr, size, retval, errret)			\
+ do {									\
+ 	retval = 0;							\
++	printk("----in __get_user_size\n");\
++	printk("----before __check_user_ptr\n");\
+ 	__chk_user_ptr(ptr);						\
++	printk("----after __check_user_ptr\n");\
+ 	switch (size) {							\
+ 	case 1:								\
++		printk("----before case1\n");\
+ 		__get_user_asm(x, ptr, retval, "b", "b", "=q", errret);	\
++		printk("----after case1\n");\
+ 		break;							\
+ 	case 2:								\
++		printk("----before case2\n");\
+ 		__get_user_asm(x, ptr, retval, "w", "w", "=r", errret);	\
++		printk("----after case2\n");\
+ 		break;							\
+ 	case 4:								\
++		printk("----before case4\n");\
+ 		__get_user_asm(x, ptr, retval, "l", "k", "=r", errret);	\
++		printk("----after case4\n");\
+ 		break;							\
+ 	case 8:								\
++		printk("----before case8\n");\
+ 		__get_user_asm_u64(x, ptr, retval, errret);		\
++		printk("----after case8\n");\
+ 		break;							\
+ 	default:							\
++		printk("----before bad\n");\
+ 		(x) = __get_user_bad();					\
+ 	}								\
+ } while (0)
+ 
+-#define __get_user_asm(x, addr, err, itype, rtype, ltype, errret)	\
++#define __get_user_asm(x, addr, err, itype, rtype, ltype, errret)\
++do {	\
++	printk("------in __get_user_asm\n");\
++	printk("------ x:     0x%lu\n", x);\
++	printk("------ addr:  0x%p\n", addr);\
++	printk("------ err:   %d\n", err);\
++	printk("------ itype: %s\n", itype);\
++	printk("------ rtype: %s\n", rtype);\
++	printk("------ ltype: %s\n", ltype);\
++	printk("------ errret:%d\n", errret);\
+ 	asm volatile(ASM_STAC "\n"					\
+ 		     "1:	mov"itype" %2,%"rtype"1\n"		\
+ 		     "2: " ASM_CLAC "\n"				\
+@@ -354,25 +380,33 @@ do {									\
+ 		     ".previous\n"					\
+ 		     _ASM_EXTABLE(1b, 3b)				\
+ 		     : "=r" (err), ltype(x)				\
+-		     : "m" (__m(addr)), "i" (errret), "0" (err))
++		     : "m" (__m(addr)), "i" (errret), "0" (err));\
++} while (0)
+ 
+ #define __get_user_size_ex(x, ptr, size)				\
+-do {									\
++do {	\
++	pr_info("1a\n");						\
+ 	__chk_user_ptr(ptr);						\
++	pr_info("2a\n");\
+ 	switch (size) {							\
+ 	case 1:								\
++		pr_info("3a\n");\
+ 		__get_user_asm_ex(x, ptr, "b", "b", "=q");		\
+ 		break;							\
+-	case 2:								\
++	case 2:\
++		pr_info("4a\n");					\
+ 		__get_user_asm_ex(x, ptr, "w", "w", "=r");		\
+ 		break;							\
+ 	case 4:								\
++		pr_info("5a\n");\
+ 		__get_user_asm_ex(x, ptr, "l", "k", "=r");		\
+ 		break;							\
+ 	case 8:								\
++		pr_info("6a\n");\
+ 		__get_user_asm_ex_u64(x, ptr);				\
+ 		break;							\
+ 	default:							\
++		pr_info("7a\n");\
+ 		(x) = __get_user_bad();					\
+ 	}								\
+ } while (0)
+@@ -392,9 +426,12 @@ do {									\
+ 
+ #define __get_user_nocheck(x, ptr, size)				\
+ ({									\
++	printk("--in __get_user_nocheck\n");\
+ 	int __gu_err;							\
+-	unsigned long __gu_val;						\
++	unsigned long __gu_val ;						\
++	printk("---before __get_user_size\n");				\
+ 	__get_user_size(__gu_val, (ptr), (size), __gu_err, -EFAULT);	\
++	printk("---after __get_user_size\n");				\
+ 	(x) = (__force __typeof__(*(ptr)))__gu_val;			\
+ 	__gu_err;							\
+ })
+diff --git a/include/asm-generic/uaccess.h b/include/asm-generic/uaccess.h
+index dc1269c..33b95db 100644
+--- a/include/asm-generic/uaccess.h
++++ b/include/asm-generic/uaccess.h
+@@ -186,40 +186,48 @@ extern int __put_user_bad(void) __attribute__((noreturn));
+ #define __get_user(x, ptr)					\
+ ({								\
+ 	int __gu_err = -EFAULT;					\
++	printk("1\n");						\
+ 	__chk_user_ptr(ptr);					\
++	printk("2\n");\
+ 	switch (sizeof(*(ptr))) {				\
+ 	case 1: {						\
++		printk("3\n");\
+ 		unsigned char __x;				\
+ 		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
+ 					 ptr, &__x);		\
+ 		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
+ 		break;						\
+ 	};							\
+-	case 2: {						\
++	case 2: { \
++		printk("4\n");\
+ 		unsigned short __x;				\
+ 		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
+ 					 ptr, &__x);		\
+ 		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
+ 		break;						\
+ 	};							\
+-	case 4: {						\
++	case 4: {\
++		printk("5\n");						\
+ 		unsigned int __x;				\
+ 		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
+ 					 ptr, &__x);		\
+ 		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
+ 		break;						\
+ 	};							\
+-	case 8: {						\
++	case 8: {\
++		printk("6\n");						\
+ 		unsigned long long __x;				\
+ 		__gu_err = __get_user_fn(sizeof (*(ptr)),	\
+ 					 ptr, &__x);		\
+ 		(x) = *(__force __typeof__(*(ptr)) *) &__x;	\
+ 		break;						\
+ 	};							\
+-	default:						\
++	default:\
++		printk("7\n");						\
+ 		__get_user_bad();				\
+ 		break;						\
+-	}							\
++	}\
++	printk("8\n");							\
+ 	__gu_err;						\
+ })
+ 
+diff --git a/lib/strnlen_user.c b/lib/strnlen_user.c
+index a28df52..78dec32 100644
+--- a/lib/strnlen_user.c
++++ b/lib/strnlen_user.c
+@@ -37,6 +37,8 @@ static inline long do_strnlen_user(const char __user *src, unsigned long count,
+ 	if (max > count)
+ 		max = count;
+ 
++	printk("  max: %lu  count:%lu \n", max, count);
++
+ 	/*
+ 	 * Do everything aligned. But that means that we
+ 	 * need to also expand the maximum..
+@@ -45,8 +47,13 @@ static inline long do_strnlen_user(const char __user *src, unsigned long count,
+ 	src -= align;
+ 	max += align;
+ 
+-	if (unlikely(__get_user(c,(unsigned long __user *)src)))
++	printk("strnlen_user.c  before unlikely --- \n");
++	if (unlikely(__get_user(c,(unsigned long __user *)src))) {
++		printk("  __get_user returned 0\n");
++		panic("0x%p", src );
+ 		return 0;
++	}
++	printk("strnlen_user  after unlikely --- \n");
+ 	c |= aligned_byte_mask(align);
+ 
+ 	for (;;) {

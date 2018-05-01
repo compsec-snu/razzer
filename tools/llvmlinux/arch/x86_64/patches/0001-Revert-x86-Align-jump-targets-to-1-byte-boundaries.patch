@@ -1,0 +1,33 @@
+From 20c53270ff4e79da0f43aa534fc2f7e3bdcdf18c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 11 Aug 2015 01:57:45 +0200
+Subject: [PATCH] Revert "x86: Align jump targets to 1-byte boundaries"
+
+This reverts commit be6cb02779ca74d83481f017db21578cfe92891c.
+
+Conflicts:
+	arch/x86/Makefile
+---
+ arch/x86/Makefile | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 118e6de..4fea5e9 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -77,12 +77,6 @@ else
+         KBUILD_AFLAGS += -m64
+         KBUILD_CFLAGS += -m64
+ 
+-        # Align jump targets to 1 byte, not the default 16 bytes:
+-        KBUILD_CFLAGS += -falign-jumps=1
+-
+-        # Pack loops tightly as well:
+-        KBUILD_CFLAGS += -falign-loops=1
+-
+         # Don't autogenerate traditional x87 instructions
+         KBUILD_CFLAGS += $(call cc-option,-mno-80387)
+         KBUILD_CFLAGS += $(call cc-option,-mno-fp-ret-in-387)
+-- 
+2.1.4
+

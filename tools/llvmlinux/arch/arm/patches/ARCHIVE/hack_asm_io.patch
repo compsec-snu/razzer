@@ -1,0 +1,35 @@
+From afb8b9858611875a94a7c759cae616ffab158698 Mon Sep 17 00:00:00 2001
+From: "behanw@converseincode.comBehan" <behanw@converseincode.comBehan>
+Date: Tue, 23 Sep 2014 22:43:22 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM arm, LLVMLinus: ASM workaround
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ arch/arm/include/asm/io.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/include/asm/io.h b/arch/arm/include/asm/io.h
+index 3d23418..4a60f8f 100644
+--- a/arch/arm/include/asm/io.h
++++ b/arch/arm/include/asm/io.h
+@@ -245,13 +245,13 @@ extern int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr);
+  * The {in,out}[bwl] macros are for emulating x86-style PCI/ISA IO space.
+  */
+ #ifdef __io
+-#define outb(v,p)	({ __iowmb(); __raw_writeb(v,__io(p)); })
++#define outb(v,p)	({ __iowmb()/*; __raw_writeb(v,__io(p))*/; })
+ #define outw(v,p)	({ __iowmb(); __raw_writew((__force __u16) \
+ 					cpu_to_le16(v),__io(p)); })
+ #define outl(v,p)	({ __iowmb(); __raw_writel((__force __u32) \
+ 					cpu_to_le32(v),__io(p)); })
+ 
+-#define inb(p)	({ __u8 __v = __raw_readb(__io(p)); __iormb(); __v; })
++#define inb(p)	({ __u8 __v = 0 /*__raw_readb(__io(p))*/; __iormb(); __v; })
+ #define inw(p)	({ __u16 __v = le16_to_cpu((__force __le16) \
+ 			__raw_readw(__io(p))); __iormb(); __v; })
+ #define inl(p)	({ __u32 __v = le32_to_cpu((__force __le32) \
+-- 
+1.9.1
+

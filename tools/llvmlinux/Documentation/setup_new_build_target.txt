@@ -1,0 +1,36 @@
+= Setting up a new LLVMLinux board target =
+
+For the following, we'll assume the new board target name is "foo".
+
+First you need to create the board target directory, and Makefile.
+
+ $ mkdir targets/foo
+ $ cp targets/template/Makefile targets/foo
+
+Next you need to edit the Makefile to fill in all the appropriate values.
+Default values are commented out in the detault Makefile (you don't need to set
+them unless they are different from the defaults. Example board build targets
+are also provided.  Change the variables that need updating, and
+change/update/delete make targets as appropriate.
+
+Next you need to provide a kernel config file. Once you have a config file,
+copy it to the board target directory. You can find a sample kernel config file
+in targets/template/config_template.
+
+ $ cp <kerneldir>/.config targets/foo/config_foo
+
+Next add your new files to git:
+
+ $ git add targets/foo
+
+Now do a test build.
+
+ $ cd targets/foo
+ $ make
+
+Once it's working well, commit it to git (don't forget to add a Signed-off-by
+to the commit comments with "git commit -s"). From git you can then send
+patches to the mailing list for inclusion in the git repo.
+
+ $ git format-patch <commitish>
+ $ git send-email --to=llvmlinux@lists.linuxfoundation.org *.patch

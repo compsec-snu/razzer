@@ -1,0 +1,74 @@
+From 8089a4550226dd7bfb39beb280fc2cbd1e86bc95 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:26 -0400
+Subject: [PATCH 32/39] Kbuild arm: LLVMLinux: Add Kbuild support for building
+ arch arm with Clang
+
+Protect more options for arm with cc-option so that we don't get errors when
+using clang instead of gcc.  Add more or different options when using clang as
+well.
+
+Author: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm/Makefile | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+--- android_kernel_nexus7.orig/arch/arm/Makefile
++++ android_kernel_nexus7/arch/arm/Makefile
+@@ -21,6 +21,15 @@
+ # Explicitly specifiy 32-bit ARM ISA since toolchain default can be -mthumb:
+ KBUILD_CFLAGS	+=$(call cc-option,-marm,)
+ 
++ifeq ($(COMPILER),clang)
++# Clang options
++KBUILD_CPPFLAGS	+= $(call cc-option,-target $(CROSS_COMPILE:-=),)
++KBUILD_CFLAGS   += $(call cc-option,-fno-builtin,)
++KBUILD_CFLAGS   += $(call cc-disable-warning,asm-operand-widths)
++KBUILD_CFLAGS   += $(call cc-option,-Xassembler,)
++KBUILD_CFLAGS   += $(call cc-option,-mno-warn-deprecated,)
++endif
++
+ # Never generate .eh_frame
+ KBUILD_CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
+ 
+@@ -42,11 +51,11 @@
+ endif
+ 
+ ifeq ($(CONFIG_CPU_BIG_ENDIAN),y)
+-KBUILD_CPPFLAGS	+= -mbig-endian
++KBUILD_CPPFLAGS	+= $(call cc-option,-mbig-endian,)
+ AS		+= -EB
+ LD		+= -EB
+ else
+-KBUILD_CPPFLAGS	+= -mlittle-endian
++KBUILD_CPPFLAGS	+= $(call cc-option,-mlittle-endian,)
+ AS		+= -EL
+ LD		+= -EL
+ endif
+@@ -92,7 +101,11 @@
+ tune-$(CONFIG_CPU_V6K)		:=$(call cc-option,-mtune=arm1136j-s,-mtune=strongarm)
+ 
+ ifeq ($(CONFIG_AEABI),y)
+-CFLAGS_ABI	:=-mabi=aapcs-linux -mno-thumb-interwork
++ifeq ($(COMPILER),clang)
++CFLAGS_ABI	:=
++else
++CFLAGS_ABI	:=-mabi=aapcs-linux $(call cc-option,-mno-thumb-interwork,)
++endif
+ else
+ CFLAGS_ABI	:=$(call cc-option,-mapcs-32,-mabi=apcs-gnu) $(call cc-option,-mno-thumb-interwork,)
+ endif
+@@ -113,7 +126,11 @@
+ endif
+ 
+ # Need -Uarm for gcc < 3.x
++ifeq ($(COMPILER),clang)
++KBUILD_CFLAGS  +=$(CFLAGS_ABI) $(CFLAGS_THUMB2) $(arch-y) $(tune-y) -msoft-float
++else
+ KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_THUMB2) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -msoft-float -Uarm
++endif
+ KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_THUMB2) $(arch-y) $(tune-y) -include asm/unified.h -msoft-float
+ 
+ CHECKFLAGS	+= -D__arm__

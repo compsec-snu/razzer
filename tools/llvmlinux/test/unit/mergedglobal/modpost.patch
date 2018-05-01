@@ -1,0 +1,50 @@
+--- linux.orig/scripts/mod/modpost.c
++++ linux/scripts/mod/modpost.c
+@@ -1093,31 +1093,42 @@
+ 			    const char *tosec, const char *tosym)
+ {
+ 	/* Check for pattern 1 */
++	fprintf(stderr, "=== secref_whitelist: fromsec:%s fromsym:%s tosec:%s tosym:%s\n", fromsec, fromsym, tosec, tosym);
+ 	if (match(tosec, init_data_sections) &&
+ 	    match(fromsec, data_sections) &&
+-	    (strncmp(fromsym, "__param", strlen("__param")) == 0))
++	    (strncmp(fromsym, "__param", strlen("__param")) == 0)) {
++		fprintf(stderr, "secref_whitelist pat 1: __param, __param\n");
+ 		return 0;
++	}
+ 
+ 	/* Check for pattern 1a */
+ 	if (strcmp(tosec, ".init.text") == 0 &&
+ 	    match(fromsec, data_sections) &&
+-	    (strncmp(fromsym, "__param_ops_", strlen("__param_ops_")) == 0))
++	    (strncmp(fromsym, "__param_ops_", strlen("__param_ops_")) == 0)) {
++		fprintf(stderr, "secref_whitelist pat 1a: .init.text, data_sections, __param_ops_\n");
+ 		return 0;
++	}
+ 
+ 	/* Check for pattern 2 */
+ 	if (match(tosec, init_exit_sections) &&
+ 	    match(fromsec, data_sections) &&
+-	    match(fromsym, mismatch->symbol_white_list))
++	    match(fromsym, mismatch->symbol_white_list)) {
++		fprintf(stderr, "secref_whitelist pat 2: init_exit_sections, data_sections, symbol_white_list\n");
+ 		return 0;
++	}
+ 
+ 	/* Check for pattern 3 */
+ 	if (match(fromsec, head_sections) &&
+-	    match(tosec, init_sections))
++	    match(tosec, init_sections)) {
++		fprintf(stderr, "secref_whitelist pat 3: head_sections, init_sections\n");
+ 		return 0;
++	}
+ 
+ 	/* Check for pattern 4 */
+-	if (match(tosym, linker_symbols))
++	if (match(tosym, linker_symbols)) {
++		fprintf(stderr, "secref_whitelist pat 4: linker_symbols\n");
+ 		return 0;
++	}
+ 
+ 	return 1;
+ }

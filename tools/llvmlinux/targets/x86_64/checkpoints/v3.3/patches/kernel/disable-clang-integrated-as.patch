@@ -1,0 +1,23 @@
+Disable the use of the Clang Integrated Assembler
+
+This patch probably can't be sent upstream in this form
+This patch needs to be reworked
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ Makefile |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Index: linux/Makefile
+===================================================================
+--- linux.orig/Makefile
++++ linux/Makefile
+@@ -366,7 +366,7 @@
+ 		   -fno-delete-null-pointer-checks
+ KBUILD_AFLAGS_KERNEL :=
+ KBUILD_CFLAGS_KERNEL :=
+-KBUILD_AFLAGS   := -D__ASSEMBLY__
++KBUILD_AFLAGS   := -D__ASSEMBLY__ -no-integrated-as
+ KBUILD_AFLAGS_MODULE  := -DMODULE
+ KBUILD_CFLAGS_MODULE  := -DMODULE
+ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds

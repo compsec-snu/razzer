@@ -1,0 +1,46 @@
+From 9cad69009477d7ab54f5058e9526ad305fc4dfa0 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 28 Sep 2012 15:22:35 -0400
+Subject: [PATCH 2/5] Remove VLAIS from HMAC
+
+The use of variable length arrays in structs (VLAIS) in the Linux Kernel code
+precludes the use of compilers which don't implement VLAIS (for instance the
+Clang compiler). Since ctx is always 32-bit, hard coding a size of 4
+accomplishes the same thing without the use of VLAIS.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Behan Webster <behanw@converseincode.com>
+---
+ crypto/hmac.c    |    2 +-
+ crypto/testmgr.c |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/crypto/hmac.c b/crypto/hmac.c
+index 8d9544c..51f8a1b 100644
+--- a/crypto/hmac.c
++++ b/crypto/hmac.c
+@@ -54,7 +54,7 @@ static int hmac_setkey(struct crypto_shash *parent,
+ 	struct crypto_shash *hash = ctx->hash;
+ 	struct {
+ 		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(hash)];
++		char ctx[4];
+ 	} desc;
+ 	unsigned int i;
+ 
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index a2ca743..8160167 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -1478,7 +1478,7 @@ static int alg_test_crc32c(const struct alg_test_desc *desc,
+ 	do {
+ 		struct {
+ 			struct shash_desc shash;
+-			char ctx[crypto_shash_descsize(tfm)];
++			char ctx[4];
+ 		} sdesc;
+ 
+ 		sdesc.shash.tfm = tfm;
+-- 
+1.7.9.5
+

@@ -1,0 +1,48 @@
+From c3e3f0fd0ab99dc73bed57f387ff782358af2fa3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:55:00 +0100
+Subject: [PATCH] Documentation: LLVMLinux: Update Documentation/dontdiff
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clang has a few other kinds of derived files which shouldn't be added to a
+patch. Add them to the Documentation/dontdiff file to prevent this.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ Documentation/dontdiff | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/dontdiff b/Documentation/dontdiff
+index b89a739..9de9813 100644
+--- a/Documentation/dontdiff
++++ b/Documentation/dontdiff
+@@ -1,5 +1,6 @@
+ *.a
+ *.aux
++*.bc
+ *.bin
+ *.bz2
+ *.cis
+@@ -21,6 +22,7 @@
+ *.i
+ *.jpeg
+ *.ko
++*.ll
+ *.log
+ *.lst
+ *.lzma
+@@ -35,6 +37,7 @@
+ *.out
+ *.patch
+ *.pdf
++*.plist
+ *.png
+ *.pot
+ *.ps
+-- 
+1.8.3.2
+

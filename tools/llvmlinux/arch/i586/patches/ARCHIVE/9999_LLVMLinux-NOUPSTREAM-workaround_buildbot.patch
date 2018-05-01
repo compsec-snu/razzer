@@ -1,0 +1,22 @@
+Fixes an issue only visible on the buildbot - it does work on my local host.
+  AS      arch/x86/realmode/rm/header.o
+error: unknown target CPU 'i386'
+make[4]: *** [arch/x86/realmode/rm/header.o] Error 1
+make[3]: *** [arch/x86/realmode/rm/realmode.bin] Error 2
+make[2]: *** [arch/x86/realmode] Error 2
+make[2]: *** Waiting for unfinished jobs.
+
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index fee49b4..8b6e1e2 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -26,7 +26,7 @@ M16_CFLAGS	 := $(call cc-option, -m16, $(CODE16GCC_CFLAGS))
+ 
+ REALMODE_CFLAGS	:= $(M16_CFLAGS) -g -Os -D__KERNEL__ \
+ 		   -DDISABLE_BRANCH_PROFILING \
+-		   -Wall -Wstrict-prototypes -march=i386 -mregparm=3 \
++		   -Wall -Wstrict-prototypes -march=i586 -mregparm=3 \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   -mno-mmx -mno-sse \
+ 		   $(call cc-option, -ffreestanding) \

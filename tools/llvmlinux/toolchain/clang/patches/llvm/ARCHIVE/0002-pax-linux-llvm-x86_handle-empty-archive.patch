@@ -1,0 +1,30 @@
+From 7cb2d39b461c58df2583a6881f42b18c30f1eafb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 10 Jul 2012 12:37:24 +0200
+Subject: [PATCH 2/6] pax-linux-llvm x86_handle-empty-archive.patch
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ lib/Linker/LinkItems.cpp |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/lib/Linker/LinkItems.cpp b/lib/Linker/LinkItems.cpp
+index 52a0d17..2782196 100644
+--- a/lib/Linker/LinkItems.cpp
++++ b/lib/Linker/LinkItems.cpp
+@@ -178,8 +178,11 @@ bool Linker::LinkInFile(const sys::Path &File, bool &is_native) {
+ 
+   // Determine what variety of file it is.
+   std::string Magic;
+-  if (!File.getMagicNumber(Magic, 64))
++  if (!File.getMagicNumber(Magic, 64)) {
++    if (File.getMagicNumber(Magic, 8) && Magic == "!<arch>\n")
++      return false;
+     return error("Cannot find linker input '" + File.str() + "'");
++  }
+ 
+   switch (sys::IdentifyFileType(Magic.c_str(), 64)) {
+     default: llvm_unreachable("Bad file type identification");
+-- 
+1.7.3.4
+

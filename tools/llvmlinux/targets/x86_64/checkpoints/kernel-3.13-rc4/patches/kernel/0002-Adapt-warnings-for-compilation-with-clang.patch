@@ -1,0 +1,52 @@
+From 40d787e5d40d5ae38314259114b17b561f0aa2a3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:39:57 +0100
+Subject: [PATCH 03/39] Kbuild: LLVMLinux: Adapt warnings for compilation with
+ clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When compiling kernel with clang, disable warnings which are too noisy.
+
+Author:  PaX Team <pageexec@freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+Merge:   Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ scripts/Makefile.build | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+index d5d859c..27c4098 100644
+--- a/scripts/Makefile.build
++++ b/scripts/Makefile.build
+@@ -65,12 +65,23 @@ warning-  := $(empty)
+ warning-1 := -Wextra -Wunused -Wno-unused-parameter
+ warning-1 += -Wmissing-declarations
+ warning-1 += -Wmissing-format-attribute
+-warning-1 += -Wmissing-prototypes
++warning-1 += $(call cc-option, -Wmissing-prototypes)
+ warning-1 += -Wold-style-definition
+ warning-1 += $(call cc-option, -Wmissing-include-dirs)
+ warning-1 += $(call cc-option, -Wunused-but-set-variable)
+ warning-1 += $(call cc-disable-warning, missing-field-initializers)
+ 
++# Clang
++warning-1 += $(call cc-disable-warning, initializer-overrides)
++warning-1 += $(call cc-disable-warning, unused-value)
++warning-1 += $(call cc-disable-warning, format)
++warning-1 += $(call cc-disable-warning, unknown-warning-option)
++warning-1 += $(call cc-disable-warning, self-assign)
++warning-1 += $(call cc-disable-warning, sign-compare)
++warning-1 += $(call cc-disable-warning, format-zero-length)
++warning-1 += $(call cc-disable-warning, uninitialized)
++warning-1 += $(call cc-option, -fcatch-undefined-behavior)
++
+ warning-2 := -Waggregate-return
+ warning-2 += -Wcast-align
+ warning-2 += -Wdisabled-optimization
+-- 
+1.8.1.2
+

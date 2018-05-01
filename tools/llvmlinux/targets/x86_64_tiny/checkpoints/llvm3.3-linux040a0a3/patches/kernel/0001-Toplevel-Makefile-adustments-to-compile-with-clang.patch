@@ -1,0 +1,42 @@
+From 9a37e7f1ba57558621d770664e22273870849834 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 09:26:33 +0100
+Subject: [PATCH 01/51] Toplevel Makefile adustments to compile with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Toplevel Makefile adustments to compile with clang
+* Disable noise
+* use -Qunused-arguments to silence warning
+---
+ Makefile |    7 ++++---
+ 1 Datei geändert, 4 Zeilen hinzugefügt(+), 3 Zeilen entfernt(-)
+
+--- linux.orig/Makefile
++++ linux/Makefile
+@@ -244,6 +244,17 @@
+ HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
+ HOSTCXXFLAGS = -O2
+ 
++ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
++HOSTCOMPILER := clang
++else
++HOSTCOMPILER := gcc
++endif
++
++ifeq ($(HOSTCOMPILER),clang)
++HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter -Wno-missing-field-initializers \
++		-fno-delete-null-pointer-checks
++endif
++
+ # Decide whether to build built-in, modular, or both.
+ # Normally, just do built-in.
+ 

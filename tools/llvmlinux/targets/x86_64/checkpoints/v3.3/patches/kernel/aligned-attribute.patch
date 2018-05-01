@@ -1,0 +1,24 @@
+__attribute((aligned)) can only be used in type definitions, but
+gcc allows it to be applied to a defined type.
+
+This patch fixes errors when compiling the Linux kernel with Clang
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ shash.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Index: linux/crypto/shash.c
+===================================================================
+--- linux.orig/crypto/shash.c
++++ linux/crypto/shash.c
+@@ -67,7 +67,8 @@ 
+ static inline unsigned int shash_align_buffer_size(unsigned len,
+ 						   unsigned long mask)
+ {
+-	return len + (mask & ~(__alignof__(u8 __attribute__ ((aligned))) - 1));
++	typedef __attribute__ ((aligned)) u8 u8_aligned;
++	return len + (mask & ~(__alignof__(u8_aligned) - 1));
+ }
+ 
+ static int shash_update_unaligned(struct shash_desc *desc, const u8 *data,

@@ -1,0 +1,42 @@
+From 8cd69724904b0b6dc5b8e307f5e0e71bc8be54b7 Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Mon, 22 Jun 2015 16:53:26 +0100
+Subject: [PATCH] drivers: md: LLVMLinux: Silence extraneous parentheses warning.
+
+Remove extraneous parentheses from if condition.
+This silences a -Wparentheses-equality warning reported by clang:
+
+drivers/md/dm-ioctl.c:1776:11: warning: equality comparison with extraneous parentheses [-Wparentheses-equality]
+        if ((cmd == DM_DEV_CREATE_CMD)) {
+             ~~~~^~~~~~~~~~~~~~~~~~~~
+drivers/md/dm-ioctl.c:1776:11: note: remove extraneous parentheses around the comparison to silence this warning
+        if ((cmd == DM_DEV_CREATE_CMD)) {
+            ~    ^                   ~
+drivers/md/dm-ioctl.c:1776:11: note: use '=' to turn this equality comparison into an assignment
+        if ((cmd == DM_DEV_CREATE_CMD)) {
+                 ^~
+                 =
+
+The changed code can be compiled without warnings by both gcc and clang.
+
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+---
+ drivers/md/dm-ioctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/md/dm-ioctl.c b/drivers/md/dm-ioctl.c
+index 720ceeb..030f1d4 100644
+--- a/drivers/md/dm-ioctl.c
++++ b/drivers/md/dm-ioctl.c
+@@ -1773,7 +1773,7 @@ static int validate_params(uint cmd, struct dm_ioctl *param)
+ 	    cmd == DM_LIST_VERSIONS_CMD)
+ 		return 0;
+ 
+-	if ((cmd == DM_DEV_CREATE_CMD)) {
++	if (cmd == DM_DEV_CREATE_CMD) {
+ 		if (!*param->name) {
+ 			DMWARN("name not supplied when creating device");
+ 			return -EINVAL;
+-- 
+1.9.1
+

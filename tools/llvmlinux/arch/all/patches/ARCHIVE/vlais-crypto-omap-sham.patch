@@ -1,0 +1,77 @@
+From 52fa94cd1b5574abbcbf665e2e72f66dc5cc98c8 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 4 Apr 2014 18:18:00 -0300
+Subject: [PATCH] crypto: LLVMLinux: Remove VLAIS from crypto/omap_sham.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch allocates the appropriate amount of memory
+using a char array using the SHASH_DESC_ON_STACK macro.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/omap-sham.c | 28 +++++++++++-----------------
+ 1 file changed, 11 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/crypto/omap-sham.c b/drivers/crypto/omap-sham.c
+index 710d863..24ef489 100644
+--- a/drivers/crypto/omap-sham.c
++++ b/drivers/crypto/omap-sham.c
+@@ -949,17 +949,14 @@ static int omap_sham_finish_hmac(struct ahash_request *req)
+ 	struct omap_sham_hmac_ctx *bctx = tctx->base;
+ 	int bs = crypto_shash_blocksize(bctx->shash);
+ 	int ds = crypto_shash_digestsize(bctx->shash);
+-	struct {
+-		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(bctx->shash)];
+-	} desc;
++	SHASH_DESC_ON_STACK(shash, bctx->shash);
+ 
+-	desc.shash.tfm = bctx->shash;
+-	desc.shash.flags = 0; /* not CRYPTO_TFM_REQ_MAY_SLEEP */
++	shash->tfm = bctx->shash;
++	shash->flags = 0; /* not CRYPTO_TFM_REQ_MAY_SLEEP */
+ 
+-	return crypto_shash_init(&desc.shash) ?:
+-	       crypto_shash_update(&desc.shash, bctx->opad, bs) ?:
+-	       crypto_shash_finup(&desc.shash, req->result, ds, req->result);
++	return crypto_shash_init(shash) ?:
++	       crypto_shash_update(shash, bctx->opad, bs) ?:
++	       crypto_shash_finup(shash, req->result, ds, req->result);
+ }
+ 
+ static int omap_sham_finish(struct ahash_request *req)
+@@ -1118,18 +1115,15 @@ static int omap_sham_update(struct ahash_request *req)
+ 	return omap_sham_enqueue(req, OP_UPDATE);
+ }
+ 
+-static int omap_sham_shash_digest(struct crypto_shash *shash, u32 flags,
++static int omap_sham_shash_digest(struct crypto_shash *tfm, u32 flags,
+ 				  const u8 *data, unsigned int len, u8 *out)
+ {
+-	struct {
+-		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(shash)];
+-	} desc;
++	SHASH_DESC_ON_STACK(shash, tfm);
+ 
+-	desc.shash.tfm = shash;
+-	desc.shash.flags = flags & CRYPTO_TFM_REQ_MAY_SLEEP;
++	shash->tfm = tfm;
++	shash->flags = flags & CRYPTO_TFM_REQ_MAY_SLEEP;
+ 
+-	return crypto_shash_digest(&desc.shash, data, len, out);
++	return crypto_shash_digest(shash, data, len, out);
+ }
+ 
+ static int omap_sham_final_shash(struct ahash_request *req)
+-- 
+1.9.1
+

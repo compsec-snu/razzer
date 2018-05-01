@@ -1,0 +1,47 @@
+From 8672890963f20a58419b4c70dff63e68ef259d33 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 09:26:33 +0100
+Subject: [PATCH 02/39] Kbuild: LLVMLinux: Toplevel Makefile adustments to
+ compile with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add support for using clang as HOSTCC. Mostly turning off options which are
+noisy when compiling the kernel.
+
+Author:  PaX Team <pageexec@freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+Merge:   Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ Makefile | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index 4971db7..547c0b5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -244,6 +244,18 @@ HOSTCXX      = g++
+ HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
+ HOSTCXXFLAGS = -O2
+ 
++ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
++HOSTCOMPILER := clang
++else
++HOSTCOMPILER := gcc
++endif
++export HOSTCOMPILER
++
++ifeq ($(HOSTCOMPILER),clang)
++HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter -Wno-missing-field-initializers \
++		-fno-delete-null-pointer-checks
++endif
++
+ # Decide whether to build built-in, modular, or both.
+ # Normally, just do built-in.
+ 
+-- 
+1.8.1.2
+

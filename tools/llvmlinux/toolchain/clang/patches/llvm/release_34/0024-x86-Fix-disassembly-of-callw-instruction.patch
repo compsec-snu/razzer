@@ -1,0 +1,60 @@
+From 1edd2267c97a7ee1072ca0896e21833bcdad65b3 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Mon, 13 Jan 2014 11:23:39 +0000
+Subject: [PATCH 24/26] [x86] Fix disassembly of callw instruction
+
+Not quite sure why this was marked isAsmParserOnly, but it means that the
+disassembler can't see it either.
+
+(cherry picked from commit 24442afda2fe4d187867d84f1fe286a88494932e)
+---
+ lib/Target/X86/X86InstrControl.td   | 10 ++++------
+ test/MC/Disassembler/X86/x86-16.txt |  4 ++--
+ 2 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/lib/Target/X86/X86InstrControl.td b/lib/Target/X86/X86InstrControl.td
+index f8e5db4..3fd717c 100644
+--- a/lib/Target/X86/X86InstrControl.td
++++ b/lib/Target/X86/X86InstrControl.td
+@@ -191,6 +191,10 @@ let isCall = 1 in
+                            (outs), (ins i32imm_pcrel:$dst),
+                            "call{l}\t$dst", [], IIC_CALL_RI>, OpSize16,
+                       Requires<[Not64BitMode]>, Sched<[WriteJump]>;
++    def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
++                           (outs), (ins i16imm_pcrel:$dst),
++                           "call{w}\t$dst", [], IIC_CALL_RI>, OpSize,
++                      Sched<[WriteJump]>;
+     def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
+                         "call{w}\t{*}$dst", [(X86call GR16:$dst)], IIC_CALL_RI>,
+                       OpSize, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
+@@ -223,12 +227,6 @@ let isCall = 1 in
+     def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaque48mem:$dst),
+                         "lcall{l}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize16,
+                       Sched<[WriteJumpLd]>;
+-
+-    // callw for 16 bit code for the assembler.
+-    let isAsmParserOnly = 1 in
+-      def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
+-                       (outs), (ins i16imm_pcrel:$dst),
+-                       "callw\t$dst", []>, OpSize;
+   }
+ 
+ 
+diff --git a/test/MC/Disassembler/X86/x86-16.txt b/test/MC/Disassembler/X86/x86-16.txt
+index eef8723..50d79c1 100644
+--- a/test/MC/Disassembler/X86/x86-16.txt
++++ b/test/MC/Disassembler/X86/x86-16.txt
+@@ -492,8 +492,8 @@
+ # CHECK: calll 
+ 0x66 0xe8 0x00 0x00 0x00 0x00
+ 
+-# CHECKX: callw
+-#0xe8 0x00 0x00
++# CHECK: callw
++0xe8 0x00 0x00
+ 
+ # CHECK: incb %al
+ 0xfe 0xc0
+-- 
+1.8.4
+

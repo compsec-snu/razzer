@@ -1,0 +1,30 @@
+From cc4c695581eab48115683972785a7e633360e5de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 29 Jan 2014 18:53:06 +0100
+Subject: [PATCH] NOUPSTREAM - support older versions of clang (<=3.4)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+which do not yet support -m16 which landed in 3.5svn
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 0dd9887..fee49b4 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -19,6 +19,7 @@ endif
+ # attempt to ensure that our asm(".code16gcc") is first in the asm
+ # output.
+ CODE16GCC_CFLAGS := -m32 -include $(srctree)/arch/x86/boot/code16gcc.h \
++		    $(call cc-option, -no-integrated-as,)\
+ 		    $(call cc-option, -fno-toplevel-reorder,\
+ 		      $(call cc-option, -fno-unit-at-a-time))
+ M16_CFLAGS	 := $(call cc-option, -m16, $(CODE16GCC_CFLAGS))
+-- 
+1.8.1.4
+

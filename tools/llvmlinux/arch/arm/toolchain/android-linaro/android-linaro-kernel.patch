@@ -1,0 +1,118 @@
+From ec1ac589d49081286164246fbaaba0012ae7ecac Mon Sep 17 00:00:00 2001
+From: codeworkx <daniel.hillenbrand@codeworkx.de>
+Date: Sun, 10 Jun 2012 10:19:34 +0200
+Subject: [PATCH] fix build errors using gcc-4.7
+
+Error: selected processor does not support ARM mode `smc #0'
+error: DIV usage mismatch between arch/arm/boot/compressed/head.o and output
+error: DIV usage mismatch between arch/arm/boot/compressed/misc.o and output
+error: DIV usage mismatch between arch/arm/boot/compressed/decompress.o and output
+error: DIV usage mismatch between arch/arm/boot/compressed/lib1funcs.o and output
+error: DIV usage mismatch between arch/arm/boot/compressed/ashldi3.o and output
+
+Change-Id: I1251b843bb9b4c74ba8039fd194e3aed2183cf5b
+---
+ arch/arm/boot/compressed/Makefile | 23 +++++++++++++++++------
+ security/smc/Makefile             |  4 ++++
+ 2 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/boot/compressed/Makefile b/arch/arm/boot/compressed/Makefile
+index 777f70d..fd73b77 100644
+--- a/arch/arm/boot/compressed/Makefile
++++ b/arch/arm/boot/compressed/Makefile
+@@ -5,6 +5,7 @@
+ #
+ 
+ OBJS		=
++plus_sec := $(call as-instr,.arch_extension sec,+sec)
+ 
+ # Ensure that mmcif loader code appears early in the image
+ # to minimise that number of bocks that have to be read in
+@@ -15,9 +16,16 @@ OBJS		+= mmcif-sh7372.o
+ endif
+ endif
+ 
+-AFLAGS_head.o += -DTEXT_OFFSET=$(TEXT_OFFSET)
+-HEAD	= head.o
+-OBJS	+= misc.o decompress.o
++AFLAGS_head.o := -DTEXT_OFFSET=$(TEXT_OFFSET)
++AFLAGS_head.o += -Wa,-march=armv7-a$(plus_sec)
++HEAD = head.o
++
++AFLAGS_misc.o +=-Wa,-march=armv7-a$(plus_sec)
++MISC = misc.o
++
++AFLAGS_decompress.o += -Wa,-march=armv7-a$(plus_sec)
++DECOMPRESS = decompress.o
++
+ FONTC	= $(srctree)/drivers/video/console/font_acorn_8x8.c
+ 
+ #
+@@ -84,9 +92,9 @@ suffix_$(CONFIG_KERNEL_LZO)  := lzo
+ suffix_$(CONFIG_KERNEL_LZMA) := lzma
+ suffix_$(CONFIG_KERNEL_XZ)   := xzkern
+ 
+-targets       := vmlinux vmlinux.lds \
++targets := vmlinux vmlinux.lds \
+ 		 piggy.$(suffix_y) piggy.$(suffix_y).o \
+-		 font.o font.c head.o misc.o $(OBJS)
++		 font.o font.c head.o misc.o decompress.o $(OBJS)
+ 
+ # Make sure files are removed during clean
+ extra-y       += piggy.gzip piggy.lzo piggy.lzma piggy.xzkern lib1funcs.S ashldi3.S
+@@ -116,12 +124,14 @@ LDFLAGS_vmlinux += -X
+ LDFLAGS_vmlinux += -T
+ 
+ # For __aeabi_uidivmod
++AFLAGS_lib1funcs.o +=-Wa,-march=armv7-a$(plus_sec)
+ lib1funcs = $(obj)/lib1funcs.o
+ 
+ $(obj)/lib1funcs.S: $(srctree)/arch/$(SRCARCH)/lib/lib1funcs.S FORCE
+ 	$(call cmd,shipped)
+ 
+ # For __aeabi_llsl
++AFLAGS_ashldi3.o +=-Wa,-march=armv7-a$(plus_sec)
+ ashldi3 = $(obj)/ashldi3.o
+ 
+ $(obj)/ashldi3.S: $(srctree)/arch/$(SRCARCH)/lib/ashldi3.S FORCE
+@@ -140,7 +150,7 @@ bad_syms=$$($(CROSS_COMPILE)nm $@ | sed -n 's/^.\{8\} [bc] \(.*\)/\1/p') && \
+   ( echo "following symbols must have non local/private scope:" >&2; \
+     echo "$$bad_syms" >&2; rm -f $@; false )
+ 
+-$(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/$(HEAD) $(obj)/piggy.$(suffix_y).o \
++$(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/$(HEAD) $(obj)/$(MISC) $(obj)/$(DECOMPRESS) $(obj)/piggy.$(suffix_y).o \
+     $(addprefix $(obj)/, $(OBJS)) $(lib1funcs) $(ashldi3) FORCE
+ 	$(call if_changed,ld)
+ 	@$(check_for_bad_syms)
+@@ -148,6 +158,7 @@ $(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/$(HEAD) $(obj)/piggy.$(suffix_y).o \
+ $(obj)/piggy.$(suffix_y): $(obj)/../Image FORCE
+ 	$(call if_changed,$(suffix_y))
+ 
++AFLAGS_piggy.$(suffix_y).o += -Wa,-march=armv7-a$(plus_sec)
+ $(obj)/piggy.$(suffix_y).o:  $(obj)/piggy.$(suffix_y) FORCE
+ 
+ CFLAGS_font.o := -Dstatic=
+diff --git a/security/smc/Makefile b/security/smc/Makefile
+index 2133178..c0b958b 100644
+--- a/security/smc/Makefile
++++ b/security/smc/Makefile
+@@ -22,6 +22,8 @@ ifdef S_VERSION_BUILD
+ EXTRA_CFLAGS += -DS_VERSION_BUILD=$(S_VERSION_BUILD)
+ endif
+ 
++plus_sec := $(call as-instr,.arch_extension sec,+sec)
++
+ EXTRA_CFLAGS += -Iarch/arm/mach-omap2
+ EXTRA_CFLAGS += -Iarch/arm/plat-omap/include/plat
+ EXTRA_CFLAGS += -DCONFIG_TF_TEEC
+@@ -41,5 +43,7 @@ tf_driver-objs += tf_device_mshield.o
+ tf_driver-objs += bridge_pub2sec.o
+ tf_driver-objs += tf_teec.o
+ 
++AFLAGS_bridge_pub2sec.o +=-Wa,-march=armv7-a$(plus_sec)
++
+ obj-$(CONFIG_SECURITY_MIDDLEWARE_COMPONENT) += tf_driver.o
+ obj-$(CONFIG_SECURITY_MIDDLEWARE_COMPONENT) += rproc_drm.o
+-- 
+1.8.5.1
+

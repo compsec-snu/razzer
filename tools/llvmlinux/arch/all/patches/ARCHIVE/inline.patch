@@ -1,0 +1,101 @@
+Remove useless inline specifiers
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Bryce Lelbach <blelbach@cct.lsu.edu>
+---
+ fs/bio.c                        |    2 +-
+ fs/block_dev.c                  |    2 +-
+ fs/buffer.c                     |    2 +-
+ kernel/time.c                   |    4 ++--
+ mm/filemap.c                    |    2 +-
+ net/core/dev.c                  |    2 +-
+ net/ipv4/ip_output.c            |    2 +-
+ 8 files changed, 9 insertions(+), 9 deletions(-)
+
+--- linux.orig/fs/bio.c
++++ linux/fs/bio.c
+@@ -400,7 +400,7 @@
+ }
+ EXPORT_SYMBOL(bio_put);
+ 
+-inline int bio_phys_segments(struct request_queue *q, struct bio *bio)
++int bio_phys_segments(struct request_queue *q, struct bio *bio)
+ {
+ 	if (unlikely(!bio_flagged(bio, BIO_SEG_VALID)))
+ 		blk_recount_segments(q, bio);
+--- linux.orig/fs/block_dev.c
++++ linux/fs/block_dev.c
+@@ -42,7 +42,7 @@
+ 	return container_of(inode, struct bdev_inode, vfs_inode);
+ }
+ 
+-inline struct block_device *I_BDEV(struct inode *inode)
++struct block_device *I_BDEV(struct inode *inode)
+ {
+ 	return &BDEV_I(inode)->bdev;
+ }
+--- linux.orig/fs/buffer.c
++++ linux/fs/buffer.c
+@@ -46,7 +46,7 @@
+ 
+ #define BH_ENTRY(list) list_entry((list), struct buffer_head, b_assoc_buffers)
+ 
+-inline void
++void
+ init_buffer(struct buffer_head *bh, bh_end_io_t *handler, void *private)
+ {
+ 	bh->b_end_io = handler;
+--- linux.orig/kernel/time.c
++++ linux/kernel/time.c
+@@ -232,7 +232,7 @@
+  * Avoid unnecessary multiplications/divisions in the
+  * two most common HZ cases:
+  */
+-inline unsigned int jiffies_to_msecs(const unsigned long j)
++unsigned int jiffies_to_msecs(const unsigned long j)
+ {
+ #if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
+ 	return (MSEC_PER_SEC / HZ) * j;
+@@ -248,7 +248,7 @@
+ }
+ EXPORT_SYMBOL(jiffies_to_msecs);
+ 
+-inline unsigned int jiffies_to_usecs(const unsigned long j)
++unsigned int jiffies_to_usecs(const unsigned long j)
+ {
+ #if HZ <= USEC_PER_SEC && !(USEC_PER_SEC % HZ)
+ 	return (USEC_PER_SEC / HZ) * j;
+--- linux.orig/mm/filemap.c
++++ linux/mm/filemap.c
+@@ -2073,7 +2073,8 @@
+  * Returns appropriate error code that caller should return or
+  * zero in case that write should be allowed.
+  */
+-inline int generic_write_checks(struct file *file, loff_t *pos, size_t *count, int isblk)
++int generic_write_checks(struct file *file, loff_t *pos, size_t *count,
++	int isblk)
+ {
+ 	struct inode *inode = file->f_mapping->host;
+ 	unsigned long limit = rlimit(RLIMIT_FSIZE);
+--- linux.orig/net/ipv4/ip_output.c
++++ linux/net/ipv4/ip_output.c
+@@ -84,7 +84,7 @@
+ EXPORT_SYMBOL(sysctl_ip_default_ttl);
+ 
+ /* Generate a checksum for an outgoing IP datagram. */
+-__inline__ void ip_send_check(struct iphdr *iph)
++void ip_send_check(struct iphdr *iph)
+ {
+ 	iph->check = 0;
+ 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
+--- linux.orig/drivers/gpu/drm/i915/i915_drv.h
++++ linux/drivers/gpu/drm/i915/i915_drv.h
+@@ -1558,7 +1558,7 @@
+ 		struct drm_i915_private *dev_priv, unsigned port);
+ extern void intel_gmbus_set_speed(struct i2c_adapter *adapter, int speed);
+ extern void intel_gmbus_force_bit(struct i2c_adapter *adapter, bool force_bit);
+-extern inline bool intel_gmbus_is_forced_bit(struct i2c_adapter *adapter)
++static bool intel_gmbus_is_forced_bit(struct i2c_adapter *adapter)
+ {
+ 	return container_of(adapter, struct intel_gmbus, adapter)->force_bit;
+ }

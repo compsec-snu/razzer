@@ -1,0 +1,30 @@
+From 4e7a573c237188b4eb3de1af2cb5958d4180c4b9 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Sat, 19 Apr 2014 22:58:59 -0700
+Subject: [PATCH] x86: LLVMLinux: Wrap -mno-80387 with cc-option
+
+Wrap -mno-80387 gcc options with cc-option so they don't break clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/x86/Makefile | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index d1b7c37..ce6ad7e 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -83,7 +83,9 @@ else
+         KBUILD_CFLAGS += -m64
+ 
+         # Don't autogenerate traditional x87, MMX or SSE instructions
+-        KBUILD_CFLAGS += -mno-mmx -mno-sse -mno-80387 -mno-fp-ret-in-387
++        KBUILD_CFLAGS += -mno-mmx -mno-sse
++        KBUILD_CFLAGS += $(call cc-option,-mno-80387)
++        KBUILD_CFLAGS += $(call cc-option,-mno-fp-ret-in-387)
+ 
+ 	# Use -mpreferred-stack-boundary=3 if supported.
+ 	KBUILD_CFLAGS += $(call cc-option,-mpreferred-stack-boundary=3)
+-- 
+1.8.3.2
+

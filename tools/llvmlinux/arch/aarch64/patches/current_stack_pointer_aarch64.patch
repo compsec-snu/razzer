@@ -1,0 +1,39 @@
+From a5796d37d9d0eff68c82db12ca0df0360c62fb71 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Wed, 12 Feb 2014 12:16:28 -0800
+Subject: [PATCH] arm64: LLVMLinux: Add current_stack_pointer() for arm64
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Define a global named register for current_stack_pointer. The use of this new
+variable guarantees that both gcc and clang can access this register in C code.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Olof Johansson <olof@lixom.net>
+Acked-by: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/include/asm/thread_info.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index e40b6d0..e6b6094 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -69,6 +69,11 @@ struct thread_info {
+ #define init_stack		(init_thread_union.stack)
+ 
+ /*
++ * how to get the current stack pointer from C
++ */
++register unsigned long current_stack_pointer asm ("sp");
++
++/*
+  * how to get the thread information struct from C
+  */
+ static inline struct thread_info *current_thread_info(void) __attribute_const__;
+-- 
+1.9.1
+

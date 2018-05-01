@@ -1,0 +1,76 @@
+From 0f7d98790c82de771546a21c31d83aae247c14d9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:57:15 +0100
+Subject: [PATCH 33/51] Various fixes in arch/x86/include/asm
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/include/asm/dwarf2.h    |    2 +-
+ arch/x86/include/asm/ftrace.h    |   11 +++++++++++
+ arch/x86/include/asm/init.h      |    2 +-
+ arch/x86/include/asm/mmconfig.h  |    2 +-
+ arch/x86/include/asm/processor.h |    2 +-
+ 5 Dateien geändert, 15 Zeilen hinzugefügt(+), 4 Zeilen entfernt(-)
+
+--- linux.orig/arch/x86/include/asm/dwarf2.h
++++ linux/arch/x86/include/asm/dwarf2.h
+@@ -53,7 +53,7 @@
+  * Due to the structure of pre-exisiting code, don't use assembler line
+  * comment character # to ignore the arguments. Instead, use a dummy macro.
+  */
+-.macro cfi_ignore a=0, b=0, c=0, d=0
++.macro cfi_ignore a=0, b=0, c=0, d=0, e=0, f=0, g=0, h=0
+ .endm
+ 
+ #define CFI_STARTPROC		cfi_ignore
+--- linux.orig/arch/x86/include/asm/ftrace.h
++++ linux/arch/x86/include/asm/ftrace.h
+@@ -32,6 +32,17 @@
+ 	addq $(SS+8-\skip), %rsp
+ 	.endm
+ 
++#else
++
++#define HAVE_ARCH_CALLER_ADDR
++
++#define CALLER_ADDR0 ((unsigned long)__builtin_return_address(0))
++#define CALLER_ADDR1 0UL
++#define CALLER_ADDR2 0UL
++#define CALLER_ADDR3 0UL
++#define CALLER_ADDR4 0UL
++#define CALLER_ADDR5 0UL
++#define CALLER_ADDR6 0UL
+ #endif
+ 
+ #ifdef CONFIG_FUNCTION_TRACER
+--- linux.orig/arch/x86/include/asm/mmconfig.h
++++ linux/arch/x86/include/asm/mmconfig.h
+@@ -3,7 +3,7 @@
+ 
+ #ifdef CONFIG_PCI_MMCONFIG
+ extern void __cpuinit fam10h_check_enable_mmcfg(void);
+-extern void __cpuinit check_enable_amd_mmconf_dmi(void);
++extern void __ref check_enable_amd_mmconf_dmi(void);
+ #else
+ static inline void fam10h_check_enable_mmcfg(void) { }
+ static inline void check_enable_amd_mmconf_dmi(void) { }
+--- linux.orig/arch/x86/include/asm/processor.h
++++ linux/arch/x86/include/asm/processor.h
+@@ -104,7 +104,7 @@
+ 	__u32			extended_cpuid_level;
+ 	/* Maximum supported CPUID level, -1=no CPUID: */
+ 	int			cpuid_level;
+-	__u32			x86_capability[NCAPINTS + NBUGINTS];
++	__u32			x86_capability[NCAPINTS + NBUGINTS] __aligned(8);
+ 	char			x86_vendor_id[16];
+ 	char			x86_model_id[64];
+ 	/* in KB - valid for CPUS which support this call: */

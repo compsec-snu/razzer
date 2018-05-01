@@ -1,0 +1,469 @@
+From 3093c36ec6f73024230dae8b721fd5bb3eece787 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:07 +0000
+Subject: [PATCH 12/26] [x86] Disambiguate RET[QL] and fix aliases for 16-bit
+ mode
+
+I couldn't see how to do this sanely without splitting RETQ from RETL.
+
+Eric says: "sad about the inability to roundtrip them now, but...".
+I have no idea what that means, but perhaps it wants preserving in the
+commit comment.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198756 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit d7ae82f8f5091fc2467419f19e28fc9f1bb16820)
+
+Conflicts:
+	test/CodeGen/X86/stdcall-notailcall.ll
+	test/CodeGen/X86/win32_sret.ll
+---
+ lib/Target/X86/X86FastISel.cpp             |  2 +-
+ lib/Target/X86/X86FloatingPoint.cpp        |  3 +-
+ lib/Target/X86/X86FrameLowering.cpp        | 10 +++---
+ lib/Target/X86/X86InstrControl.td          | 11 +++---
+ lib/Target/X86/X86InstrInfo.td             | 11 +++---
+ lib/Target/X86/X86MCInstLower.cpp          | 11 ++++--
+ test/CodeGen/X86/2008-08-31-EH_RETURN64.ll |  2 +-
+ test/CodeGen/X86/fast-isel-x86.ll          |  6 ++--
+ test/CodeGen/X86/sibcall.ll                |  4 +--
+ test/CodeGen/X86/stdcall-notailcall.ll     |  2 +-
+ test/CodeGen/X86/stdcall.ll                |  4 +--
+ test/CodeGen/X86/win32_sret.ll             | 28 ++++++++--------
+ test/MC/X86/x86-16.s                       | 54 ++++++++++++++++++++++++++++++
+ 13 files changed, 108 insertions(+), 40 deletions(-)
+
+diff --git a/lib/Target/X86/X86FastISel.cpp b/lib/Target/X86/X86FastISel.cpp
+index 97f96ab..6d30e70 100644
+--- a/lib/Target/X86/X86FastISel.cpp
++++ b/lib/Target/X86/X86FastISel.cpp
+@@ -888,7 +888,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
+ 
+   // Now emit the RET.
+   MachineInstrBuilder MIB =
+-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, TII.get(X86::RET));
++    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, TII.get(Subtarget->is64Bit() ? X86::RETQ : X86::RETL));
+   for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
+     MIB.addReg(RetRegs[i], RegState::Implicit);
+   return true;
+diff --git a/lib/Target/X86/X86FloatingPoint.cpp b/lib/Target/X86/X86FloatingPoint.cpp
+index 48470da..d6d0bbc 100644
+--- a/lib/Target/X86/X86FloatingPoint.cpp
++++ b/lib/Target/X86/X86FloatingPoint.cpp
+@@ -1671,7 +1671,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &I) {
+     break;
+   }
+ 
+-  case X86::RET:
++  case X86::RETQ:
++  case X86::RETL:
+   case X86::RETI:
+     // If RET has an FP register use operand, pass the first one in ST(0) and
+     // the second one in ST(1).
+diff --git a/lib/Target/X86/X86FrameLowering.cpp b/lib/Target/X86/X86FrameLowering.cpp
+index a06ba9d..e1a75f4 100644
+--- a/lib/Target/X86/X86FrameLowering.cpp
++++ b/lib/Target/X86/X86FrameLowering.cpp
+@@ -107,7 +107,8 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
+   unsigned Opc = MBBI->getOpcode();
+   switch (Opc) {
+   default: return 0;
+-  case X86::RET:
++  case X86::RETL:
++  case X86::RETQ:
+   case X86::RETI:
+   case X86::TCRETURNdi:
+   case X86::TCRETURNri:
+@@ -730,7 +731,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
+   switch (RetOpcode) {
+   default:
+     llvm_unreachable("Can only insert epilog into returning blocks");
+-  case X86::RET:
++  case X86::RETQ:
++  case X86::RETL:
+   case X86::RETI:
+   case X86::TCRETURNdi:
+   case X86::TCRETURNri:
+@@ -888,8 +890,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
+ 
+     // Delete the pseudo instruction TCRETURN.
+     MBB.erase(MBBI);
+-  } else if ((RetOpcode == X86::RET || RetOpcode == X86::RETI) &&
+-             (X86FI->getTCReturnAddrDelta() < 0)) {
++  } else if ((RetOpcode == X86::RETQ || RetOpcode == X86::RETI ||
++              RetOpcode == X86::RETL) && (X86FI->getTCReturnAddrDelta() < 0)) {
+     // Add the return addr area delta back since we are not tail calling.
+     int delta = -1*X86FI->getTCReturnAddrDelta();
+     MBBI = MBB.getLastNonDebugInstr();
+diff --git a/lib/Target/X86/X86InstrControl.td b/lib/Target/X86/X86InstrControl.td
+index da2fdf0..f6ffb83 100644
+--- a/lib/Target/X86/X86InstrControl.td
++++ b/lib/Target/X86/X86InstrControl.td
+@@ -21,14 +21,17 @@
+ // ST1 arguments when returning values on the x87 stack.
+ let isTerminator = 1, isReturn = 1, isBarrier = 1,
+     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
+-  def RET    : I   <0xC3, RawFrm, (outs), (ins variable_ops),
+-                    "ret",
+-                    [(X86retflag 0)], IIC_RET>, OpSize16;
++  def RETL   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
++                    "ret{l}",
++                    [(X86retflag 0)], IIC_RET>, OpSize16, Requires<[Not64BitMode]>;
++  def RETQ   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
++                    "ret{q}",
++                    [(X86retflag 0)], IIC_RET>, Requires<[In64BitMode]>;
+   def RETW   : I   <0xC3, RawFrm, (outs), (ins),
+                     "ret{w}",
+                     [], IIC_RET>, OpSize;
+   def RETI   : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
+-                    "ret\t$amt",
++                    "ret{l}\t$amt",
+                     [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize16;
+   def RETIW  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
+                     "ret{w}\t$amt",
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index f4c6eb4..20e575a 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -2129,7 +2129,8 @@ def : MnemonicAlias<"cdqe", "cltq", "att">;
+ def : MnemonicAlias<"cqo",  "cqto", "att">;
+ 
+ // lret maps to lretl, it is not ambiguous with lretq.
+-def : MnemonicAlias<"lret", "lretl", "att">;
++def : MnemonicAlias<"lret", "lretw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"lret", "lretl", "att">, Requires<[Not16BitMode]>;
+ 
+ def : MnemonicAlias<"leavel", "leave", "att">, Requires<[Not64BitMode]>;
+ def : MnemonicAlias<"leaveq", "leave", "att">, Requires<[In64BitMode]>;
+@@ -2172,8 +2173,9 @@ def : MnemonicAlias<"repe",  "rep",   "att">;
+ def : MnemonicAlias<"repz",  "rep",   "att">;
+ def : MnemonicAlias<"repnz", "repne", "att">;
+ 
+-def : MnemonicAlias<"retl", "ret", "att">, Requires<[Not64BitMode]>;
+-def : MnemonicAlias<"retq", "ret", "att">, Requires<[In64BitMode]>;
++def : MnemonicAlias<"ret", "retw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"ret", "retl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"ret", "retq", "att">, Requires<[In64BitMode]>;
+ 
+ def : MnemonicAlias<"salb", "shlb", "att">;
+ def : MnemonicAlias<"salw", "shlw", "att">;
+@@ -2189,7 +2191,8 @@ def : MnemonicAlias<"ud2a",  "ud2",  "att">;
+ def : MnemonicAlias<"verrw", "verr", "att">;
+ 
+ // System instruction aliases.
+-def : MnemonicAlias<"iret",    "iretl",    "att">;
++def : MnemonicAlias<"iret",    "iretw",    "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"iret",    "iretl",    "att">, Requires<[Not16BitMode]>;
+ def : MnemonicAlias<"sysret",  "sysretl",  "att">;
+ def : MnemonicAlias<"sysexit", "sysexitl", "att">;
+ 
+diff --git a/lib/Target/X86/X86MCInstLower.cpp b/lib/Target/X86/X86MCInstLower.cpp
+index 6649c82..3571e3f 100644
+--- a/lib/Target/X86/X86MCInstLower.cpp
++++ b/lib/Target/X86/X86MCInstLower.cpp
+@@ -335,6 +335,11 @@ static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
+   Inst.addOperand(Saved);
+ }
+ 
++static unsigned getRetOpcode(const X86Subtarget &Subtarget)
++{
++	return Subtarget.is64Bit() ? X86::RETQ : X86::RETL;
++}
++
+ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
+   OutMI.setOpcode(MI->getOpcode());
+ 
+@@ -464,7 +469,7 @@ ReSimplify:
+   case X86::EH_RETURN:
+   case X86::EH_RETURN64: {
+     OutMI = MCInst();
+-    OutMI.setOpcode(X86::RET);
++    OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
+     break;
+   }
+ 
+@@ -904,12 +909,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
+     return LowerPATCHPOINT(OutStreamer, SM, *MI);
+ 
+   case X86::MORESTACK_RET:
+-    OutStreamer.EmitInstruction(MCInstBuilder(X86::RET));
++    OutStreamer.EmitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));
+     return;
+ 
+   case X86::MORESTACK_RET_RESTORE_R10:
+     // Return, then restore R10.
+-    OutStreamer.EmitInstruction(MCInstBuilder(X86::RET));
++    OutStreamer.EmitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));
+     OutStreamer.EmitInstruction(MCInstBuilder(X86::MOV64rr)
+       .addReg(X86::R10)
+       .addReg(X86::RAX));
+diff --git a/test/CodeGen/X86/2008-08-31-EH_RETURN64.ll b/test/CodeGen/X86/2008-08-31-EH_RETURN64.ll
+index 496779c..51064f1 100644
+--- a/test/CodeGen/X86/2008-08-31-EH_RETURN64.ll
++++ b/test/CodeGen/X86/2008-08-31-EH_RETURN64.ll
+@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
+ ; CHECK: movq %rsp, %rbp
+ ; CHECK: popq %rbp
+ ; CHECK: movq %rcx, %rsp
+-; CHECK: ret # eh_return, addr: %rcx
++; CHECK: retq # eh_return, addr: %rcx
+ define i8* @test(i64 %a, i8* %b)  {
+ entry:
+   call void @llvm.eh.unwind.init()
+diff --git a/test/CodeGen/X86/fast-isel-x86.ll b/test/CodeGen/X86/fast-isel-x86.ll
+index ba86e88..a212a7c 100644
+--- a/test/CodeGen/X86/fast-isel-x86.ll
++++ b/test/CodeGen/X86/fast-isel-x86.ll
+@@ -3,7 +3,7 @@
+ ; This should use flds to set the return value.
+ ; CHECK-LABEL: test0:
+ ; CHECK: flds
+-; CHECK: ret
++; CHECK: retl
+ @G = external global float
+ define float @test0() nounwind {
+   %t = load float* @G
+@@ -12,7 +12,7 @@ define float @test0() nounwind {
+ 
+ ; This should pop 4 bytes on return.
+ ; CHECK-LABEL: test1:
+-; CHECK: ret $4
++; CHECK: retl $4
+ define void @test1({i32, i32, i32, i32}* sret %p) nounwind {
+   store {i32, i32, i32, i32} zeroinitializer, {i32, i32, i32, i32}* %p
+   ret void
+@@ -25,7 +25,7 @@ define void @test1({i32, i32, i32, i32}* sret %p) nounwind {
+ ; CHECK-NEXT: L2$pb:
+ ; CHECK-NEXT: pop
+ ; CHECK: HHH
+-; CHECK: ret
++; CHECK: retl
+ @HHH = external global i32
+ define i32 @test2() nounwind {
+   %t = load i32* @HHH
+diff --git a/test/CodeGen/X86/sibcall.ll b/test/CodeGen/X86/sibcall.ll
+index 589e9ec..28fc626 100644
+--- a/test/CodeGen/X86/sibcall.ll
++++ b/test/CodeGen/X86/sibcall.ll
+@@ -247,11 +247,11 @@ entry:
+ define void @t15(%struct.foo* noalias sret %agg.result) nounwind  {
+ ; 32-LABEL: t15:
+ ; 32: calll {{_?}}f
+-; 32: ret $4
++; 32: retl $4
+ 
+ ; 64-LABEL: t15:
+ ; 64: callq {{_?}}f
+-; 64: ret
++; 64: retq
+   tail call fastcc void @f(%struct.foo* noalias sret %agg.result) nounwind
+   ret void
+ }
+diff --git a/test/CodeGen/X86/stdcall-notailcall.ll b/test/CodeGen/X86/stdcall-notailcall.ll
+index 8f522cd..f56591c 100644
+--- a/test/CodeGen/X86/stdcall-notailcall.ll
++++ b/test/CodeGen/X86/stdcall-notailcall.ll
+@@ -4,7 +4,7 @@
+ define x86_stdcallcc void @bar(%struct.I* nocapture %this) ssp align 2 {
+ ; CHECK-LABEL: bar:
+ ; CHECK-NOT: jmp
+-; CHECK: ret $4
++; CHECK: retl $4
+ entry:
+   tail call void @foo()
+   ret void
+diff --git a/test/CodeGen/X86/stdcall.ll b/test/CodeGen/X86/stdcall.ll
+index 73826ed..3cefe14 100644
+--- a/test/CodeGen/X86/stdcall.ll
++++ b/test/CodeGen/X86/stdcall.ll
+@@ -6,14 +6,14 @@
+ define internal x86_stdcallcc void @MyFunc() nounwind {
+ entry:
+ ; CHECK: MyFunc@0:
+-; CHECK: ret
++; CHECK: retl
+   ret void
+ }
+ 
+ ; PR14410
+ define x86_stdcallcc i32 @"\01DoNotMangle"(i32 %a) {
+ ; CHECK: DoNotMangle:
+-; CHECK: ret $4
++; CHECK: retl $4
+ entry:
+   ret i32 %a
+ }
+diff --git a/test/CodeGen/X86/win32_sret.ll b/test/CodeGen/X86/win32_sret.ll
+index a24963a..0ffddbd 100644
+--- a/test/CodeGen/X86/win32_sret.ll
++++ b/test/CodeGen/X86/win32_sret.ll
+@@ -16,13 +16,13 @@ entry:
+ ; WIN32:      sret1
+ ; WIN32:      movb $42, (%eax)
+ ; WIN32-NOT:  popl %eax
+-; WIN32:    {{ret$}}
++; WIN32:    {{retl$}}
+ 
+ ; MINGW_X86:  sret1
+-; MINGW_X86:  ret $4
++; MINGW_X86:  retl $4
+ 
+ ; LINUX:      sret1
+-; LINUX:      ret $4
++; LINUX:      retl $4
+ 
+   store i8 42, i8* %x, align 4
+   ret void
+@@ -33,13 +33,13 @@ entry:
+ ; WIN32:      sret2
+ ; WIN32:      movb {{.*}}, (%eax)
+ ; WIN32-NOT:  popl %eax
+-; WIN32:    {{ret$}}
++; WIN32:    {{retl$}}
+ 
+ ; MINGW_X86:  sret2
+-; MINGW_X86:  ret $4
++; MINGW_X86:  retl $4
+ 
+ ; LINUX:      sret2
+-; LINUX:      ret $4
++; LINUX:      retl $4
+ 
+   store i8 %y, i8* %x
+   ret void
+@@ -51,13 +51,13 @@ entry:
+ ; WIN32:      movb $42, (%eax)
+ ; WIN32-NOT:  movb $13, (%eax)
+ ; WIN32-NOT:  popl %eax
+-; WIN32:    {{ret$}}
++; WIN32:    {{retl$}}
+ 
+ ; MINGW_X86:  sret3
+-; MINGW_X86:  ret $4
++; MINGW_X86:  retl $4
+ 
+ ; LINUX:      sret3
+-; LINUX:      ret $4
++; LINUX:      retl $4
+ 
+   store i8 42, i8* %x
+   store i8 13, i8* %y
+@@ -72,13 +72,13 @@ entry:
+ ; WIN32:     sret4
+ ; WIN32:     movl $42, (%eax)
+ ; WIN32-NOT: popl %eax
+-; WIN32:   {{ret$}}
++; WIN32:   {{retl$}}
+ 
+ ; MINGW_X86: sret4
+-; MINGW_X86: ret $4
++; MINGW_X86: retl $4
+ 
+ ; LINUX:     sret4
+-; LINUX:     ret $4
++; LINUX:     retl $4
+ 
+   %x = getelementptr inbounds %struct.S4* %agg.result, i32 0, i32 0
+   store i32 42, i32* %x, align 4
+@@ -103,7 +103,7 @@ entry:
+ ; should match both 4(%esp) and 8(%esp).
+ ; WIN32:     {{[48]}}(%esp), %eax
+ ; WIN32:     movl $42, (%eax)
+-; WIN32:     ret $4
++; WIN32:     retl $4
+ }
+ 
+ define void @call_foo5() {
+@@ -121,6 +121,6 @@ entry:
+ ; The this pointer goes to ECX.
+ ; WIN32-NEXT: leal {{[0-9]+}}(%esp), %ecx
+ ; WIN32-NEXT: calll "?foo@C5@@QAE?AUS5@@XZ"
+-; WIN32:      ret
++; WIN32:      retl
+   ret void
+ }
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index bb1aa4a..9fdd864 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -71,6 +71,10 @@ int $255
+ // CHECK: popfl	        # encoding: [0x66,0x9d]
+         popfl
+ 
++retl
++// CHECK: ret
++// CHECK:  encoding: [0x66,0xc3]
++
+ // CHECK: cmoval	%eax, %edx
+ // CHECK:  encoding: [0x66,0x0f,0x47,0xd0]
+         	cmoval	%eax,%edx
+@@ -352,6 +356,16 @@ cmovnae	%bx,%bx
+ lcalll $0x2, $0x1234
+ 
+ 
++iret
++// CHECK: iretw
++// CHECK: encoding: [0xcf]
++iretw
++// CHECK: iretw
++// CHECK: encoding: [0xcf]
++iretl
++// CHECK: iretl
++// CHECK: encoding: [0x66,0xcf]
++
+ sysret
+ // CHECK: sysretl
+ // CHECK: encoding: [0x0f,0x07]
+@@ -567,6 +581,30 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x2f]
+         	das
+ 
++// CHECK: retw	$31438
++// CHECK:  encoding: [0xc2,0xce,0x7a]
++        	retw	$0x7ace
++
++// CHECK: lretw	$31438
++// CHECK:  encoding: [0xca,0xce,0x7a]
++        	lretw	$0x7ace
++
++// CHECK: retw	$31438
++// CHECK:  encoding: [0xc2,0xce,0x7a]
++        	ret	$0x7ace
++
++// CHECK: lretw	$31438
++// CHECK:  encoding: [0xca,0xce,0x7a]
++        	lret	$0x7ace
++
++// CHECK: retl	$31438
++// CHECK:  encoding: [0x66,0xc2,0xce,0x7a]
++        	retl	$0x7ace
++
++// CHECK: lretl	$31438
++// CHECK:  encoding: [0x66,0xca,0xce,0x7a]
++        	lretl	$0x7ace
++
+ // CHECK: bound	2(%eax), %bx
+ // CHECK:  encoding: [0x67,0x62,0x58,0x02]
+         	bound	2(%eax),%bx
+@@ -825,3 +863,19 @@ xchgl %ecx, %eax
+ // CHECK: xchgl %ecx, %eax
+ // CHECK: encoding: [0x66,0x91]
+ xchgl %eax, %ecx
++
++// CHECK: retw
++// CHECK: encoding: [0xc3]
++retw
++
++// CHECK: retl
++// CHECK: encoding: [0x66,0xc3]
++retl
++
++// CHECK: lretw
++// CHECK: encoding: [0xcb]
++lretw
++
++// CHECK: lretl
++// CHECK: encoding: [0x66,0xcb]
++lretl
+-- 
+1.8.4
+

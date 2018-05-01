@@ -1,0 +1,25 @@
+{
+  "target": "linux/amd64",
+  "http": "0.0.0.0:56741",
+  "workdir": "$PWD/workdir",
+  "vmlinux": "$KERNEL_BUILD/vmlinux",
+  "image": "$PWD/wheezy.img",
+  "sshkey": "$PWD/ssh/id_rsa",
+  "syzkaller": "$SYZKALLER_HOME/src/github.com/google/syzkaller",
+  "procs": 1,
+  "type": "qemu",
+  "mempair":   "$SYZKALLER_HOME/exp/configs/kernel/partition/$KERNEL_VERSION/mempair",
+  "mapping":   "$SYZKALLER_HOME/exp/configs/kernel/partition/$KERNEL_VERSION/mapping",
+  "callgraph": "$SYZKALLER_HOME/exp/configs/kernel/partition/$KERNEL_VERSION/callgraph",
+  "distance":  "$SYZKALLER_HOME/exp/configs/kernel/partition/$KERNEL_VERSION/distance",
+  "sandbox": "namespace",
+  "vm": {
+    "schedcount": 16,
+    "count": 16,
+    "kernel": "$KERNEL_BUILD/arch/x86/boot/bzImage",
+    "cpu": 2,
+    "mem": 8192,
+    "qemu": "$QEMU_HOME/build/x86_64-softmmu/qemu-system-x86_64"
+  },
+  "disable_syscalls": ["socket$can_bcm", "socket$inet_smc", "socket$can_raw", "perf_event_open"]
+}

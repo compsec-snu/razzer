@@ -1,0 +1,80 @@
+From 0b9106441a7be1f7b6b8755ab92d12e8aa70b8dd Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:26 -0400
+Subject: [PATCH] Kbuild arm: LLVMLinux: Add Kbuild support for building arch
+ arm with Clang
+
+Protect more options for arm with cc-option so that we don't get errors when
+using clang instead of gcc.  Add more or different options when using clang as
+well.
+
+KernelVersion:
+Author: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+---
+ arch/arm/Makefile                 | 14 +++++++++-----
+ arch/arm/boot/compressed/Makefile |  2 +-
+ 2 files changed, 10 insertions(+), 6 deletions(-)
+
+--- linux.orig/arch/arm/Makefile
++++ linux/arch/arm/Makefile
+@@ -30,6 +30,10 @@
+ # Never generate .eh_frame
+ KBUILD_CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
+ 
++ifeq ($(COMPILER),clang)
++KBUILD_CFLAGS += -Wa,-mno-warn-deprecated
++endif
++
+ # This should work on most of the modern platforms
+ KBUILD_DEFCONFIG := multi_v7_defconfig
+ 
+@@ -40,15 +44,15 @@
+ endif
+ 
+ ifeq ($(CONFIG_FRAME_POINTER),y)
+-KBUILD_CFLAGS	+=-fno-omit-frame-pointer -mapcs -mno-sched-prolog
++KBUILD_CFLAGS	+=-fno-omit-frame-pointer $(call cc-option,-mapcs,) $(call cc-option,-mno-sched-prolog,)
+ endif
+ 
+ ifeq ($(CONFIG_CPU_BIG_ENDIAN),y)
+-KBUILD_CPPFLAGS	+= -mbig-endian
++KBUILD_CPPFLAGS	+= $(call cc-option,-mbig-endian)
+ AS		+= -EB
+ LD		+= -EB
+ else
+-KBUILD_CPPFLAGS	+= -mlittle-endian
++KBUILD_CPPFLAGS	+= $(call cc-option,-mlittle-endian)
+ AS		+= -EL
+ LD		+= -EL
+ endif
+@@ -105,7 +109,7 @@
+ tune-y := $(tune-y)
+ 
+ ifeq ($(CONFIG_AEABI),y)
+-CFLAGS_ABI	:=-mabi=aapcs-linux -mno-thumb-interwork -mfpu=vfp
++CFLAGS_ABI	:=-mabi=aapcs-linux $(call cc-option,-mno-thumb-interwork,) -mfpu=vfp
+ else
+ CFLAGS_ABI	:=$(call cc-option,-mapcs-32,-mabi=apcs-gnu) $(call cc-option,-mno-thumb-interwork,)
+ endif
+@@ -129,7 +133,7 @@
+ endif
+ 
+ # Need -Uarm for gcc < 3.x
+-KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_ISA) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -msoft-float -Uarm
++KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_ISA) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -msoft-float $(call cc-option, -Uarm,)
+ KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_ISA) $(arch-y) $(tune-y) -include asm/unified.h -msoft-float
+ 
+ CHECKFLAGS	+= -D__arm__
+--- linux.orig/arch/arm/boot/compressed/Makefile
++++ linux/arch/arm/boot/compressed/Makefile
+@@ -115,7 +115,7 @@
+ CFLAGS_fdt_rw.o := $(nossp_flags)
+ CFLAGS_fdt_wip.o := $(nossp_flags)
+ 
+-ccflags-y := -fpic -mno-single-pic-base -fno-builtin -I$(obj)
++ccflags-y := -fpic $(call cc-option,-mno-single-pic-base,) -fno-builtin -I$(obj)
+ asflags-y := -DZIMAGE
+ 
+ # Supply kernel BSS size to the decompressor via a linker symbol.

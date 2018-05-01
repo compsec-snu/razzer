@@ -1,0 +1,34 @@
+From e5d3eb0569e4ccd42633da943157e1307a07a873 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:55 +0200
+Subject: [PATCH 09/11] Revert "frv: uaccess s/might_sleep/might_fault/"
+
+This reverts commit b607ae78ac8a78f8e5e36817500e7c311519f032.
+---
+ arch/frv/include/asm/uaccess.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/frv/include/asm/uaccess.h b/arch/frv/include/asm/uaccess.h
+index 3ac9a59..0b67ec5 100644
+--- a/arch/frv/include/asm/uaccess.h
++++ b/arch/frv/include/asm/uaccess.h
+@@ -280,14 +280,14 @@ extern long __memcpy_user(void *dst, const void *src, unsigned long count);
+ static inline unsigned long __must_check
+ __copy_to_user(void __user *to, const void *from, unsigned long n)
+ {
+-       might_fault();
++       might_sleep();
+        return __copy_to_user_inatomic(to, from, n);
+ }
+ 
+ static inline unsigned long
+ __copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+-       might_fault();
++       might_sleep();
+        return __copy_from_user_inatomic(to, from, n);
+ }
+ 
+-- 
+1.8.1.4
+

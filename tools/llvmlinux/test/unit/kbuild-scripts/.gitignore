@@ -1,0 +1,3 @@
+scripts/gcc-version.sh
+scripts/Kbuild.include
+scripts/Kbuild.patched

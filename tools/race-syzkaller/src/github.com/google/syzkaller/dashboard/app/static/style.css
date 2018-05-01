@@ -1,0 +1,133 @@
+#topbar {
+	padding: 5px 10px;
+	background: #E0EBF5;
+}
+
+#topbar a {
+	color: #375EAB;
+	text-decoration: none;
+}
+
+h1, h2, h3, h4 {
+	margin: 0;
+	padding: 0;
+	color: #375EAB;
+	font-weight: bold;
+}
+
+table {
+	border: 1px solid #ccc;
+	margin: 20px 5px;
+	border-collapse: collapse;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+table caption {
+	font-weight: bold;
+}
+
+table td, table th {
+	vertical-align: top;
+	padding: 2px 8px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+.position_table {
+	border: 0px;
+	margin: 0px;
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.position_table td, .position_table tr {
+	vertical-align: center;
+	padding: 0px;
+}
+
+.position_table .search {
+	text-align: right;
+}
+
+.list_table td, .list_table th {
+	border-left: 1px solid #ccc;
+}
+
+.list_table th {
+	background: #F4F4F4;
+}
+
+.list_table tr:nth-child(2n+1) {
+	background: #F4F4F4;
+}
+
+.list_table tr:hover {
+	background: #ffff99;
+}
+
+.list_table .namespace {
+	width: 100pt;
+	max-width: 100pt;
+}
+
+.list_table .title {
+	width: 350pt;
+	max-width: 350pt;
+}
+
+.list_table .tag {
+	font-family: monospace;
+	font-size: 8pt;
+	width: 200pt;
+	max-width: 200pt;
+}
+
+.list_table .opts {
+	width: 40pt;
+	max-width: 40pt;
+}
+
+.list_table .status {
+	width: 250pt;
+	max-width: 250pt;
+}
+
+.list_table .patched {
+	width: 60pt;
+	max-width: 60pt;
+	text-align: center;
+}
+
+.list_table .kernel {
+	width: 60pt;
+	max-width: 60pt;
+}
+
+.list_table .maintainers {
+	width: 150pt;
+	max-width: 150pt;
+}
+
+.list_table .result {
+	width: 60pt;
+	max-width: 60pt;
+}
+
+.list_table .stat {
+	width: 50pt;
+	max-width: 50pt;
+	font-family: monospace;
+	text-align: right;
+}
+
+.bad {
+	color: #f00;
+	font-weight: bold;
+}
+
+textarea {
+	width:100%;
+	font-family: monospace;
+}

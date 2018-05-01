@@ -1,0 +1,33 @@
+# This is the official list of people who can contribute (and who have contributed)
+# code to the syzkaller project repository. The AUTHORS file lists the copyright holders;
+# this file lists people. For example, Google employees are listed here
+# but not in AUTHORS, because Google holds the copyright.
+
+Google Inc.
+ Dmitry Vyukov
+ Andrey Konovalov
+ David Drysdale
+ Vishwath Mohan
+ Billy Lau
+ Michael Pratt
+ Jess Frazelle
+ Zach Riggle
+ Willem de Bruijn
+ Eric Biggers
+ Atul Prakash
+ Julia Hansbrough
+Baozeng Ding
+Lorenzo Stoakes
+Jeremy Huang
+Shuai Bai
+Alexander Popov
+Jean-Baptiste Cayrou
+Yuzhe Han
+Thomas Garnier
+Utkarsh Anand
+Tobias Klauser
+Tim Tianyang Chen
+Ed Maste
+Sumukha PK
+Mitchell Horne
+Denis Efremov

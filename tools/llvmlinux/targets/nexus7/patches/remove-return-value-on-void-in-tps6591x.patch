@@ -1,0 +1,25 @@
+diff --git a/drivers/mfd/tps6591x.c b/drivers/mfd/tps6591x.c
+index 42d0065..e9d0f86 100755
+--- a/drivers/mfd/tps6591x.c
++++ b/drivers/mfd/tps6591x.c
+@@ -385,17 +385,17 @@ static void tps6591x_power_off(void)
+ 	pr_err("%s(): Setting power off seq\n", __func__);
+ 	ret = tps6591x_set_bits(dev, TPS6591X_DEVCTRL, DEVCTRL_PWR_OFF_SEQ);
+ 	if (ret < 0)
+-		return ret;
++		return;
+ 
+ 	pr_err("%s(): Clearing DEV_SLP\n", __func__);
+ 	ret = tps6591x_clr_bits(dev, TPS6591X_DEVCTRL, DEVCTRL_DEV_SLP);
+ 	if (ret < 0)
+-		return ret;
++		return;
+ 
+ 	pr_err("%s(): Setting device off and clearing dev-on\n", __func__);
+ 	ret = tps6591x_update(dev, TPS6591X_DEVCTRL, DEVCTRL_DEV_OFF,
+ 					DEVCTRL_DEV_OFF | DEVCTRL_DEV_ON);
+-	return ret;
++	return;
+ }
+ 
+ static int tps6591x_gpio_get(struct gpio_chip *gc, unsigned offset)

@@ -1,0 +1,6 @@
+#!/bin/bash
+`dirname $0`/../../../../../toolchain/clang/install/bin/clang \
+	-target arm-none-linux-gnueabi \
+	-gcc-toolchain `dirname $0`/../arm-2011.03 -D__linux__ \
+	-march=armv7-a --sysroot=`dirname $0`/../arm-2011.03/arm-none-linux-gnueabi/libc $*
+

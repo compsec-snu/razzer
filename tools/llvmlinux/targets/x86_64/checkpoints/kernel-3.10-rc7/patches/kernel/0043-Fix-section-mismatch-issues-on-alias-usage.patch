@@ -1,0 +1,45 @@
+From 173774cb62867c5da59d2f590c44c06d74cac41e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:07:02 +0100
+Subject: [PATCH 43/51] Fix section mismatch issues on alias usage
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+
+When using an alias in clang we seem not to inherit the section of the target function.
+Thus we assign the section explicitely.
+---
+ include/linux/init.h |    4 ++--
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+diff --git a/include/linux/init.h b/include/linux/init.h
+index e59041e..210886e 100644
+--- a/include/linux/init.h
++++ b/include/linux/init.h
+@@ -308,13 +308,13 @@ void __init parse_early_options(char *cmdline);
+ #define module_init(initfn)					\
+ 	static inline initcall_t __inittest(void)		\
+ 	{ return initfn; }					\
+-	int init_module(void) __attribute__((alias(#initfn)));
++	int init_module(void) __section(.init) __attribute__((alias(#initfn)));
+ 
+ /* This is only required if you want to be unloadable. */
+ #define module_exit(exitfn)					\
+ 	static inline exitcall_t __exittest(void)		\
+ 	{ return exitfn; }					\
+-	void cleanup_module(void) __attribute__((alias(#exitfn)));
++	void cleanup_module(void) __section(.exit) __attribute__((alias(#exitfn)));
+ 
+ #define __setup_param(str, unique_id, fn)	/* nothing */
+ #define __setup(str, func) 			/* nothing */
+-- 
+1.7.10.4
+

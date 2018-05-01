@@ -1,0 +1,2 @@
+The LLVMLinux project aims to fully build the Linux kernel using both gcc and
+clang (the C front end for the LLVM compiler infrastructure project). 

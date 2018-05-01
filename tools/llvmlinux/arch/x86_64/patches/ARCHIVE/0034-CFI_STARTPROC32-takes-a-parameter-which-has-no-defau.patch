@@ -1,0 +1,36 @@
+From 1f3b55bb59d668f90cf6f5809fca5279ac6d4a77 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:58:19 +0100
+Subject: [PATCH 34/51] CFI_STARTPROC32 takes a parameter which has no default
+ value, so it has to be provided at each invocation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/ia32/ia32entry.S |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/ia32/ia32entry.S b/arch/x86/ia32/ia32entry.S
+index 076745f..ac8ee5a 100644
+--- a/arch/x86/ia32/ia32entry.S
++++ b/arch/x86/ia32/ia32entry.S
+@@ -460,7 +460,7 @@ GLOBAL(\label)
+ 	jmp  ia32_ptregs_common	
+ 	.endm
+ 
+-	CFI_STARTPROC32
++	CFI_STARTPROC32 simple
+ 
+ 	PTREGSCALL stub32_rt_sigreturn, sys32_rt_sigreturn, %rdi
+ 	PTREGSCALL stub32_sigreturn, sys32_sigreturn, %rdi
+-- 
+1.7.10.4
+

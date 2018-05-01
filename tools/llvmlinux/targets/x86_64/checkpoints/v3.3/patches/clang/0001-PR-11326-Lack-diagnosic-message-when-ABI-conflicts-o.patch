@@ -1,0 +1,75 @@
+From 792f3a195c3ff42614a064f8a2ba45cd7ec62eac Mon Sep 17 00:00:00 2001
+From: Weiming Zhao <weimingz@codeaurora.org>
+Date: Tue, 18 Sep 2012 23:09:56 -0700
+Subject: [PATCH] PR 11326: Lack diagnosic message when ABI conflicts on ARM
+
+When both Triple and -mabi are used, it may result into conflicting
+ABI value.
+---
+ include/clang/Basic/DiagnosticCommonKinds.td |    1 +
+ lib/Frontend/CompilerInvocation.cpp          |   23 +++++++++++++++++++++--
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/include/clang/Basic/DiagnosticCommonKinds.td b/include/clang/Basic/DiagnosticCommonKinds.td
+index f859287..ee0e7ca 100644
+--- a/include/clang/Basic/DiagnosticCommonKinds.td
++++ b/include/clang/Basic/DiagnosticCommonKinds.td
+@@ -101,6 +101,7 @@ def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
+ def err_target_unknown_abi : Error<"unknown target ABI '%0'">;
+ def err_target_unknown_cxxabi : Error<"unknown C++ ABI '%0'">;
+ def err_target_invalid_feature : Error<"invalid target feature '%0'">;
++def warn_target_override_abi: Warning<"environment value '%0' of triple is overrided by ABI option value '%1'">;
+ 
+ // Source manager
+ def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
+diff --git a/lib/Frontend/CompilerInvocation.cpp b/lib/Frontend/CompilerInvocation.cpp
+index 6d6dbfc..7037b67 100644
+--- a/lib/Frontend/CompilerInvocation.cpp
++++ b/lib/Frontend/CompilerInvocation.cpp
+@@ -2277,7 +2277,8 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
+   Opts.RewriteIncludes = Args.hasArg(OPT_frewrite_includes);
+ }
+ 
+-static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args) {
++static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
++                            DiagnosticsEngine &Diags) {
+   using namespace options;
+   Opts.ABI = Args.getLastArgValue(OPT_target_abi);
+   Opts.CXXABI = Args.getLastArgValue(OPT_cxx_abi);
+@@ -2289,6 +2290,24 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args) {
+   // Use the default target triple if unspecified.
+   if (Opts.Triple.empty())
+     Opts.Triple = llvm::sys::getDefaultTargetTriple();
++
++  // Use Opts.ABI to override the environment of triple for ARM.
++  llvm::Triple T(Opts.Triple);
++  if (T.getArch()==llvm::Triple::arm && !Opts.ABI.empty()) {
++    llvm::Triple::EnvironmentType env = T.getEnvironment();
++    // Env and ABI (Triple::EnvironmentType and ARMABIInfo::ABIKind) are not
++    // 1-to-1 mapping. Env is overrided only when inconsistence between EABI
++    // and legacy ABI occurs.
++    bool isOpsEABI = StringRef(Opts.ABI).startswith("aapcs");
++    bool isEnvEABI = (env == llvm::Triple::GNUEABI || env == llvm::Triple::EABI
++        || env == llvm::Triple::Android);
++    if (isEnvEABI != isOpsEABI) {
++      T.setEnvironment(isOpsEABI ? llvm::Triple::GNUEABI : llvm::Triple::GNU);
++      Opts.Triple = T.getTriple();
++      Diags.Report(diag::warn_target_override_abi) << T.getEnvironmentName()
++        << Opts.ABI ;
++    }
++  }
+ }
+ 
+ //
+@@ -2351,7 +2370,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
+   FileManager FileMgr(Res.getFileSystemOpts());
+   ParsePreprocessorArgs(Res.getPreprocessorOpts(), *Args, FileMgr, Diags);
+   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), *Args);
+-  ParseTargetArgs(Res.getTargetOpts(), *Args);
++  ParseTargetArgs(Res.getTargetOpts(), *Args, Diags);
+ 
+   return Success;
+ }
+-- 
+1.7.8.3
+

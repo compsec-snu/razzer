@@ -1,0 +1,22 @@
+config_x86_64             is a working distro config
+config_x86_64_default     is minimal and boots to shell
+
+CHECKPOINT/               is a folder containing known working configurations
+
+Usage:
+- cp selected CHECKPOINT to an outside directory
+
+mkdir /tmp/checkpoint
+cp CHECKPOINT/working_kernel_3.3 /tmp/checkpoint/
+make CONFIG=/tmp/checkpoint/working_kernel_3.3 sync-all
+
+- if instructed to do so on the console , checkout a specific version of llvmlinux
+  Example:
+  Current HEAD does not match with checkpoint /tmp/checkpoint/working_kernel_3.3. Please run:
+    git checkout 2a38c62b17834671eeb1fafa7ebd76bb27bd2b86
+
+make CONFIG=/tmp/checkpoint/working_kernel_3.3 sync-all
+make CONFIG=/tmp/checkpoint/working_kernel_3.3 all
+
+-> wait until done.
+

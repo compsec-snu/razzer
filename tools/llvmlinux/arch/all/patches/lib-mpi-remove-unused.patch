@@ -1,0 +1,39 @@
+From 92b3f4844a19638648618c822b87f58f5e64371e Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Mon, 27 Oct 2014 11:40:50 -0700
+Subject: [PATCH] mpi, LLVMLinux: Remove unused headers from mpi-internal.h
+
+FIXME
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+[Refreshed following upstream addition of 'static']
+Signed-off-by: Daniel Sanders <daniel.sanders@imgtec.com>
+---
+ lib/mpi/mpi-internal.h | 8 --------
+ 1 file changed, 8 deletions(-)
+
+--- linux.orig/lib/mpi/mpi-internal.h
++++ linux/lib/mpi/mpi-internal.h
+@@ -168,20 +168,12 @@
+ int mpi_lshift_limbs(MPI a, unsigned int count);
+ 
+ /*-- mpihelp-add.c --*/
+-static inline mpi_limb_t mpihelp_add_1(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr,
+-			 mpi_size_t s1_size, mpi_limb_t s2_limb);
+ mpi_limb_t mpihelp_add_n(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr,
+ 			 mpi_ptr_t s2_ptr, mpi_size_t size);
+-static inline mpi_limb_t mpihelp_add(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr, mpi_size_t s1_size,
+-		       mpi_ptr_t s2_ptr, mpi_size_t s2_size);
+ 
+ /*-- mpihelp-sub.c --*/
+-static inline mpi_limb_t mpihelp_sub_1(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr,
+-			 mpi_size_t s1_size, mpi_limb_t s2_limb);
+ mpi_limb_t mpihelp_sub_n(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr,
+ 			 mpi_ptr_t s2_ptr, mpi_size_t size);
+-static inline mpi_limb_t mpihelp_sub(mpi_ptr_t res_ptr, mpi_ptr_t s1_ptr, mpi_size_t s1_size,
+-		       mpi_ptr_t s2_ptr, mpi_size_t s2_size);
+ 
+ /*-- mpihelp-cmp.c --*/
+ int mpihelp_cmp(mpi_ptr_t op1_ptr, mpi_ptr_t op2_ptr, mpi_size_t size);

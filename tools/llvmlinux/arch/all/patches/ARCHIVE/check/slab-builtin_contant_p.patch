@@ -1,0 +1,23 @@
+Use of __builtin_constant_p(size) breaks Clang compile
+
+Do not upstream this patch as is.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ slab.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Index: linux/mm/slab.c
+===================================================================
+--- linux.orig/mm/slab.c
++++ linux/mm/slab.c
+@@ -342,7 +342,8 @@
+ {
+ 	extern void __bad_size(void);
+ 
+-	if (__builtin_constant_p(size)) {
++	/* if (__builtin_constant_p(size)) { */
++	if (1) {
+ 		int i = 0;
+ 
+ #define CACHE(x) \

@@ -1,0 +1,217 @@
+From 612133e2a6ea83b29fa5a4a7d50665d14bcf5ef3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:38:42 +0200
+Subject: [PATCH 21/48] Various modifications in arch/x86/lib/  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/lib/cmpxchg16b_emu.S |    1 -
+ arch/x86/lib/copy_user_64.S   |    1 -
+ arch/x86/lib/memcpy_32.c      |    8 ++++----
+ arch/x86/lib/string_32.c      |   20 ++++++++++----------
+ arch/x86/lib/strstr_32.c      |    2 +-
+ arch/x86/lib/usercopy_32.c    |    9 +++++----
+ 6 files changed, 20 insertions(+), 21 deletions(-)
+
+diff --git a/arch/x86/lib/cmpxchg16b_emu.S b/arch/x86/lib/cmpxchg16b_emu.S
+index 1e572c5..72928c1 100644
+--- a/arch/x86/lib/cmpxchg16b_emu.S
++++ b/arch/x86/lib/cmpxchg16b_emu.S
+@@ -39,7 +39,6 @@ CFI_STARTPROC
+ # *atomic* on a single cpu (as provided by the this_cpu_xx class of
+ # macros).
+ #
+-this_cpu_cmpxchg16b_emu:
+ 	pushf
+ 	cli
+ 
+diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
+index 0248402..9420792 100644
+--- a/arch/x86/lib/copy_user_64.S
++++ b/arch/x86/lib/copy_user_64.S
+@@ -104,7 +104,6 @@ ENDPROC(_copy_from_user)
+ 	.section .fixup,"ax"
+ 	/* must zero dest */
+ ENTRY(bad_from_user)
+-bad_from_user:
+ 	CFI_STARTPROC
+ 	movl %edx,%ecx
+ 	xorl %eax,%eax
+diff --git a/arch/x86/lib/memcpy_32.c b/arch/x86/lib/memcpy_32.c
+index b908a59..c0e6a87 100644
+--- a/arch/x86/lib/memcpy_32.c
++++ b/arch/x86/lib/memcpy_32.c
+@@ -4,7 +4,7 @@
+ #undef memcpy
+ #undef memset
+ 
+-void *memcpy(void *to, const void *from, size_t n)
++asmlinkage void *memcpy(void *to, const void *from, size_t n)
+ {
+ #ifdef CONFIG_X86_USE_3DNOW
+ 	return __memcpy3d(to, from, n);
+@@ -14,13 +14,13 @@ void *memcpy(void *to, const void *from, size_t n)
+ }
+ EXPORT_SYMBOL(memcpy);
+ 
+-void *memset(void *s, int c, size_t count)
++asmlinkage void *memset(void *s, int c, size_t count)
+ {
+ 	return __memset(s, c, count);
+ }
+ EXPORT_SYMBOL(memset);
+ 
+-void *memmove(void *dest, const void *src, size_t n)
++asmlinkage void *memmove(void *dest, const void *src, size_t n)
+ {
+ 	int d0,d1,d2,d3,d4,d5;
+ 	char *ret = dest;
+@@ -196,7 +196,7 @@ void *memmove(void *dest, const void *src, size_t n)
+ 		".p2align 4\n\t"
+ 		"11:"
+ 		: "=&c" (d0), "=&S" (d1), "=&D" (d2),
+-		  "=r" (d3),"=r" (d4), "=r"(d5)
++		  "=a" (d3),"=b" (d4), "=d"(d5)
+ 		:"0" (n),
+ 		 "1" (src),
+ 		 "2" (dest)
+diff --git a/arch/x86/lib/string_32.c b/arch/x86/lib/string_32.c
+index bd59090..b6bce88 100644
+--- a/arch/x86/lib/string_32.c
++++ b/arch/x86/lib/string_32.c
+@@ -14,7 +14,7 @@
+ #include <linux/module.h>
+ 
+ #ifdef __HAVE_ARCH_STRCPY
+-char *strcpy(char *dest, const char *src)
++asmlinkage char *strcpy(char *dest, const char *src)
+ {
+ 	int d0, d1, d2;
+ 	asm volatile("1:\tlodsb\n\t"
+@@ -29,7 +29,7 @@ EXPORT_SYMBOL(strcpy);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRNCPY
+-char *strncpy(char *dest, const char *src, size_t count)
++asmlinkage char *strncpy(char *dest, const char *src, size_t count)
+ {
+ 	int d0, d1, d2, d3;
+ 	asm volatile("1:\tdecl %2\n\t"
+@@ -49,7 +49,7 @@ EXPORT_SYMBOL(strncpy);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRCAT
+-char *strcat(char *dest, const char *src)
++asmlinkage char *strcat(char *dest, const char *src)
+ {
+ 	int d0, d1, d2, d3;
+ 	asm volatile("repne\n\t"
+@@ -67,7 +67,7 @@ EXPORT_SYMBOL(strcat);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRNCAT
+-char *strncat(char *dest, const char *src, size_t count)
++asmlinkage char *strncat(char *dest, const char *src, size_t count)
+ {
+ 	int d0, d1, d2, d3;
+ 	asm volatile("repne\n\t"
+@@ -91,7 +91,7 @@ EXPORT_SYMBOL(strncat);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRCMP
+-int strcmp(const char *cs, const char *ct)
++asmlinkage int strcmp(const char *cs, const char *ct)
+ {
+ 	int d0, d1;
+ 	int res;
+@@ -114,7 +114,7 @@ EXPORT_SYMBOL(strcmp);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRNCMP
+-int strncmp(const char *cs, const char *ct, size_t count)
++asmlinkage int strncmp(const char *cs, const char *ct, size_t count)
+ {
+ 	int res;
+ 	int d0, d1, d2;
+@@ -139,7 +139,7 @@ EXPORT_SYMBOL(strncmp);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRCHR
+-char *strchr(const char *s, int c)
++asmlinkage char *strchr(const char *s, int c)
+ {
+ 	int d0;
+ 	char *res;
+@@ -161,7 +161,7 @@ EXPORT_SYMBOL(strchr);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRLEN
+-size_t strlen(const char *s)
++asmlinkage size_t strlen(const char *s)
+ {
+ 	int d0;
+ 	size_t res;
+@@ -176,7 +176,7 @@ EXPORT_SYMBOL(strlen);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_MEMCHR
+-void *memchr(const void *cs, int c, size_t count)
++asmlinkage void *memchr(const void *cs, int c, size_t count)
+ {
+ 	int d0;
+ 	void *res;
+@@ -213,7 +213,7 @@ EXPORT_SYMBOL(memscan);
+ #endif
+ 
+ #ifdef __HAVE_ARCH_STRNLEN
+-size_t strnlen(const char *s, size_t count)
++asmlinkage size_t strnlen(const char *s, size_t count)
+ {
+ 	int d0;
+ 	int res;
+diff --git a/arch/x86/lib/strstr_32.c b/arch/x86/lib/strstr_32.c
+index 8e2d55f..13bd716 100644
+--- a/arch/x86/lib/strstr_32.c
++++ b/arch/x86/lib/strstr_32.c
+@@ -1,6 +1,6 @@
+ #include <linux/string.h>
+ 
+-char *strstr(const char *cs, const char *ct)
++__attribute__((regparm(0))) char *strstr(const char *cs, const char *ct)
+ {
+ int	d0, d1;
+ register char *__res;
+diff --git a/arch/x86/lib/usercopy_32.c b/arch/x86/lib/usercopy_32.c
+index e218d5d..53bfd7d 100644
+--- a/arch/x86/lib/usercopy_32.c
++++ b/arch/x86/lib/usercopy_32.c
+@@ -199,6 +199,9 @@ long strnlen_user(const char __user *s, long n)
+ 
+ 	might_fault();
+ 
++	if(!n)
++		res = 1;
++	else
+ 	__asm__ __volatile__(
+ 		"	testl %0, %0\n"
+ 		"	jz 3f\n"
+@@ -211,15 +214,13 @@ long strnlen_user(const char __user *s, long n)
+ 		".section .fixup,\"ax\"\n"
+ 		"2:	xorl %%eax,%%eax\n"
+ 		"	jmp 1b\n"
+-		"3:	movb $1,%%al\n"
+-		"	jmp 1b\n"
+ 		".previous\n"
+ 		".section __ex_table,\"a\"\n"
+ 		"	.align 4\n"
+ 		"	.long 0b,2b\n"
+ 		".previous"
+-		:"=&r" (n), "=&D" (s), "=&a" (res), "=&c" (tmp)
+-		:"0" (n), "1" (s), "2" (0), "3" (mask)
++		:"=&r" (n), "=&D" (s), "=a" (res), "=&c" (tmp)
++		:"0" (n), "1" (s), "2" (0), "3" (n & mask)
+ 		:"cc");
+ 	return res & mask;
+ }
+-- 
+1.7.3.4
+

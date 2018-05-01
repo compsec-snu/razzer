@@ -1,0 +1,90 @@
+From af061f7026df558643622594760e75e024db808f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:24:40 +0200
+Subject: [PATCH 7/8] Remove VLAIS usage from netfilter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+From: Jan-Simon Möller <dl9pf@gmx.de>
+
+The use of variable length arrays in structs (VLAIS) in the Linux Kernel code
+precludes the use of compilers which don't implement VLAIS (for instance the
+Clang compiler). This patch instead calculates offsets into the kmalloc-ed
+memory buffer using macros from valign.h.
+
+Patch from series at
+http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+by PaX Team.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: pageexec@freemail.hu
+[Modified to use macros from valign.h]
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ net/netfilter/xt_repldata.h |   40 ++++++++++++++++++++++++----------------
+ 1 file changed, 24 insertions(+), 16 deletions(-)
+
+diff --git a/net/netfilter/xt_repldata.h b/net/netfilter/xt_repldata.h
+index 6efe4e5..d2b4232 100644
+--- a/net/netfilter/xt_repldata.h
++++ b/net/netfilter/xt_repldata.h
+@@ -5,31 +5,39 @@
+  * they serve as the hanging-off data accessed through repl.data[].
+  */
+ 
++#include <linux/valign.h>
++
+ #define xt_alloc_initial_table(type, typ2) ({ \
+ 	unsigned int hook_mask = info->valid_hooks; \
+ 	unsigned int nhooks = hweight32(hook_mask); \
+ 	unsigned int bytes = 0, hooknum = 0, i = 0; \
+-	struct { \
+-		struct type##_replace repl; \
+-		struct type##_standard entries[nhooks]; \
+-		struct type##_error term; \
+-	} *tbl = kzalloc(sizeof(*tbl), GFP_KERNEL); \
+-	if (tbl == NULL) \
++	int replsize = paddedsize(0, 1, \
++		struct type##_replace, struct type##_standard); \
++	int entsize = paddedsize(replsize, nhooks, \
++		struct type##_standard, struct type##_error); \
++	int termsize = paddedsize(replsize+entsize, 1, \
++		struct type##_error, int); \
++	struct type##_replace *repl = kzalloc(replsize+entsize+termsize, \
++		GFP_KERNEL); \
++	if (repl == NULL) \
+ 		return NULL; \
+-	strncpy(tbl->repl.name, info->name, sizeof(tbl->repl.name)); \
+-	tbl->term = (struct type##_error)typ2##_ERROR_INIT;  \
+-	tbl->repl.valid_hooks = hook_mask; \
+-	tbl->repl.num_entries = nhooks + 1; \
+-	tbl->repl.size = nhooks * sizeof(struct type##_standard) + \
+-	                 sizeof(struct type##_error); \
++	struct type##_standard *entries = paddedstart(repl, replsize, \
++		struct type##_standard); \
++	struct type##_error *term = paddedstart(entries, entsize, \
++		struct type##_error); \
++	strncpy(repl->name, info->name, sizeof(repl->name)); \
++	*term = (struct type##_error)typ2##_ERROR_INIT;  \
++	repl->valid_hooks = hook_mask; \
++	repl->num_entries = nhooks + 1; \
++	repl->size = entsize+termsize; \
+ 	for (; hook_mask != 0; hook_mask >>= 1, ++hooknum) { \
+ 		if (!(hook_mask & 1)) \
+ 			continue; \
+-		tbl->repl.hook_entry[hooknum] = bytes; \
+-		tbl->repl.underflow[hooknum]  = bytes; \
+-		tbl->entries[i++] = (struct type##_standard) \
++		repl->hook_entry[hooknum] = bytes; \
++		repl->underflow[hooknum]  = bytes; \
++		entries[i++] = (struct type##_standard) \
+ 			typ2##_STANDARD_INIT(NF_ACCEPT); \
+ 		bytes += sizeof(struct type##_standard); \
+ 	} \
+-	tbl; \
++	repl; \
+ })
+-- 
+1.7.9.5
+

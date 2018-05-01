@@ -1,0 +1,19 @@
+= Howto not forget to sign your git commits =
+
+Git provides you with many hooks to allow you to script various aspects of your
+use of git.
+
+If, for example, you keep on forgetting to add your Signed-off-by to your
+commits (by not using "git commit -s") adding the following to your
+.git/hooks/commit-msg (you may need to create the hook file, or rename the
+available sample file).
+
+ .git/hooks/commit-msg
+
+ test 0 -lt $(grep -c '^Signed-off-by: ' "$1") || {
+         echo >&2 "No Signed-off-by lines. Use 'git commit -s'"
+         exit 1
+ }
+
+Once added, the above will stop a commit, if it doesn't find the
+"Signed-off-by" line in your commit message.

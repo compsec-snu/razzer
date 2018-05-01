@@ -1,0 +1,63 @@
+From 2297d6932cc6a916decfe3fe8b8e232a4e6a1d0c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:59 +0200
+Subject: [PATCH 11/11] Revert "asm-generic: uaccess
+ s/might_sleep/might_fault/"
+
+This reverts commit e0acd0bd0594161be44c054bb6b984972f444beb.
+---
+ include/asm-generic/uaccess.h | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/include/asm-generic/uaccess.h b/include/asm-generic/uaccess.h
+index dc1269c..c184aa8 100644
+--- a/include/asm-generic/uaccess.h
++++ b/include/asm-generic/uaccess.h
+@@ -163,7 +163,7 @@ static inline __must_check long __copy_to_user(void __user *to,
+ 
+ #define put_user(x, ptr)					\
+ ({								\
+-	might_fault();						\
++	might_sleep();						\
+ 	access_ok(VERIFY_WRITE, ptr, sizeof(*ptr)) ?		\
+ 		__put_user(x, ptr) :				\
+ 		-EFAULT;					\
+@@ -225,7 +225,7 @@ extern int __put_user_bad(void) __attribute__((noreturn));
+ 
+ #define get_user(x, ptr)					\
+ ({								\
+-	might_fault();						\
++	might_sleep();						\
+ 	access_ok(VERIFY_READ, ptr, sizeof(*ptr)) ?		\
+ 		__get_user(x, ptr) :				\
+ 		-EFAULT;					\
+@@ -255,7 +255,7 @@ extern int __get_user_bad(void) __attribute__((noreturn));
+ static inline long copy_from_user(void *to,
+ 		const void __user * from, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (access_ok(VERIFY_READ, from, n))
+ 		return __copy_from_user(to, from, n);
+ 	else
+@@ -265,7 +265,7 @@ static inline long copy_from_user(void *to,
+ static inline long copy_to_user(void __user *to,
+ 		const void *from, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (access_ok(VERIFY_WRITE, to, n))
+ 		return __copy_to_user(to, from, n);
+ 	else
+@@ -336,7 +336,7 @@ __clear_user(void __user *to, unsigned long n)
+ static inline __must_check unsigned long
+ clear_user(void __user *to, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (!access_ok(VERIFY_WRITE, to, n))
+ 		return n;
+ 
+-- 
+1.8.1.4
+

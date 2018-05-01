@@ -1,0 +1,278 @@
+From 2706fa2cb845db2971834002093fdcd9ad95707e Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Wed, 12 Feb 2014 12:16:58 -0800
+Subject: [PATCH] DO-NOT-UPSTREAM arm64: LLVMLinux: Fix inline arm64 assembly for use with
+ clang
+
+Fix variable types for 64-bit inline assembly.
+
+This patch now works with both gcc and clang.
+
+Not-signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm64/include/asm/arch_timer.h | 26 +++++++++++++++-----------
+ arch/arm64/include/asm/uaccess.h    |  2 +-
+ arch/arm64/kernel/debug-monitors.c  |  8 ++++----
+ arch/arm64/kernel/perf_event.c      | 34 +++++++++++++++++-----------------
+ 4 files changed, 37 insertions(+), 33 deletions(-)
+
+diff --git a/arch/arm64/include/asm/arch_timer.h b/arch/arm64/include/asm/arch_timer.h
+index 9400596..c1f87e0 100644
+--- a/arch/arm64/include/asm/arch_timer.h
++++ b/arch/arm64/include/asm/arch_timer.h
+@@ -37,19 +37,23 @@ void arch_timer_reg_write_cp15(int access, enum arch_timer_reg reg, u32 val)
+ 	if (access == ARCH_TIMER_PHYS_ACCESS) {
+ 		switch (reg) {
+ 		case ARCH_TIMER_REG_CTRL:
+-			asm volatile("msr cntp_ctl_el0,  %0" : : "r" (val));
++			asm volatile("msr cntp_ctl_el0,  %0"
++				: : "r" ((u64)val));
+ 			break;
+ 		case ARCH_TIMER_REG_TVAL:
+-			asm volatile("msr cntp_tval_el0, %0" : : "r" (val));
++			asm volatile("msr cntp_tval_el0, %0"
++				: : "r" ((u64)val));
+ 			break;
+ 		}
+ 	} else if (access == ARCH_TIMER_VIRT_ACCESS) {
+ 		switch (reg) {
+ 		case ARCH_TIMER_REG_CTRL:
+-			asm volatile("msr cntv_ctl_el0,  %0" : : "r" (val));
++			asm volatile("msr cntv_ctl_el0,  %0"
++				: : "r" ((u64)val));
+ 			break;
+ 		case ARCH_TIMER_REG_TVAL:
+-			asm volatile("msr cntv_tval_el0, %0" : : "r" (val));
++			asm volatile("msr cntv_tval_el0, %0"
++				: : "r" ((u64)val));
+ 			break;
+ 		}
+ 	}
+@@ -60,7 +64,7 @@ void arch_timer_reg_write_cp15(int access, enum arch_timer_reg reg, u32 val)
+ static __always_inline
+ u32 arch_timer_reg_read_cp15(int access, enum arch_timer_reg reg)
+ {
+-	u32 val;
++	u64 val;
+ 
+ 	if (access == ARCH_TIMER_PHYS_ACCESS) {
+ 		switch (reg) {
+@@ -82,26 +86,26 @@ u32 arch_timer_reg_read_cp15(int access, enum arch_timer_reg reg)
+ 		}
+ 	}
+ 
+-	return val;
++	return (u32)val;
+ }
+ 
+ static inline u32 arch_timer_get_cntfrq(void)
+ {
+-	u32 val;
++	u64 val;
+ 	asm volatile("mrs %0,   cntfrq_el0" : "=r" (val));
+-	return val;
++	return (u32)val;
+ }
+ 
+ static inline u32 arch_timer_get_cntkctl(void)
+ {
+-	u32 cntkctl;
++	u64 cntkctl;
+ 	asm volatile("mrs	%0, cntkctl_el1" : "=r" (cntkctl));
+-	return cntkctl;
++	return (u32)cntkctl;
+ }
+ 
+ static inline void arch_timer_set_cntkctl(u32 cntkctl)
+ {
+-	asm volatile("msr	cntkctl_el1, %0" : : "r" (cntkctl));
++	asm volatile("msr	cntkctl_el1, %0" : : "r" ((u64)cntkctl));
+ }
+ 
+ static inline void arch_counter_set_user_access(void)
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index 3bf8f4e..104719b 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -93,7 +93,7 @@ static inline void set_fs(mm_segment_t fs)
+ 	__chk_user_ptr(addr);						\
+ 	asm("adds %1, %1, %3; ccmp %1, %4, #2, cc; cset %0, ls"		\
+ 		: "=&r" (flag), "=&r" (roksum)				\
+-		: "1" (addr), "Ir" (size),				\
++		: "1" (addr), "r" ((u64)size),				\
+ 		  "r" (current_thread_info()->addr_limit)		\
+ 		: "cc");						\
+ 	flag;								\
+diff --git a/arch/arm64/kernel/debug-monitors.c b/arch/arm64/kernel/debug-monitors.c
+index b056369..695a18f 100644
+--- a/arch/arm64/kernel/debug-monitors.c
++++ b/arch/arm64/kernel/debug-monitors.c
+@@ -43,15 +43,15 @@ static void mdscr_write(u32 mdscr)
+ {
+ 	unsigned long flags;
+ 	local_dbg_save(flags);
+-	asm volatile("msr mdscr_el1, %0" :: "r" (mdscr));
++	asm volatile("msr mdscr_el1, %0" : : "r" ((u64)mdscr));
+ 	local_dbg_restore(flags);
+ }
+ 
+ static u32 mdscr_read(void)
+ {
+-	u32 mdscr;
++	u64 mdscr;
+ 	asm volatile("mrs %0, mdscr_el1" : "=r" (mdscr));
+-	return mdscr;
++	return (u32)mdscr;
+ }
+ 
+ /*
+@@ -127,7 +127,7 @@ void disable_debug_monitors(enum debug_el el)
+  */
+ static void clear_os_lock(void *unused)
+ {
+-	asm volatile("msr oslar_el1, %0" : : "r" (0));
++	asm volatile("msr oslar_el1, %0" : : "r" ((u64)0));
+ }
+ 
+ static int os_lock_notify(struct notifier_block *self,
+diff --git a/arch/arm64/kernel/perf_event.c b/arch/arm64/kernel/perf_event.c
+index baf5afb..f2e399c 100644
+--- a/arch/arm64/kernel/perf_event.c
++++ b/arch/arm64/kernel/perf_event.c
+@@ -844,16 +844,16 @@ static const unsigned armv8_pmuv3_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+ 
+ static inline u32 armv8pmu_pmcr_read(void)
+ {
+-	u32 val;
++	u64 val;
+ 	asm volatile("mrs %0, pmcr_el0" : "=r" (val));
+-	return val;
++	return (u32)val;
+ }
+ 
+ static inline void armv8pmu_pmcr_write(u32 val)
+ {
+ 	val &= ARMV8_PMCR_MASK;
+ 	isb();
+-	asm volatile("msr pmcr_el0, %0" :: "r" (val));
++	asm volatile("msr pmcr_el0, %0" : : "r" ((u64)val));
+ }
+ 
+ static inline int armv8pmu_has_overflowed(u32 pmovsr)
+@@ -893,7 +893,7 @@ static inline int armv8pmu_select_counter(int idx)
+ 	}
+ 
+ 	counter = ARMV8_IDX_TO_COUNTER(idx);
+-	asm volatile("msr pmselr_el0, %0" :: "r" (counter));
++	asm volatile("msr pmselr_el0, %0" : : "r" ((u64)counter));
+ 	isb();
+ 
+ 	return idx;
+@@ -901,7 +901,7 @@ static inline int armv8pmu_select_counter(int idx)
+ 
+ static inline u32 armv8pmu_read_counter(int idx)
+ {
+-	u32 value = 0;
++	u64 value = 0;
+ 
+ 	if (!armv8pmu_counter_valid(idx))
+ 		pr_err("CPU%u reading wrong counter %d\n",
+@@ -911,7 +911,7 @@ static inline u32 armv8pmu_read_counter(int idx)
+ 	else if (armv8pmu_select_counter(idx) == idx)
+ 		asm volatile("mrs %0, pmxevcntr_el0" : "=r" (value));
+ 
+-	return value;
++	return (u32)value;
+ }
+ 
+ static inline void armv8pmu_write_counter(int idx, u32 value)
+@@ -920,16 +920,16 @@ static inline void armv8pmu_write_counter(int idx, u32 value)
+ 		pr_err("CPU%u writing wrong counter %d\n",
+ 			smp_processor_id(), idx);
+ 	else if (idx == ARMV8_IDX_CYCLE_COUNTER)
+-		asm volatile("msr pmccntr_el0, %0" :: "r" (value));
++		asm volatile("msr pmccntr_el0, %0" : : "r" ((u64)value));
+ 	else if (armv8pmu_select_counter(idx) == idx)
+-		asm volatile("msr pmxevcntr_el0, %0" :: "r" (value));
++		asm volatile("msr pmxevcntr_el0, %0" : : "r" ((u64)value));
+ }
+ 
+ static inline void armv8pmu_write_evtype(int idx, u32 val)
+ {
+ 	if (armv8pmu_select_counter(idx) == idx) {
+ 		val &= ARMV8_EVTYPE_MASK;
+-		asm volatile("msr pmxevtyper_el0, %0" :: "r" (val));
++		asm volatile("msr pmxevtyper_el0, %0" : : "r" ((u64)val));
+ 	}
+ }
+ 
+@@ -944,7 +944,7 @@ static inline int armv8pmu_enable_counter(int idx)
+ 	}
+ 
+ 	counter = ARMV8_IDX_TO_COUNTER(idx);
+-	asm volatile("msr pmcntenset_el0, %0" :: "r" (BIT(counter)));
++	asm volatile("msr pmcntenset_el0, %0" : : "r" ((u64)BIT(counter)));
+ 	return idx;
+ }
+ 
+@@ -959,7 +959,7 @@ static inline int armv8pmu_disable_counter(int idx)
+ 	}
+ 
+ 	counter = ARMV8_IDX_TO_COUNTER(idx);
+-	asm volatile("msr pmcntenclr_el0, %0" :: "r" (BIT(counter)));
++	asm volatile("msr pmcntenclr_el0, %0" : : "r" ((u64)BIT(counter)));
+ 	return idx;
+ }
+ 
+@@ -974,7 +974,7 @@ static inline int armv8pmu_enable_intens(int idx)
+ 	}
+ 
+ 	counter = ARMV8_IDX_TO_COUNTER(idx);
+-	asm volatile("msr pmintenset_el1, %0" :: "r" (BIT(counter)));
++	asm volatile("msr pmintenset_el1, %0" : : "r" ((u64)BIT(counter)));
+ 	return idx;
+ }
+ 
+@@ -989,17 +989,17 @@ static inline int armv8pmu_disable_intens(int idx)
+ 	}
+ 
+ 	counter = ARMV8_IDX_TO_COUNTER(idx);
+-	asm volatile("msr pmintenclr_el1, %0" :: "r" (BIT(counter)));
++	asm volatile("msr pmintenclr_el1, %0" : : "r" ((u64)BIT(counter)));
+ 	isb();
+ 	/* Clear the overflow flag in case an interrupt is pending. */
+-	asm volatile("msr pmovsclr_el0, %0" :: "r" (BIT(counter)));
++	asm volatile("msr pmovsclr_el0, %0" : : "r" ((u64)BIT(counter)));
+ 	isb();
+ 	return idx;
+ }
+ 
+ static inline u32 armv8pmu_getreset_flags(void)
+ {
+-	u32 value;
++	u64 value;
+ 
+ 	/* Read */
+ 	asm volatile("mrs %0, pmovsclr_el0" : "=r" (value));
+@@ -1008,7 +1008,7 @@ static inline u32 armv8pmu_getreset_flags(void)
+ 	value &= ARMV8_OVSR_MASK;
+ 	asm volatile("msr pmovsclr_el0, %0" :: "r" (value));
+ 
+-	return value;
++	return (u32)value;
+ }
+ 
+ static void armv8pmu_enable_event(struct hw_perf_event *hwc, int idx)
+@@ -1217,7 +1217,7 @@ static void armv8pmu_reset(void *info)
+ 	armv8pmu_pmcr_write(ARMV8_PMCR_P | ARMV8_PMCR_C);
+ 
+ 	/* Disable access from userspace. */
+-	asm volatile("msr pmuserenr_el0, %0" :: "r" (0));
++	asm volatile("msr pmuserenr_el0, %0" : : "r" ((u64)0));
+ }
+ 
+ static int armv8_pmuv3_map_event(struct perf_event *event)
+-- 
+1.9.1
+

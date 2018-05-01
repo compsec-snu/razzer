@@ -1,0 +1,112 @@
+From 29174acfa4e629e7ed87dcbc0f4b8923e8eb52dd Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:23 -0400
+Subject: [PATCH] kbuild: LLVMLinux: Add Kbuild support for building kernel
+ with Clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add support to toplevel Makefile for compiling with clang, both for
+HOSTCC and CC. Use cc-option to prevent gcc option from breaking clang, and
+from clang options from breaking gcc.
+
+Clang 3.4 semantics are the same as gcc semantics for unsupported flags. For
+unsupported warnings clang 3.4 returns true but shows a warning and gcc shows
+a warning and returns false.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ Makefile | 30 +++++++++++++++++++++++++++++-
+ 1 file changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index ef779ec..8709afb 100644
+--- a/Makefile
++++ b/Makefile
+@@ -247,6 +247,11 @@ HOSTCXX      = g++
+ HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
+ HOSTCXXFLAGS = -O2
+ 
++ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
++HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
++		-Wno-missing-field-initializers -fno-delete-null-pointer-checks
++endif
++
+ # Decide whether to build built-in, modular, or both.
+ # Normally, just do built-in.
+ 
+@@ -323,6 +328,14 @@ endif
+ 
+ export quiet Q KBUILD_VERBOSE
+ 
++ifneq ($(CC),)
++ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
++COMPILER := clang
++else
++COMPILER := gcc
++endif
++export COMPILER
++endif
+ 
+ # Look for make include files relative to root of kernel src
+ MAKEFLAGS += --include-dir=$(srctree)
+@@ -373,12 +395,15 @@ LINUXINCLUDE    := \
+ 
+ KBUILD_CPPFLAGS := -D__KERNEL__
+ 
++ifneq ($(COMPILER),clang)
++NULL_PTR_CHECKS := -fno-delete-null-pointer-checks
++endif
+ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+ 		   -fno-strict-aliasing -fno-common \
+ 		   -Werror-implicit-function-declaration \
+ 		   -Wno-format-security \
+ 		   $(call cc-option,-no-integrated-as,) \
+-		   -fno-delete-null-pointer-checks
++		   ${NULL_PTR_CHECKS}
+ KBUILD_AFLAGS_KERNEL :=
+ KBUILD_CFLAGS_KERNEL :=
+ KBUILD_AFLAGS   := -D__ASSEMBLY__ $(call cc-option,-no-integrated-as,)
+@@ -622,9 +635,24 @@ endif
+ endif
+ KBUILD_CFLAGS += $(stackp-flag)
+ 
++ifeq ($(COMPILER),clang)
++KBUILD_CPPFLAGS += $(call cc-option,-Qunused-arguments,)
++KBUILD_CPPFLAGS += $(call cc-option,-Wno-unknown-warning-option,)
++KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable)
++KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
++KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
++# Quiet clang warning: comparison of unsigned expression < 0 is always false
++KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
++# CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
++# source of a reference will be _MergedGlobals and not on of the whitelisted names.
++# See modpost pattern 2
++KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
++else
++
+ # This warning generated too much noise in a regular build.
+ # Use make W=1 to enable this warning (see scripts/Makefile.build)
+ KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
++endif
+ 
+ ifdef CONFIG_FRAME_POINTER
+ KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
+@@ -660,8 +701,10 @@ endif
+ 
+ # We trigger additional mismatches with less inlining
+ ifdef CONFIG_DEBUG_SECTION_MISMATCH
++ifneq ($(COMPILER),clang)
+ KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
+ endif
++endif
+ 
+ # arch Makefile may override CC so keep this after arch Makefile is included
+ NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
+-- 
+1.8.3.2
+

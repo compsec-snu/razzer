@@ -1,0 +1,58 @@
+From 0821f45c9845b1ced45ce04df8761619372e6eac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:00:42 +0100
+Subject: [PATCH 37/51] CHECK - fixes to realmode for compilation with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/realmode/init.c |   13 +++++--------
+ 1 Datei geändert, 5 Zeilen hinzugefügt(+), 8 Zeilen entfernt(-)
+
+diff --git a/arch/x86/realmode/init.c b/arch/x86/realmode/init.c
+index cbca565..686f267 100644
+--- a/arch/x86/realmode/init.c
++++ b/arch/x86/realmode/init.c
+@@ -14,8 +14,7 @@ void __init setup_real_mode(void)
+ 	u16 real_mode_seg;
+ 	u32 *rel;
+ 	u32 count;
+-	u32 *ptr;
+-	u16 *seg;
++	u32 ptr;
+ 	int i;
+ 	unsigned char *base;
+ 	struct trampoline_header *trampoline_header;
+@@ -44,17 +43,15 @@ void __init setup_real_mode(void)
+ 	/* 16-bit segment relocations. */
+ 	count = rel[0];
+ 	rel = &rel[1];
+-	for (i = 0; i < count; i++) {
+-		seg = (u16 *) (base + rel[i]);
+-		*seg = real_mode_seg;
+-	}
++	for (i = 0; i < count; i++)
++		memcpy(base + rel[i], &real_mode_seg, sizeof real_mode_seg);
+ 
+ 	/* 32-bit linear relocations. */
+ 	count = rel[i];
+ 	rel =  &rel[i + 1];
+ 	for (i = 0; i < count; i++) {
+-		ptr = (u32 *) (base + rel[i]);
+-		*ptr += __pa(base);
++		ptr = (u32)__pa(base);
++		memcpy(base + rel[i], &ptr, sizeof ptr);
+ 	}
+ 
+ 	/* Must be perfomed *after* relocation. */
+-- 
+1.7.10.4
+

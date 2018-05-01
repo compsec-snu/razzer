@@ -1,0 +1,64 @@
+From 72b1733c4e1523d1c9f33df6f45e7b445c6ae99d Mon Sep 17 00:00:00 2001
+From: Daniel Sanders <daniel.sanders@imgtec.com>
+Date: Mon, 9 Feb 2015 16:40:35 +0000
+Subject: [PATCH v4 3/4] MIPS: LLVMLinux: Fix an 'inline asm input/output type
+ mismatch' error.
+
+Replace incorrect matching constraint that caused the error with an alternative
+that still has the required constraints on the inline assembly.
+
+This is the error message reported by clang:
+arch/mips/include/asm/checksum.h:285:27: error: unsupported inline asm: input with type '__be32' (aka 'unsigned int') matching output with type 'unsigned short'
+          "0" (htonl(len)), "1" (htonl(proto)), "r" (sum));
+                                 ^~~~~~~~~~~~
+
+The changed code can be compiled successfully by both gcc and clang.
+
+Signed-off-by: Daniel Sanders <daniel.sanders@imgtec.com>
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+Suggested-by: Maciej W. Rozycki <macro@linux-mips.org>
+Cc: Ralf Baechle <ralf@linux-mips.org>
+Cc: Markos Chandras <markos.chandras@imgtec.com>
+Cc: Leonid Yegoshin <Leonid.Yegoshin@imgtec.com>
+Cc: linux-mips@linux-mips.org
+Cc: linux-kernel@vger.kernel.org
+---
+v2 replaced the patch following Maciej's suggestion where he observed that
+the assembly was somewhat strange and suggested correcting the
+constraints and using a local of matching type.
+
+v3 fixed a small whitespace issue.
+
+v4 refreshes the patch.
+
+ arch/mips/include/asm/checksum.h | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/include/asm/checksum.h b/arch/mips/include/asm/checksum.h
+index 5c585c5..3ceacde 100644
+--- a/arch/mips/include/asm/checksum.h
++++ b/arch/mips/include/asm/checksum.h
+@@ -218,6 +218,8 @@ static __inline__ __sum16 csum_ipv6_magic(const struct in6_addr *saddr,
+ 					  __u32 len, unsigned short proto,
+ 					  __wsum sum)
+ {
++	__wsum tmp;
++
+ 	__asm__(
+ 	"	.set	push		# csum_ipv6_magic\n"
+ 	"	.set	noreorder	\n"
+@@ -270,9 +272,9 @@ static __inline__ __sum16 csum_ipv6_magic(const struct in6_addr *saddr,
+ 
+ 	"	addu	%0, $1		# Add final carry\n"
+ 	"	.set	pop"
+-	: "=r" (sum), "=r" (proto)
++	: "=&r" (sum), "=&r" (tmp)
+ 	: "r" (saddr), "r" (daddr),
+-	  "0" (htonl(len)), "1" (htonl(proto)), "r" (sum));
++	  "0" (htonl(len)), "r" (htonl(proto)), "r" (sum));
+ 
+ 	return csum_fold(sum);
+ }
+-- 
+2.1.4
+

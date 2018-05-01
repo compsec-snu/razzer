@@ -1,0 +1,412 @@
+From 8c6da5c8826b908ba38df2cf7443375f44e8217e Mon Sep 17 00:00:00 2001
+From: Craig Topper <craig.topper@gmail.com>
+Date: Mon, 6 Jan 2014 06:02:58 +0000
+Subject: [PATCH 04/26] Add OpSize16 bit, for instructions which need 0x66
+ prefix in 16-bit mode
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The 0x66 prefix toggles between 16-bit and 32-bit addressing mode.
+So in 32-bit mode it is used to switch to 16-bit addressing mode for the
+following instruction, while in 16-bit mode it's the other way round — it's
+used to switch to 32-bit mode instead.
+
+Thus, emit the 0x66 prefix byte for OpSize only in 32-bit (and 64-bit) mode,
+and introduce a new OpSize16 bit which is used in 16-bit mode instead.
+
+This is just the basic infrastructure for that change; a subsequent patch
+will add the new OpSize16 bit to the 32-bit instructions that need it.
+
+Patch from David Woodhouse.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198586 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 30be10a06e1e6735a91826df63e1d0456cee7da2)
+---
+ lib/Target/X86/MCTargetDesc/X86BaseInfo.h        |   8 +-
+ lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp |   3 +-
+ lib/Target/X86/X86InstrFormats.td                |  55 ++++----
+ test/MC/X86/x86-16.s                             | 170 +++++++++++++++++++++++
+ 4 files changed, 205 insertions(+), 31 deletions(-)
+
+diff --git a/lib/Target/X86/MCTargetDesc/X86BaseInfo.h b/lib/Target/X86/MCTargetDesc/X86BaseInfo.h
+index 1ef9814..dcb9a8a 100644
+--- a/lib/Target/X86/MCTargetDesc/X86BaseInfo.h
++++ b/lib/Target/X86/MCTargetDesc/X86BaseInfo.h
+@@ -299,13 +299,15 @@ namespace X86II {
+ 
+     // OpSize - Set if this instruction requires an operand size prefix (0x66),
+     // which most often indicates that the instruction operates on 16 bit data
+-    // instead of 32 bit data.
++    // instead of 32 bit data. OpSize16 in 16 bit mode indicates that the
++    // instruction operates on 32 bit data instead of 16 bit data.
+     OpSize      = 1 << 6,
++    OpSize16    = 1 << 7,
+ 
+     // AsSize - Set if this instruction requires an operand size prefix (0x67),
+     // which most often indicates that the instruction address 16 bit address
+     // instead of 32 bit address (or 32 bit address in 64 bit mode).
+-    AdSize      = 1 << 7,
++    AdSize      = 1 << 8,
+ 
+     //===------------------------------------------------------------------===//
+     // Op0Mask - There are several prefix bytes that are used to form two byte
+@@ -313,7 +315,7 @@ namespace X86II {
+     // used to obtain the setting of this field.  If no bits in this field is
+     // set, there is no prefix byte for obtaining a multibyte opcode.
+     //
+-    Op0Shift    = 8,
++    Op0Shift    = 9,
+     Op0Mask     = 0x1F << Op0Shift,
+ 
+     // TB - TwoByte - Set if this instruction has a two byte opcode, which
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+index 02b852e..65cc34e 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+@@ -1176,8 +1176,7 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
+     EmitByte(0x67, CurByte, OS);
+ 
+   // Emit the operand size opcode prefix as needed.
+-  // FIXME for is16BitMode().
+-  if (TSFlags & X86II::OpSize)
++  if (TSFlags & (is16BitMode(Features) ? X86II::OpSize16 : X86II::OpSize))
+     EmitByte(0x66, CurByte, OS);
+ 
+   bool Need0FPrefix = false;
+diff --git a/lib/Target/X86/X86InstrFormats.td b/lib/Target/X86/X86InstrFormats.td
+index 5022259..06f2b8c 100644
+--- a/lib/Target/X86/X86InstrFormats.td
++++ b/lib/Target/X86/X86InstrFormats.td
+@@ -113,6 +113,7 @@ def CD8VT8 : CD8VForm<7>;  // v := 8
+ // Prefix byte classes which are used to indicate to the ad-hoc machine code
+ // emitter that various prefix bytes are required.
+ class OpSize { bit hasOpSizePrefix = 1; }
++class OpSize16 { bit hasOpSize16Prefix = 1; }
+ class AdSize { bit hasAdSizePrefix = 1; }
+ class REX_W  { bit hasREX_WPrefix = 1; }
+ class LOCK   { bit hasLockPrefix = 1; }
+@@ -188,6 +189,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
+   // Attributes specific to X86 instructions...
+   //
+   bit hasOpSizePrefix = 0;  // Does this inst have a 0x66 prefix?
++  bit hasOpSize16Prefix = 0;// Does this inst have a 0x66 prefix in 16-bit mode?
+   bit hasAdSizePrefix = 0;  // Does this inst have a 0x67 prefix?
+ 
+   bits<5> Prefix = 0;       // Which prefix byte does this inst have?
+@@ -219,32 +221,33 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
+   // TSFlags layout should be kept in sync with X86InstrInfo.h.
+   let TSFlags{5-0}   = FormBits;
+   let TSFlags{6}     = hasOpSizePrefix;
+-  let TSFlags{7}     = hasAdSizePrefix;
+-  let TSFlags{12-8}  = Prefix;
+-  let TSFlags{13}    = hasREX_WPrefix;
+-  let TSFlags{16-14} = ImmT.Value;
+-  let TSFlags{19-17} = FPForm.Value;
+-  let TSFlags{20}    = hasLockPrefix;
+-  let TSFlags{22-21} = SegOvrBits;
+-  let TSFlags{24-23} = ExeDomain.Value;
+-  let TSFlags{32-25} = Opcode;
+-  let TSFlags{33}    = hasVEXPrefix;
+-  let TSFlags{34}    = hasVEX_WPrefix;
+-  let TSFlags{35}    = hasVEX_4VPrefix;
+-  let TSFlags{36}    = hasVEX_4VOp3Prefix;
+-  let TSFlags{37}    = hasVEX_i8ImmReg;
+-  let TSFlags{38}    = hasVEX_L;
+-  let TSFlags{39}    = ignoresVEX_L;
+-  let TSFlags{40}    = hasEVEXPrefix;
+-  let TSFlags{41}    = hasEVEX_K;
+-  let TSFlags{42}    = hasEVEX_Z;
+-  let TSFlags{43}    = hasEVEX_L2;
+-  let TSFlags{44}    = hasEVEX_B;
+-  let TSFlags{46-45} = EVEX_CD8E;
+-  let TSFlags{49-47} = EVEX_CD8V;
+-  let TSFlags{50}    = has3DNow0F0FOpcode;
+-  let TSFlags{51}    = hasMemOp4Prefix;
+-  let TSFlags{52}    = hasXOP_Prefix;
++  let TSFlags{7}     = hasOpSize16Prefix;
++  let TSFlags{8}     = hasAdSizePrefix;
++  let TSFlags{13-9}  = Prefix;
++  let TSFlags{14}    = hasREX_WPrefix;
++  let TSFlags{17-15} = ImmT.Value;
++  let TSFlags{20-18} = FPForm.Value;
++  let TSFlags{21}    = hasLockPrefix;
++  let TSFlags{23-22} = SegOvrBits;
++  let TSFlags{25-24} = ExeDomain.Value;
++  let TSFlags{33-26} = Opcode;
++  let TSFlags{34}    = hasVEXPrefix;
++  let TSFlags{35}    = hasVEX_WPrefix;
++  let TSFlags{36}    = hasVEX_4VPrefix;
++  let TSFlags{37}    = hasVEX_4VOp3Prefix;
++  let TSFlags{38}    = hasVEX_i8ImmReg;
++  let TSFlags{39}    = hasVEX_L;
++  let TSFlags{40}    = ignoresVEX_L;
++  let TSFlags{41}    = hasEVEXPrefix;
++  let TSFlags{42}    = hasEVEX_K;
++  let TSFlags{43}    = hasEVEX_Z;
++  let TSFlags{44}    = hasEVEX_L2;
++  let TSFlags{45}    = hasEVEX_B;
++  let TSFlags{47-46} = EVEX_CD8E;
++  let TSFlags{50-48} = EVEX_CD8V;
++  let TSFlags{51}    = has3DNow0F0FOpcode;
++  let TSFlags{52}    = hasMemOp4Prefix;
++  let TSFlags{53}    = hasXOP_Prefix;
+ }
+ 
+ class PseudoI<dag oops, dag iops, list<dag> pattern>
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 36f3b19..115132d 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -27,6 +27,9 @@
+ // CHECK: testb	%bl, %cl                # encoding: [0x84,0xcb]
+         testb %bl, %cl
+ 
++// CHECK: addw	%ax, %ax                # encoding: [0x01,0xc0]
++        addw %ax, %ax
++
+ into
+ // CHECK: into
+ // CHECK:  encoding: [0xce]
+@@ -40,6 +43,10 @@ int $255
+ // CHECK: int $255
+ // CHECK:  encoding: [0xcd,0xff]
+ 
++// CHECK: cmovbw %bx, %bx
++cmovnae	%bx,%bx
++
++
+ // CHECK: fmul	%st(0)
+ // CHECK:  encoding: [0xd8,0xc8]
+         fmul %st(0), %st
+@@ -64,10 +71,119 @@ int $255
+ // CHECK:  encoding: [0xd8,0xf0]
+         fdiv %st(0), %st
+ 
++// CHECK: movw	%cs, %ax
++// CHECK:  encoding: [0x8c,0xc8]
++        movw %cs, %ax
++
++// CHECK: movw	%cs, (%eax)
++// CHECK:  encoding: [0x67,0x8c,0x08]
++        movw %cs, (%eax)
++
++// CHECK: movw	(%eax), %cs
++// CHECK:  encoding: [0x67,0x8e,0x08]
++        movw (%eax), %cs
++
++// CHECK: movl	%cr0, %eax
++// CHECK:  encoding: [0x0f,0x20,0xc0]
++        movl %cr0,%eax
++
++// CHECK: movl	%cr1, %eax
++// CHECK:  encoding: [0x0f,0x20,0xc8]
++        movl %cr1,%eax
++
++// CHECK: movl	%cr2, %eax
++// CHECK:  encoding: [0x0f,0x20,0xd0]
++        movl %cr2,%eax
++
++// CHECK: movl	%cr3, %eax
++// CHECK:  encoding: [0x0f,0x20,0xd8]
++        movl %cr3,%eax
++
++// CHECK: movl	%cr4, %eax
++// CHECK:  encoding: [0x0f,0x20,0xe0]
++        movl %cr4,%eax
++
++// CHECK: movl	%dr0, %eax
++// CHECK:  encoding: [0x0f,0x21,0xc0]
++        movl %dr0,%eax
++
++// CHECK: movl	%dr1, %eax
++// CHECK:  encoding: [0x0f,0x21,0xc8]
++        movl %dr1,%eax
++
++// CHECK: movl	%dr1, %eax
++// CHECK:  encoding: [0x0f,0x21,0xc8]
++        movl %dr1,%eax
++
++// CHECK: movl	%dr2, %eax
++// CHECK:  encoding: [0x0f,0x21,0xd0]
++        movl %dr2,%eax
++
++// CHECK: movl	%dr3, %eax
++// CHECK:  encoding: [0x0f,0x21,0xd8]
++        movl %dr3,%eax
++
++// CHECK: movl	%dr4, %eax
++// CHECK:  encoding: [0x0f,0x21,0xe0]
++        movl %dr4,%eax
++
++// CHECK: movl	%dr5, %eax
++// CHECK:  encoding: [0x0f,0x21,0xe8]
++        movl %dr5,%eax
++
++// CHECK: movl	%dr6, %eax
++// CHECK:  encoding: [0x0f,0x21,0xf0]
++        movl %dr6,%eax
++
++// CHECK: movl	%dr7, %eax
++// CHECK:  encoding: [0x0f,0x21,0xf8]
++        movl %dr7,%eax
++
+ // CHECK: wait
+ // CHECK:  encoding: [0x9b]
+ 	fwait
+ 
++sysret
++// CHECK: sysretl
++// CHECK: encoding: [0x0f,0x07]
++sysretl
++// CHECK: sysretl
++// CHECK: encoding: [0x0f,0x07]
++
++testl	%ecx, -24(%ebp)
++// CHECK: testl	-24(%ebp), %ecx
++testl	-24(%ebp), %ecx
++// CHECK: testl	-24(%ebp), %ecx
++
++
++pushw %cs
++// CHECK: pushw	%cs
++// CHECK: encoding: [0x0e]
++pushw %ds
++// CHECK: pushw	%ds
++// CHECK: encoding: [0x1e]
++pushw %ss
++// CHECK: pushw	%ss
++// CHECK: encoding: [0x16]
++pushw %es
++// CHECK: pushw	%es
++// CHECK: encoding: [0x06]
++pushw %fs
++// CHECK: pushw	%fs
++// CHECK: encoding: [0x0f,0xa0]
++pushw %gs
++// CHECK: pushw	%gs
++// CHECK: encoding: [0x0f,0xa8]
++
++pushfd
++// CHECK: pushfl
++popfd
++// CHECK: popfl
++pushfl
++// CHECK: pushfl
++popfl
++// CHECK: popfl
++
+ 
+ 	setc	%bl
+ 	setnae	%bl
+@@ -103,9 +219,15 @@ ljmpl	$0x7ace,$0x7ace
+ // CHECK:	incb	%al # encoding: [0xfe,0xc0]
+ 	incb %al
+ 
++// CHECK:	incw	%ax # encoding: [0x40]
++	incw %ax
++
+ // CHECK:	decb	%al # encoding: [0xfe,0xc8]
+ 	decb %al
+ 
++// CHECK:	decw	%ax # encoding: [0x48]
++	decw %ax
++
+ // CHECK: pshufw $14, %mm4, %mm0 # encoding: [0x0f,0x70,0xc4,0x0e]
+ pshufw $14, %mm4, %mm0
+ 
+@@ -152,6 +274,10 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x2f]
+         	das
+ 
++// CHECK: bound	2(%eax), %bx
++// CHECK:  encoding: [0x67,0x62,0x58,0x02]
++        	bound	2(%eax),%bx
++
+ // CHECK: arpl	%bx, %bx
+ // CHECK:  encoding: [0x63,0xdb]
+         	arpl	%bx,%bx
+@@ -219,11 +345,23 @@ pshufw $90, %mm4, %mm0
+ 	outsb	%ds:(%si), %dx
+ 	outsb	(%si), %dx
+ 
++// CHECK: outsw # encoding: [0x6f]
++// CHECK: outsw
++// CHECK: outsw
++	outsw
++	outsw	%ds:(%si), %dx
++	outsw	(%si), %dx
++
+ // CHECK: insb # encoding: [0x6c]
+ // CHECK: insb
+ 	insb
+ 	insb	%dx, %es:(%di)
+ 
++// CHECK: insw # encoding: [0x6d]
++// CHECK: insw
++	insw
++	insw	%dx, %es:(%di)
++
+ // CHECK: movsb # encoding: [0xa4]
+ // CHECK: movsb
+ // CHECK: movsb
+@@ -231,6 +369,13 @@ pshufw $90, %mm4, %mm0
+ 	movsb	%ds:(%si), %es:(%di)
+ 	movsb	(%si), %es:(%di)
+ 
++// CHECK: movsw # encoding: [0xa5]
++// CHECK: movsw
++// CHECK: movsw
++	movsw
++	movsw	%ds:(%si), %es:(%di)
++	movsw	(%si), %es:(%di)
++
+ // CHECK: lodsb # encoding: [0xac]
+ // CHECK: lodsb
+ // CHECK: lodsb
+@@ -242,6 +387,17 @@ pshufw $90, %mm4, %mm0
+ 	lods	%ds:(%si), %al
+ 	lods	(%si), %al
+ 
++// CHECK: lodsw # encoding: [0xad]
++// CHECK: lodsw
++// CHECK: lodsw
++// CHECK: lodsw
++// CHECK: lodsw
++	lodsw
++	lodsw	%ds:(%si), %ax
++	lodsw	(%si), %ax
++	lods	%ds:(%si), %ax
++	lods	(%si), %ax
++
+ // CHECK: stosb # encoding: [0xaa]
+ // CHECK: stosb
+ // CHECK: stosb
+@@ -249,6 +405,17 @@ pshufw $90, %mm4, %mm0
+ 	stosb	%al, %es:(%di)
+ 	stos	%al, %es:(%di)
+ 
++// CHECK: stosw # encoding: [0xab]
++// CHECK: stosw
++// CHECK: stosw
++	stosw
++	stosw	%ax, %es:(%di)
++	stos	%ax, %es:(%di)
++
++// CHECK: strw
++// CHECK: encoding: [0x0f,0x00,0xc8]
++	str %ax
++
+ // CHECK: fsubp
+ // CHECK: encoding: [0xde,0xe1]
+ fsubp %st,%st(1)
+@@ -257,3 +424,6 @@ fsubp %st,%st(1)
+ // CHECK: encoding: [0xde,0xe2]
+ fsubp   %st, %st(2)
+ 
++// CHECK: xchgw %ax, %ax
++// CHECK: encoding: [0x90]
++xchgw %ax, %ax
+-- 
+1.8.4
+

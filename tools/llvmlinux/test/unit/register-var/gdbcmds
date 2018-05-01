@@ -1,0 +1,13 @@
+#b SuggestInitializationFixit
+#b DiagUninitUse
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Analysis/UninitializedValues.cpp:471
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Analysis/UninitializedValues.cpp:671
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Analysis/UninitializedValues.cpp:695
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Analysis/UninitializedValues.cpp:747
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Sema/SemaDecl.cpp:8622
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/include/clang/AST/Decl.h:770
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Parse/ParseDecl.cpp:2881
+b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Parse/ParseDecl.cpp:2425
+#b DiagnoseUninitializedUse
+#b /local2/mnt/workspace/llvmlinux/toolchain/clang/src/clang/lib/Parse/ParseDecl.cpp:1691
+run -cc1 -triple armv4t-none-linux-gnueabi -emit-obj -mrelax-all -disable-free -main-file-name test.c -static-define -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -fuse-init-array -target-cpu arm7tdmi -target-feature +soft-float-abi -target-abi aapcs-linux -mfloat-abi soft -v -resource-dir /local2/mnt/workspace/llvmlinux/toolchain/clang/install/bin/../lib/clang/3.5.0 -isysroot /local2/mnt/workspace/llvmlinux/arch/arm/toolchain/codesourcery/arm-2013.05/bin/../arm-none-linux-gnueabi/libc -internal-isystem /local2/mnt/workspace/llvmlinux/arch/arm/toolchain/codesourcery/arm-2013.05/bin/../arm-none-linux-gnueabi/libc/usr/local/include -internal-isystem /local2/mnt/workspace/llvmlinux/toolchain/clang/install/bin/../lib/clang/3.5.0/include -internal-externc-isystem /local2/mnt/workspace/llvmlinux/arch/arm/toolchain/codesourcery/arm-2013.05/bin/../arm-none-linux-gnueabi/libc/include -internal-externc-isystem /local2/mnt/workspace/llvmlinux/arch/arm/toolchain/codesourcery/arm-2013.05/bin/../arm-none-linux-gnueabi/libc/usr/include -Wall -fdebug-compilation-dir /local2/mnt/workspace/llvmlinux/test/unit/register-var -ferror-limit 19 -fmessage-length 124 -mstackrealign -fno-signed-char -fobjc-runtime=gcc -fdiagnostics-show-option -fcolor-diagnostics -vectorize-slp -o /local2/mnt/workspace/llvmlinux/targets/vexpress/tmp/test-cbacf3.o -x c test.c

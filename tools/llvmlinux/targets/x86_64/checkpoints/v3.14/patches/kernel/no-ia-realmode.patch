@@ -1,0 +1,40 @@
+From 16be922ab0f1247daf88e14dc5840556ce4e3080 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:38:47 +0100
+Subject: [PATCH] kbuild, x86: LLVMLinux: Ad no-integrated-as to
+ arch/x86/realmode/rm/Makefile.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add -no-integrated-as with cc-option. This is transparent for gcc.
+We need it the boot-code as we don't inherit the global no-integrated-as.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ arch/x86/realmode/rm/Makefile | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/x86/realmode/rm/Makefile b/arch/x86/realmode/rm/Makefile
+index 3497f14..7e44536 100644
+--- a/arch/x86/realmode/rm/Makefile
++++ b/arch/x86/realmode/rm/Makefile
+@@ -19,6 +19,14 @@ wakeup-objs	+= video-vga.o
+ wakeup-objs	+= video-vesa.o
+ wakeup-objs	+= video-bios.o
+ 
++# For clang, we need to enforce not to use the integrated assembler
++AFLAGS_wakeup_asm.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_bioscall.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_copy.o		= $(call cc-option,-no-integrated-as,)
++AFLAGS_trampoline_32.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_trampoline_64.o	= $(call cc-option,-no-integrated-as,)
++AFLAGS_reboot_32.o	= $(call cc-option,-no-integrated-as,)
++
+ realmode-y			+= header.o
+ realmode-y			+= trampoline_$(BITS).o
+ realmode-y			+= stack.o
+-- 
+1.8.3.2
+

@@ -1,0 +1,30 @@
+Return 0 for compound_lock_irqsave unless CONFIG_TRANSPARENT_HUGEPAGE
+
+This patch fixes errors when compiling the Linux kernel with Clang
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ mm.h |    6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+Index: linux/include/linux/mm.h
+===================================================================
+--- linux.orig/include/linux/mm.h
++++ linux/include/linux/mm.h
+@@ -336,12 +336,14 @@
+ 
+ static inline unsigned long compound_lock_irqsave(struct page *page)
+ {
+-	unsigned long uninitialized_var(flags);
+ #ifdef CONFIG_TRANSPARENT_HUGEPAGE
++	unsigned long uninitialized_var(flags);
+ 	local_irq_save(flags);
+ 	compound_lock(page);
+-#endif
+ 	return flags;
++#else
++	return 0UL;
++#endif
+ }
+ 
+ static inline void compound_unlock_irqrestore(struct page *page,

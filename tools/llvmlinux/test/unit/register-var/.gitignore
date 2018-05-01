@@ -1,0 +1,7 @@
+*.o
+*-gcc
+*-clang
+Makefile-orig
+Makefile-save
+test-x86_64.x
+test1.c

@@ -1,0 +1,123 @@
+From 99e2eb26e1510a8ee975e07b935243fba39742d2 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:23 -0400
+Subject: [PATCH 01/39] Kbuild: LLVMLinux: Add Kbuild support for building
+ kernel with Clang
+
+Add support for for compiling with clang to Kbuild
+
+Author: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ Makefile               | 18 ++++++++++++++++++
+ scripts/Kbuild.include | 35 ++++++++++++++++++++++++++++++-----
+ 2 files changed, 48 insertions(+), 5 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index fe8204b..4971db7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -314,6 +314,12 @@ endif
+ 
+ export quiet Q KBUILD_VERBOSE
+ 
++ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
++COMPILER := clang
++else
++COMPILER := gcc
++endif
++export COMPILER
+ 
+ # Look for make include files relative to root of kernel src
+ MAKEFLAGS += --include-dir=$(srctree)
+@@ -570,6 +576,9 @@ endif # $(dot-config)
+ # Defaults to vmlinux, but the arch makefile usually adds further targets
+ all: vmlinux
+ 
++# Quiet unused arguments warning from clang
++KBUILD_CPPFLAGS   += $(call cc-option,-Qunused-arguments,)
++
+ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
+ KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
+ else
+@@ -599,7 +608,16 @@ endif
+ 
+ # This warning generated too much noise in a regular build.
+ # Use make W=1 to enable this warning (see scripts/Makefile.build)
++ifeq ($(COMPILER),clang)
++KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable)
++KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
++KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
++else
+ KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
++endif
++
++# Quiet clang warning: comparison of unsigned expression < 0 is always false
++KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
+ 
+ ifdef CONFIG_FRAME_POINTER
+ KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 547e15d..f883b1d 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -106,9 +106,32 @@ as-option = $(call try-run,\
+ as-instr = $(call try-run,\
+ 	printf "%b\n" "$(1)" | $(CC) $(KBUILD_AFLAGS) -c -x assembler -o "$$TMP" -,$(2),$(3))
+ 
++# Test for clang
++ifeq ($(COMPILER),clang)
++
+ # cc-option
+ # Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
++cc-option = $(call try-run,\
++	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP" 2>&1 \
++		| egrep -q "warning: .* '$(1)'",$(2),$(1))
+ 
++# cc-option-yn
++# Usage: flag := $(call cc-option-yn,-march=winchip-c6)
++cc-option-yn = $(call try-run,\
++	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP" 2>&1 \
++		| egrep -q "warning: .* '$(1)'",n,y)
++
++# cc-disable-warning
++# Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
++cc-disable-warning = $(call try-run,\
++	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP" 2>&1 \
++		| grep -q "unknown warning option",,-Wno-$(strip $(1)))
++
++# Otherwise assume GCC or something compatible
++else
++
++# cc-option
++# Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
+ cc-option = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
+ 
+@@ -117,16 +140,18 @@ cc-option = $(call try-run,\
+ cc-option-yn = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
+ 
+-# cc-option-align
+-# Prefix align with either -falign or -malign
+-cc-option-align = $(subst -functions=0,,\
+-	$(call cc-option,-falign-functions=0,-malign-functions=0))
+-
+ # cc-disable-warning
+ # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
+ cc-disable-warning = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
+ 
++endif
++
++# cc-option-align
++# Prefix align with either -falign or -malign
++cc-option-align = $(subst -functions=0,,\
++	$(call cc-option,-falign-functions=0,-malign-functions=0))
++
+ # cc-version
+ # Usage gcc-ver := $(call cc-version)
+ cc-version = $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-version.sh $(CC))
+-- 
+1.8.1.2
+

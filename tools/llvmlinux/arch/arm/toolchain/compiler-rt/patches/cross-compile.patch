@@ -1,0 +1,204 @@
+commit 6f662cc777e428685cd578b9d950f2a70545ca5e
+Author: Raja Venkateswaran <rajav@quicinc.com>
+Date:   Tue Jul 31 16:44:39 2012 -0700
+
+    Support for building linux armv7 libraries (full, profile and asan versions)
+
+Index: compiler-rt/lib/arm/restore_vfp_d8_d15_regs.S
+===================================================================
+--- compiler-rt.orig/lib/arm/restore_vfp_d8_d15_regs.S
++++ compiler-rt/lib/arm/restore_vfp_d8_d15_regs.S
+@@ -33,5 +33,7 @@
+ 
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+ 
+Index: compiler-rt/lib/arm/save_vfp_d8_d15_regs.S
+===================================================================
+--- compiler-rt.orig/lib/arm/save_vfp_d8_d15_regs.S
++++ compiler-rt/lib/arm/save_vfp_d8_d15_regs.S
+@@ -31,5 +31,6 @@
+ 	bx      lr                      // return to prolog
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
+-
++#endif
+Index: compiler-rt/lib/arm/switch16.S
+===================================================================
+--- compiler-rt.orig/lib/arm/switch16.S
++++ compiler-rt/lib/arm/switch16.S
+@@ -41,4 +41,6 @@
+ 	bx      ip                      // jump to computed label
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+Index: compiler-rt/lib/arm/switch32.S
+===================================================================
+--- compiler-rt.orig/lib/arm/switch32.S
++++ compiler-rt/lib/arm/switch32.S
+@@ -42,5 +42,7 @@
+ 
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+ 
+Index: compiler-rt/lib/arm/switch8.S
+===================================================================
+--- compiler-rt.orig/lib/arm/switch8.S
++++ compiler-rt/lib/arm/switch8.S
+@@ -39,5 +39,7 @@
+ 	bx      ip                      // jump to computed label
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+ 
+Index: compiler-rt/lib/arm/switchu8.S
+===================================================================
+--- compiler-rt.orig/lib/arm/switchu8.S
++++ compiler-rt/lib/arm/switchu8.S
+@@ -39,5 +39,7 @@
+ 	bx      ip                      // jump to computed label
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+ 
+Index: compiler-rt/lib/arm/sync_synchronize.S
+===================================================================
+--- compiler-rt.orig/lib/arm/sync_synchronize.S
++++ compiler-rt/lib/arm/sync_synchronize.S
+@@ -29,6 +29,8 @@
+ 	ldmfd	sp!, {r7, pc}
+ 
+ 	// tell linker it can break up file at label boundaries
++#ifndef GNU_ASM
+ 	.subsections_via_symbols
++#endif
+ 		
+ #endif
+Index: compiler-rt/lib/clear_cache.c
+===================================================================
+--- compiler-rt.orig/lib/clear_cache.c
++++ compiler-rt/lib/clear_cache.c
+@@ -21,6 +21,7 @@
+  * specified range.
+  */
+ 
++#if !defined(__arm__)
+ void __clear_cache(void* start, void* end)
+ {
+ #if __i386__ || __x86_64__
+@@ -38,3 +39,4 @@
+ #endif
+ }
+ 
++#endif
+Index: compiler-rt/make/platform/linux_armv7.mk
+===================================================================
+--- /dev/null
++++ compiler-rt/make/platform/linux_armv7.mk
+@@ -0,0 +1,92 @@
++Description := Static runtime libraries for Linux/armv7
++
++###
++
++Arch := arm
++
++# We don't currently have any general purpose way to target architectures other
++# than the compiler defaults (because there is no generalized way to invoke
++# cross compilers). For now, we just find the target archicture of the compiler
++# and only define configurations we know that compiler can generate.
++CompilerTargetTriple := arm-none-linux-gnueabi
++
++ifneq ($(DEBUGMAKE),)
++ifeq ($(CompilerTargetTriple),)
++$(error "unable to infer compiler target triple for $(CC)")
++endif
++endif
++
++CompilerTargetArch := $(firstword $(subst -, ,$(CompilerTargetTriple)))
++
++# Only define configs if we detected a linux target.
++#ifneq ($(findstring -linux-,$(CompilerTargetTriple)),)
++
++# Configurations which just include all the runtime functions.
++Configs += full-arm
++Arch.full-arm := armv7
++
++# Configuration for profile runtime.
++Configs += profile-arm
++Arch.profile-arm := armv7
++
++# Configuration for ASAN runtime.
++Configs += asan-arm
++Arch.asan-arm := armv7
++
++#endif
++
++###
++
++ifeq ($(ARMGCCHOME),)
++$(error "Must set ARMGCCHOME")
++endif
++
++PATH := $(ARMGCCHOME)/arm-none-linux-gnueabi/bin:$(PATH)
++
++CFLAGS := -v -mcpu=cortex-a9 -mfloat-abi=softfp -mfpu=neon -Wall -Werror -O3 -fomit-frame-pointer -DGNU_ASM -ccc-host-triple arm-none-linux-gnueabi -ccc-gcc-name arm-none-gnueabi-g++ --sysroot=$(ARMGCCHOME) -I$(ARMGCCHOME)/arm-none-linux-gnueabi/libc/usr/include
++
++CFLAGS.full-arm := $(CFLAGS)
++CFLAGS.profile-arm := $(CFLAGS)
++CFLAGS.asan-arm := $(CFLAGS)  -fPIE -fno-builtin
++
++# Use our stub SDK as the sysroot to support more portable building. For now we
++# just do this for the non-ASAN modules, because the stub SDK doesn't have
++# enough support to build ASAN.
++
++FUNCTIONS.armv7 := comparedf2 comparesf2 \
++                addsf3vfp bswapdi2 bswapsi2 divdf3vfp \
++                divsf3vfp eqdf2vfp eqsf2vfp extendsfdf2vfp \
++                fixdfsivfp fixsfsivfp fixunsdfsivfp fixunssfsivfp \
++                floatsidfvfp floatsisfvfp floatunssidfvfp floatunssisfvfp \
++                gedf2vfp gesf2vfp gtdf2vfp gtsf2vfp \
++                ledf2vfp lesf2vfp ltdf2vfp ltsf2vfp \
++                muldf3vfp mulsf3vfp \
++                nedf2vfp nesf2vfp \
++                subdf3vfp subsf3vfp truncdfsf2vfp unorddf2vfp unordsf2vfp \
++                modsi3 umodsi3 udivsi3 divsi3 udivmodsi4 divmodsi4
++
++#FUNCTIONS.full-arm := $(CommonFunctions) $(ArchFunctions.armv7) $(FUNCTIONS.armv7)
++FUNCTIONS.full-arm := $(CommonFunctions) $(ArchFunctions.armv7)
++FUNCTIONS.profile-arm := GCDAProfiling
++FUNCTIONS.asan-arm := $(AsanFunctions) $(InterceptionFunctions) \
++                                        $(SanitizerCommonFunctions)
++
++# Always use optimized variants.
++OPTIMIZED := 1
++
++# We don't need to use visibility hidden on Linux.
++VISIBILITY_HIDDEN := 0
++
++DSTPREFIX=$(LLVM_INSTALL_ROOT)/compiler-rt/arm/armv7
++# Install rules
++install-armv7-dir:
++	mkdir -p $(DSTPREFIX) ;\
++	mkdir -p $(DSTPREFIX)/profile ;\
++	mkdir -p $(DSTPREFIX)/asan
++
++
++install-armv7: install-armv7-dir
++	cp $(ProjSrcRoot)/linux_armv7/full-arm/libcompiler_rt.a $(DSTPREFIX) ;\
++	cp $(ProjSrcRoot)/linux_armv7/profile-arm/libcompiler_rt.a $(DSTPREFIX)/profile ;\
++	cp $(ProjSrcRoot)/linux_armv7/asan-arm/libcompiler_rt.a $(DSTPREFIX)/asan
++

@@ -1,0 +1,24 @@
+= Frequently Asked Questions =
+
+ What is the Licence of LLVMLinux?
+
+The LLVMLinux project contains at least 3 distinct kinds of code in the repository:
+
+# Patches for the kernel, which are licensed [http://www.kernel.org/pub/linux/kernel/COPYING GPL2] in order to be integrated into the Linux Kernel)
+# Patches for LLVM and/or Clang, which are licensed with the [http://llvm.org/releases/3.1/LICENSE.TXT LLVM project License]
+# The actual build scripts and tools which automate the llvm-setup code for the LLVMLinux project are under the [http://git.linuxfoundation.org/?p=llvm-setup.git;a=blob;f=Makefile;h=0c81e628e8ff9fa25088d88d5f272d55517c5ac8;hb=master MIT License]
+
+
+ Does LLVMLinux project keep a snapshot of LLVM/clang or Linux Kernel in its own repository?
+
+The LLVMLinux project does not host copies of the LLVM, Clang, nor the Linux Kernel code. The idea is to not diverge from the HEAD of the LLVM/Clang repos, nor mainline of the Linux kernel repo.
+
+The goal is to upstream patches to LLVM/Clang and to the Linux kernel which means all patches need to be continually rebased to the HEAD of each repo. Changes to each code base are maintained as a series of patches which are automatically applied on top of each of the respective repos by automated scripts run by the build system.
+
+Amongst other things there are currently a number of python scripts which automatically remove hunks from patches which have already been applied upstream to minimize breakage during the Continuous Integration builds performed by buildbot.
+
+The project build bot rebuilds each of LLVM, Clang, the Linux kernel and llvm-setup everytime anyone makes a commit in the respective code repository. The hope is to catch any breakages in patches as soon as possible.
+
+More builds, configurations and test cases will be added to buildbot as they are ready and made available.
+
+Submit your patches, test cases and build requests to this mailing list.

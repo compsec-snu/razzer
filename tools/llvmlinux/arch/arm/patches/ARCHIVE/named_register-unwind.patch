@@ -1,0 +1,45 @@
+From d24b01eb03c72ce59485e6b93289a135d077ec32 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:27 -0400
+Subject: [PATCH] arm: LLVMLinux: Use current_stack_pointer in unwind_backtrace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the global current_stack_pointer to get the value of the stack pointer.
+This change supports being able to compile the kernel with both gcc and clang.
+
+KernelVersion: 3.17.0-rc6
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Acked-by: Will Deacon <will.deacon@arm.com>
+Acked-by: Nicolas Pitre <nico@linaro.org>
+---
+ arch/arm/kernel/unwind.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/kernel/unwind.c b/arch/arm/kernel/unwind.c
+index a61a1df..caea23b 100644
+--- a/arch/arm/kernel/unwind.c
++++ b/arch/arm/kernel/unwind.c
+@@ -471,7 +471,6 @@ int unwind_frame(struct stackframe *frame)
+ void unwind_backtrace(struct pt_regs *regs, struct task_struct *tsk)
+ {
+ 	struct stackframe frame;
+-	register unsigned long current_sp asm ("sp");
+ 
+ 	pr_debug("%s(regs = %p tsk = %p)\n", __func__, regs, tsk);
+ 
+@@ -485,7 +484,7 @@ void unwind_backtrace(struct pt_regs *regs, struct task_struct *tsk)
+ 			frame.pc = regs->ARM_lr;
+ 	} else if (tsk == current) {
+ 		frame.fp = (unsigned long)__builtin_frame_address(0);
+-		frame.sp = current_sp;
++		frame.sp = current_stack_pointer;
+ 		frame.lr = (unsigned long)__builtin_return_address(0);
+ 		frame.pc = (unsigned long)unwind_backtrace;
+ 	} else {
+-- 
+1.9.1
+

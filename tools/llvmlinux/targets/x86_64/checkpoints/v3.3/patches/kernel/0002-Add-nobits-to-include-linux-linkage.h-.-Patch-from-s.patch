@@ -1,0 +1,66 @@
+From 717317e0e5d2408e53ac327cd0b673d320f62905 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 11:51:52 +0200
+Subject: [PATCH 02/48] Add @nobits to include/linux/linkage.h . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+Find @nobits at: http://sourceware.org/binutils/docs/as/Section.html
+
+[...]
+
+ELF Version
+
+This is one of the ELF section stack manipulation directives. The others are .subsection (see SubSection), .pushsection (see PushSection), .popsection (see PopSection), and .previous (see Previous).
+
+For ELF targets, the .section directive is used like this:
+
+     .section name [, "flags"[, @type[,flag_specific_arguments]]]
+
+The optional flags argument is a quoted string which may contain any combination of the following characters:
+
+a
+    section is allocatable
+e
+    section is excluded from executable and shared library.
+w
+    section is writable
+x
+    section is executable
+M
+    section is mergeable
+S
+    section contains zero terminated strings
+G
+    section is a member of a section group
+T
+    section is used for thread-local-storage
+?
+    section is a member of the previously-current section's group, if any
+
+The optional type argument may contain one of the following constants:
+
+@progbits
+    section contains data
+@nobits
+    section does not contain data (i.e., section only occupies space)
+
+[...]
+---
+ include/linux/linkage.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/linkage.h b/include/linux/linkage.h
+index 807f1e5..7657122 100644
+--- a/include/linux/linkage.h
++++ b/include/linux/linkage.h
+@@ -24,7 +24,7 @@
+  * alignment directives yourself
+  */
+ #define __PAGE_ALIGNED_DATA	.section ".data..page_aligned", "aw"
+-#define __PAGE_ALIGNED_BSS	.section ".bss..page_aligned", "aw"
++#define __PAGE_ALIGNED_BSS	.section ".bss..page_aligned", "aw", @nobits
+ 
+ /*
+  * This is used by architectures to keep arguments on the stack
+-- 
+1.7.3.4
+

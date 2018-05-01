@@ -1,0 +1,101 @@
+Choose a target in the targets directory and cd to it.
+Type make, this will build the target and all the dependencies.
+
+Valid build targets for platforms in llvm-setup and llvm-setup/targets/<targetname>:
+
+	clang-fetch
+	clang-configure
+	clang-build
+	clang-sync
+	clang-clean
+
+	clangdev-fetch
+	clangdev-configure
+	clangdev-build
+	clangdev-sync
+	clangdev-clean
+
+	clang-update-all
+
+Valid build targets for platforms in llvm-setup/targets/<targetname>:
+
+	kernel-fetch
+	kernel-configure
+	kernel-build
+	kernel-devbuild
+	kernel-sync
+	kernel-clean
+
+Valid build targets for platforms that support testing via QEMU:
+
+	qemu-fetch
+	qemu-configure
+	qemu-build
+
+	test
+
+##############################################################################
+
+The automation uses two passes to create a filter of the upstream patches
+for those targets that are not synced to the tip. The filtered set of
+patches are appied so it is easy to tell exactly what patches were made
+and which did not apply.
+
+The patches that do not apply are listed in the file
+llvm-setup/targets/<targetname>/kernel-filter:
+
+	F - log file used to create the following patch filter entries
+	M - File is missing from the current code base
+	R - Rejected hunk(s) from a patch
+
+Patch files are also organized by common, arch specific, and platform specific.
+
+Common patches are in common/*.patch
+Arch specific patches are in common/<arch>/*.patch
+Platform specific patches are in llvm-setup/targets/<targetname>/*.patch
+
+Patches are further separated into those for unused return value warnings, general
+warnings, and error fixes.
+
+##############################################################################
+
+The directory structure is as follows:
+
+llvm-setup
+|- common.mk       Top-level makefile include; included by all other Makfiles
+|- arch            Architecture specific patches and scripts
+|  |- all
+|  |  |- all.mk    Common kernel make rules and defaults; included by common.mk
+|  |  |- kernel    Mainline kernel git tree; git cloned by target builds
+|  |  `- patches   clang kernel patches common to all architectures
+|  |- arm
+|  |  |- arm.mk    Arm kernel make rules and defaults; included by common.mk
+|  |  |- bin       Scripts used by the arm architecture
+|  |  |- patches   clang kernel patches for arm
+|  |  `- toolchain Arm cross toolchain configuration, and download
+|  |- mips
+|  |  |- mips.mk   Arm kernel make rules and defaults; included by common.mk
+|  |  |- bin       Scripts used by the mips architecture
+|  |  |- patches   clang kernel patches for mips
+|  |  `- toolchain MIPS cross toolchain configuration, and download
+|  `- x86_64
+|     |- x86_86.mk Arm kernel make rules and defaults; included by common.mk
+|     |- bin       Scripts used by the x86_64 architecture
+|     |- patches   clang kernel patches for x86_64
+|  |  `- toolchain x86_64 cross toolchain configuration, and download
+|- targets         Build targets; choose a target for which to build a kernel
+|  |- msm          Target build for the MSM board
+|  |- template     Template files which can be used to build a new target
+|  |- vexpress     Target build for the QEMU vexpress arm target
+|  `- x86_64       Target build for the x86_64 platform
+|- test            Testing related code
+|  |- test.mk      Common test make rules and defaults; included by common.mk
+|  |- initramfs    Small initramfs built with toybox and dash
+|  |- ltp          The Linux Test project (currently compiled for arm)
+|  `- qemu         The QEMU machine emulator used to test clang built kernels
+|- toolchain       All multi-platform toolchains under test
+|  |- toolchain.mk Common toolchain make rules and defaults; included by common.mk
+|  |- android  	   The android GCC toolchain (ARM and x86)
+|  `- clang        The clang toolchain and LLVM
+`- tools           General tools and scripts provided by the LLVMLinux project
+   `- tools.mk     Common tool make rules and defaultsl included by common.mk

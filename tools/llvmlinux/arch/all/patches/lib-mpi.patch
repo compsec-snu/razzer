@@ -1,0 +1,57 @@
+From 69a178a41a4d0c1c57be4769e4a3cd17a8280780 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:09 -0700
+Subject: [PATCH] mpi, LLVMLinux: Fix ASM for clang in mpi
+
+[MC] Do we need both -fheinous-gnu-extensions and the cast fix?
+
+The cast inside the inline ASM is not supported by clang. It is
+in fact ignored by GCC.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Not-signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+[Refreshed following upstream addition of early-clobber]
+Signed-off-by: Daniel Sanders <daniel.sanders@imgtec.com>
+---
+ lib/mpi/Makefile   | 2 ++
+ lib/mpi/longlong.h | 9 +++------
+ 2 files changed, 5 insertions(+), 6 deletions(-)
+
+--- linux.orig/lib/mpi/Makefile
++++ linux/lib/mpi/Makefile
+@@ -4,6 +4,8 @@
+ 
+ obj-$(CONFIG_MPILIB) = mpi.o
+ 
++CFLAGS_KERNEL += $(call cc-option,-fheinous-gnu-extensions)
++
+ mpi-y = \
+ 	generic_mpih-lshift.o		\
+ 	generic_mpih-mul1.o		\
+--- linux.orig/lib/mpi/longlong.h
++++ linux/lib/mpi/longlong.h
+@@ -193,8 +193,7 @@
+ 		"rI" ((USItype)(bl)))
+ #if defined __ARM_ARCH_2__ || defined __ARM_ARCH_3__
+ #define umul_ppmm(xh, xl, a, b) \
+-	__asm__ ("%@ Inlined umul_ppmm\n" \
+-		"mov	%|r0, %2, lsr #16		@ AAAA\n" \
++	__asm__ ("mov	%|r0, %2, lsr #16		@ AAAA\n" \
+ 		"mov	%|r2, %3, lsr #16		@ BBBB\n" \
+ 		"bic	%|r1, %2, %|r0, lsl #16		@ aaaa\n" \
+ 		"bic	%0, %3, %|r2, lsl #16		@ bbbb\n" \
+@@ -213,10 +212,8 @@
+ 	: "r0", "r1", "r2")
+ #else
+ #define umul_ppmm(xh, xl, a, b) \
+-	__asm__ ("%@ Inlined umul_ppmm\n" \
+-		"umull %r1, %r0, %r2, %r3" \
+-	: "=&r" ((USItype)(xh)), \
+-			"=&r" ((USItype)(xl)) \
++	__asm__ ("umull %1, %0, %2, %3" \
++	: "=&r" ((xh)), "=&r" ((xl)) \
+ 	: "r" ((USItype)(a)), \
+ 			"r" ((USItype)(b)) \
+ 	: "r0", "r1")

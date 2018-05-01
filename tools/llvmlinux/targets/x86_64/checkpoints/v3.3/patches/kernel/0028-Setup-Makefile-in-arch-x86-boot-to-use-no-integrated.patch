@@ -1,0 +1,37 @@
+From f48a9504a96e81d1400caacf2b14ab618f24f184 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:01:37 +0200
+Subject: [PATCH 28/48] Setup Makefile in arch/x86/boot/ to use -no-integrated-as for clang. Specify cflags for cpucheck.o  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/Makefile |    7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
+index 95365a8..bfb8cb1 100644
+--- a/arch/x86/boot/Makefile
++++ b/arch/x86/boot/Makefile
+@@ -20,6 +20,8 @@ targets		:= vmlinux.bin setup.bin setup.elf bzImage
+ targets		+= fdimage fdimage144 fdimage288 image.iso mtools.conf
+ subdir-		:= compressed
+ 
++CFLAGS_cpucheck.o = -march=i586
++
+ setup-y		+= a20.o bioscall.o cmdline.o copy.o cpu.o cpucheck.o
+ setup-y		+= early_serial_console.o edd.o header.o main.o mca.o memory.o
+ setup-y		+= pm.o pmjump.o printf.o regs.o string.o tty.o video.o
+@@ -53,8 +55,9 @@ $(obj)/cpustr.h: $(obj)/mkcpustr FORCE
+ # that way we can complain to the user if the CPU is insufficient.
+ KBUILD_CFLAGS	:= $(LINUXINCLUDE) -g -Os -D_SETUP -D__KERNEL__ \
+ 		   -DDISABLE_BRANCH_PROFILING \
+-		   -Wall -Wstrict-prototypes \
+-		   -march=i386 -mregparm=3 \
++		   -Wall -W -Wstrict-prototypes \
++		   -Wno-unused-value -Wno-unused-parameter -mno-sse \
++		   -march=i386 -mregparm=3 -no-integrated-as \
+ 		   -include $(srctree)/$(src)/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer \
+ 		   $(call cc-option, -ffreestanding) \
+-- 
+1.7.3.4
+

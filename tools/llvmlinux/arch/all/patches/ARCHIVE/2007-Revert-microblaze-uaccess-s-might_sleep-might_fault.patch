@@ -1,0 +1,44 @@
+From 06996c7bcd1daa4e3cdf61c43853006e38851c0b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:50 +0200
+Subject: [PATCH 07/11] Revert "microblaze: uaccess s/might_sleep/might_fault/"
+
+This reverts commit ac093f8d5e76be1f2654acfd7a59d339ba037654.
+---
+ arch/microblaze/include/asm/uaccess.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/microblaze/include/asm/uaccess.h b/arch/microblaze/include/asm/uaccess.h
+index 0aa0057..04e4955 100644
+--- a/arch/microblaze/include/asm/uaccess.h
++++ b/arch/microblaze/include/asm/uaccess.h
+@@ -145,7 +145,7 @@ static inline unsigned long __must_check __clear_user(void __user *to,
+ static inline unsigned long __must_check clear_user(void __user *to,
+ 							unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (unlikely(!access_ok(VERIFY_WRITE, to, n)))
+ 		return n;
+ 
+@@ -371,7 +371,7 @@ extern long __user_bad(void);
+ static inline long copy_from_user(void *to,
+ 		const void __user *from, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (access_ok(VERIFY_READ, from, n))
+ 		return __copy_from_user(to, from, n);
+ 	return n;
+@@ -385,7 +385,7 @@ static inline long copy_from_user(void *to,
+ static inline long copy_to_user(void __user *to,
+ 		const void *from, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (access_ok(VERIFY_WRITE, to, n))
+ 		return __copy_to_user(to, from, n);
+ 	return n;
+-- 
+1.8.1.4
+

@@ -1,0 +1,13 @@
+diff --git a/utils/gtest/include/gtest.h b/utils/gtest/include/gtest.h
+index 3143bd6..bbeae9e 100644
+--- a/utils/gtest/include/gtest.h
++++ b/utils/gtest/include/gtest.h
+@@ -18338,7 +18338,7 @@ AssertionResult CmpHelperEQ(const char* expected_expression,
+                                // signed/unsigned mismatch.
+ #endif
+ 
+-  if (expected == actual) {
++  if ((T2)expected == actual) {
+     return AssertionSuccess();
+   }
+ 

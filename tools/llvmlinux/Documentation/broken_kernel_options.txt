@@ -1,0 +1,333 @@
+These tests were done on x86_64 starting from allyesconfig.
+
+
+CONFIG_DEBUG_NMI_SELFTEST=n		-  patch for linux kernel available in archive
+
+###########################
+
+CONFIG_XEN=n	- VLAIS
+
+  CC      arch/x86/xen/mmu.o
+arch/x86/xen/mmu.c:1343:18: error: fields must have a constant size:
+      'variable length array in structure' extension will never be
+      supported
+                DECLARE_BITMAP(mask, num_processors);
+                               ^
+include/linux/types.h:10:16: note: expanded from macro 'DECLARE_BITMAP'
+        unsigned long name[BITS_TO_LONGS(bits)]
+                      ^
+1 error generated.
+
+
+###########################
+
+CONFIG_EXOFS_FS=n 	- VLAIS
+
+  CC      fs/exofs/super.o
+fs/exofs/super.c:553:19: error: fields must have a constant size: 'variable
+      length array in structure' extension will never be supported
+                struct ore_dev *oreds[numdevs * 2 - 1];
+                                ^
+fs/exofs/super.c:554:20: error: fields must have a constant size: 'variable
+      length array in structure' extension will never be supported
+                struct exofs_dev eds[numdevs];
+                                 ^
+2 errors generated.
+
+###########################
+
+CONFIG_NFS_V4_1=n   - VLAIS
+CONFIG_ORE=n
+
+  CC [M]  fs/exofs/ore.o
+fs/exofs/ore.c:148:28: error: fields must have a constant size: 'variable
+      length array in structure' extension will never be supported
+                struct ore_per_dev_state per_dev[numdevs];
+                                         ^
+fs/exofs/ore.c:150:24: error: fields must have a constant size: 'variable
+      length array in structure' extension will never be supported
+                        struct osd_sg_entry sglist[sgs_per_dev * numdevs];
+                                            ^
+fs/exofs/ore.c:151:17: error: fields must have a constant size: 'variable
+      length array in structure' extension will never be supported
+                        struct page *pages[num_par_pages];
+
+###########################
+CONFIG_IMA	- VLAIS
+  CC      security/integrity/ima/ima_crypto.o
+security/integrity/ima/ima_crypto.c:50:8: error: fields must have a
+      constant size: 'variable length array in structure' extension will
+      never be supported
+                char ctx[crypto_shash_descsize(ima_shash_tfm)];
+
+
+###########################
+CONFIG_DM_RAID=N	- VLAIS
+CONFIG_MD_RAID10=N	- VLAIS
+
+  CC      drivers/md/raid10.o
+drivers/md/raid10.c:718:18: error: fields must have a constant size:
+      'variable length array in structure' extension will never be
+      supported
+                        struct r10dev devs[conf->copies];
+
+
+###########################
+CONFIG_BCACHE=n		- VLAIS  (&nested func?)
+In file included from drivers/md/bcache/btree.h:101:
+drivers/md/bcache/bset.h:171:14: warning: field 'end' with variable sized
+      type 'struct bkey' not at the end of a struct or class is a GNU
+      extension [-Wgnu]
+        struct bkey     end;
+                        ^
+drivers/md/bcache/btree.c:1293:2: error: function definition is not allowed
+      here
+        {
+        ^
+drivers/md/bcache/btree.c:1312:4: error: use of undeclared identifier 'ret'
+                        ret = PTR_ERR(r->b);
+                        ^
+drivers/md/bcache/btree.c:1317:3: error: use of undeclared identifier
+      'stale'
+                stale = btree_gc_mark_node(r->b, &r->keys, gc);
+                ^
+drivers/md/bcache/btree.c:1320:23: error: use of undeclared identifier
+      'stale'
+                    (r->b->level || stale > 10 ||
+                                    ^
+drivers/md/bcache/btree.c:1325:4: error: use of undeclared identifier 'ret'
+                        ret = btree_gc_recurse(r->b, op, writes, gc);
+                        ^
+drivers/md/bcache/btree.c:1327:7: error: use of undeclared identifier 'ret'
+                if (ret) {
+                    ^
+drivers/md/bcache/btree.c:1363:9: error: use of undeclared identifier 'ret'
+        return ret;
+               ^
+drivers/md/bcache/btree.c:1628:2: error: function definition is not allowed
+      here
+        {
+        ^
+drivers/md/bcache/btree.c:1646:3: error: use of undeclared identifier
+      'old_offset'
+                old_offset = KEY_START(k);
+                ^
+drivers/md/bcache/btree.c:1749:21: error: use of undeclared identifier
+      'old_offset'
+                subtract_dirty(k, old_offset, old_size - KEY_SIZE(k));
+                                  ^
+5 warnings and 10 errors generated.
+
+###########################
+CONFIG_WIMAX=N		-	VLAIS
+  CC      drivers/net/wimax/i2400m/fw.o
+drivers/net/wimax/i2400m/fw.c:655:6: error: fields must have a constant
+      size: 'variable length array in structure' extension will never be
+      supported
+                u8 cmd_payload[chunk_len];
+                   ^
+1 error generated.
+
+###########################
+CONFIG_BT=n		- VLAIS
+net/bluetooth/amp.c:153:9: error: fields must have a constant size:
+      'variable length array in structure' extension will never be
+      supported
+                        char ctx[crypto_shash_descsize(tfm)];
+                             ^
+net/bluetooth/amp.c:152:22: warning: field 'shash' with variable sized type
+      'struct shash_desc' not at the end of a struct or class is a GNU
+      extension [-Wgnu]
+                        struct shash_desc shash;
+
+
+
+###########################
+CONFIG_R8187SE=n
+CONFIG_RTL8192U=n
+CONFIG_RTLLIB=n
+CONFIG_R8712U=n
+
+  LD [M]  drivers/staging/rtl8187se/r8187se.o
+drivers/staging/rtl8187se/r8180_wx.o: In function `ieee80211_increment_scans':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/rtl8187se/ieee80211/ieee80211.h:1451: multiple definition of `ieee80211_increment_scans'
+drivers/staging/rtl8187se/r8180_core.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/rtl8187se/ieee80211/ieee80211.h:1451: first defined here
+drivers/staging/rtl8187se/r8180_wx.o: In function `ieee80211_get_scans':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/rtl8187se/ieee80211/ieee80211.h:1456: multiple definition of `ieee80211_get_scans'
+drivers/staging/rtl8187se/r8180_core.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/rtl8187se/ieee80211/ieee80211.h:1456: first defined here
+drivers/staging/rtl8187se/r8180_rtl8225z2.o: In function `ieee80211_increment_scans':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/rtl8187se/ieee80211/ieee80211.h:1451: multiple definition of `ieee80211_increment_scans'
+
+
+###########################
+MODULES_SIG=n
+CONFIG_INTEGRITY_SIGNATURE=n
+CONFIG_ASYMMETRIC_KEY_TYPE=n
+
+  LD      lib/mpi/mpi.o
+lib/mpi/generic_mpih-mul1.o: In function `mpihelp_add_1':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/lib/mpi/mpi-inline.h:45: multiple definition of `mpihelp_add_1'
+lib/mpi/generic_mpih-lshift.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/lib/mpi/mpi-inline.h:45: first defined here
+lib/mpi/generic_mpih-mul1.o: In function `mpihelp_add':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/lib/mpi/mpi-inline.h:67: multiple definition of `mpihelp_add'
+lib/mpi/generic_mpih-lshift.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/lib/mpi/mpi-inline.h:67: first defined here
+lib/mpi/generic_mpih-mul1.o: In function `mpihelp_sub_1':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/lib/mpi/mpi-inline.h:85: multiple definition of `mpihelp_sub_1'
+
+
+###########################
+CONFIG_WLAGS49_H2=n
+CONFIG_WLAGS49_H25=n
+
+  LD [M]  drivers/staging/wlags49_h2/wlags49_h2_cs.o
+drivers/staging/wlags49_h2/wl_priv.o: In function `wl_act_int_on':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/wlags49_h2/wl_internal.h:1018: multiple definition of `wl_act_int_on'
+drivers/staging/wlags49_h2/wl_wext.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/wlags49_h2/wl_internal.h:1018: first defined here
+drivers/staging/wlags49_h2/wl_priv.o: In function `wl_act_int_off':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/staging/wlags49_h2/wl_internal.h:1030: multiple definition of `wl_act_int_off'
+
+
+###########################
+CONFIG_GCOV_KERNEL=n	- symbols are part of compiler-rt (which we do not use)
+drivers/built-in.o: In function `__llvm_gcov_writeout':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/gpu/drm/udl/udl_modeset.c:364: undefined reference to `llvm_gcda_start_file'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/gpu/drm/udl/udl_modeset.c:364: undefined reference to `llvm_gcda_emit_function'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/gpu/drm/udl/udl_modeset.c:364: undefined reference to `llvm_gcda_emit_arcs'
+
+###########################
+CONFIG_MISDN=n
+
+
+###########################
+drivers/built-in.o: In function `l2_st7_tout_200':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1435: undefined reference to `transmit_enquiry'
+drivers/built-in.o: In function `l2_st8_tout_200':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1441: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1442: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1444: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1446: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1452: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1455: undefined reference to `transmit_enquiry'
+drivers/built-in.o: In function `l2_st7_tout_203':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1462: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1463: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1465: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1471: undefined reference to `transmit_enquiry'
+drivers/built-in.o: In function `l2_pull_iqueue':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1477: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1478: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1478: undefined reference to `mcount'
+drivers/built-in.o: In function `cansend':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:383: undefined reference to `mcount'
+drivers/built-in.o: In function `l2_pull_iqueue':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1486: undefined reference to `mcount'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/mISDN/layer2.c:1501: more undefined references to `mcount' follow
+drivers/built-in.o: In function `vpm_init':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:756: undefined reference to `vpm_in'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:761: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:762: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:763: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:767: undefined reference to `vpm_in'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:768: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:771: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:772: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:775: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:780: undefined reference to `vpm_out'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:785: more undefined references to `vpm_out' follow
+drivers/built-in.o: In function `vpm_init':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:790: undefined reference to `vpm_in'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:796: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:816: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:822: undefined reference to `vpm_out'
+drivers/built-in.o: In function `init_chip':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1377: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1380: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1381: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1386: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1389: undefined reference to `mcount'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1392: more undefined references to `mcount' follow
+drivers/built-in.o: In function `hfcmulti_leds':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1722: undefined reference to `vpm_out'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1824: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:1825: undefined reference to `mcount'
+drivers/built-in.o: In function `hfcmulti_resync':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:927: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:927: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:933: undefined reference to `mcount'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:945: more undefined references to `mcount' follow
+drivers/built-in.o: In function `vpm_echocan_on':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:882: undefined reference to `vpm_out'
+drivers/built-in.o: In function `channel_bctrl':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3681: undefined reference to `mcount'
+drivers/built-in.o: In function `vpm_echocan_off':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:890: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:915: undefined reference to `vpm_out'
+drivers/built-in.o: In function `deactivate_bchannel':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3455: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3456: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3464: undefined reference to `mcount'
+drivers/built-in.o: In function `hfcmulti_conf':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3215: undefined reference to `mcount'
+drivers/built-in.o: In function `mode_hfcmulti':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:2876: undefined reference to `mcount'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3017: more undefined references to `mcount' follow
+drivers/built-in.o: In function `mode_hfcmulti':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3035: undefined reference to `vpm_out'
+drivers/built-in.o: In function `open_dchannel':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:4062: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:4086: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:4087: undefined reference to `mcount'
+drivers/built-in.o: In function `hfcmulti_initmode':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3896: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:3901: undefined reference to `mcount'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/isdn/hardware/mISDN/hfcmulti.c:4021: more undefined references to `mcount' follow
+###########################
+
+CONFIG_FTRACE=n
+arch/x86/kernel/head64.o: In function `early_make_pgtable':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/arch/x86/kernel/head64.c:62: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/arch/x86/kernel/head64.c:62: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/arch/x86/kernel/head64.c:75: undefined reference to `mcount'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/arch/x86/kernel/head64.c:103: undefined reference to `mcount'
+arch/x86/kernel/head64.o: In function `reset_early_page_tables':
+
+###########################
+CONFIG_SCSI_QLA_FC=n
+CONFIG_TCM_QLA2XXX=n
+
+drivers/built-in.o: In function `qla24xx_start_scsi':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/qla2xxx/qla_iocb.c:1545: undefined reference to `qla24xx_build_scsi_iocbs'
+drivers/built-in.o: In function `qla82xx_start_scsi':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/qla2xxx/qla_iocb.c:2518: undefined reference to `qla24xx_build_scsi_iocbs'
+drivers/built-in.o: In function `megasas_ioc_init_fusion'
+
+###########################
+MEGARAID_SAS=n
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:694: undefined reference to `megasas_return_cmd'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:694: undefined reference to `megasas_return_cmd'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:694: undefined reference to `megasas_return_cmd'
+drivers/built-in.o: In function `megasas_get_ld_map_info':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:732: undefined reference to `megasas_return_cmd'
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:771: undefined reference to `megasas_return_cmd'
+drivers/built-in.o:/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:825: more undefined references to `megasas_return_cmd' follow
+drivers/built-in.o: In function `megasas_build_io_fusion':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:1675: undefined reference to `megasas_is_ldio'
+drivers/built-in.o: In function `megasas_reset_fusion':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/scsi/megaraid/megaraid_sas_fusion.c:2378: undefined reference to `megasas_return_cmd'
+drivers/built-in.o: In function `iwl_mvm_update_quotas':
+
+###########################
+CONFIG_IWLMVM=n
+drivers/built-in.o: In function `iwl_mvm_update_quotas':
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/drivers/net/wireless/iwlwifi/mvm/quota.c:146: undefined reference to `__compiletime_assert_146'
+make[1]: *** [vmlinux] Fehler 1
+
+###########################
+
+Right now, it builds - but does not boot. 
+
+###########################
+
+###########################
+
+

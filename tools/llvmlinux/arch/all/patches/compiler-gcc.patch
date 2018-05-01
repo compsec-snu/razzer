@@ -1,0 +1,43 @@
+From a492a65bfe8cbd139b1342bb0ae55c424b690e16 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 23:09:53 -0700
+Subject: [PATCH] Mark inline functions as __maybe_unused
+
+clang warns if inline functions aren't used. By making them __maybe_unused
+there is no warning for either gcc nor clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+Cc: "Christopher Li" <sparse@chrisli.org>
+---
+ include/linux/compiler-gcc.h | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
+index dfaa7b3..929a3f0 100644
+--- a/include/linux/compiler-gcc.h
++++ b/include/linux/compiler-gcc.h
+@@ -70,14 +70,14 @@
+  */
+ #if !defined(CONFIG_ARCH_SUPPORTS_OPTIMIZED_INLINING) ||		\
+     !defined(CONFIG_OPTIMIZE_INLINING) || (__GNUC__ < 4)
+-#define inline		inline		__attribute__((always_inline)) notrace
+-#define __inline__	__inline__	__attribute__((always_inline)) notrace
++#define inline		inline		__attribute__((always_inline)) notrace __maybe_unused
++#define __inline__	__inline__	__attribute__((always_inline)) notrace __maybe_unused
+ #define __inline	__inline	__attribute__((always_inline)) notrace
+ #else
+ /* A lot of inline functions can cause havoc with function tracing */
+-#define inline		inline		notrace
+-#define __inline__	__inline__	notrace
+-#define __inline	__inline	notrace
++#define inline		inline		notrace __maybe_unused
++#define __inline__	__inline__	notrace __maybe_unused
++#define __inline	__inline	notrace __maybe_unused
+ #endif
+ 
+ #define __always_inline	inline __attribute__((always_inline))
+-- 
+1.9.1
+

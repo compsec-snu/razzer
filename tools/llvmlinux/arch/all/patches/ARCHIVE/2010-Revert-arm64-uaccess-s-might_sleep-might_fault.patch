@@ -1,0 +1,35 @@
+From 32e7965be42280f452505d62a86486f54179035a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:57 +0200
+Subject: [PATCH 10/11] Revert "arm64: uaccess s/might_sleep/might_fault/"
+
+This reverts commit 56d2ef789f7c424918abdf6b95d84a64c1473220.
+---
+ arch/arm64/include/asm/uaccess.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index edb3d5c..008f848 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -166,7 +166,7 @@ do {									\
+ 
+ #define get_user(x, ptr)						\
+ ({									\
+-	might_fault();							\
++	might_sleep();							\
+ 	access_ok(VERIFY_READ, (ptr), sizeof(*(ptr))) ?			\
+ 		__get_user((x), (ptr)) :				\
+ 		((x) = 0, -EFAULT);					\
+@@ -227,7 +227,7 @@ do {									\
+ 
+ #define put_user(x, ptr)						\
+ ({									\
+-	might_fault();							\
++	might_sleep();							\
+ 	access_ok(VERIFY_WRITE, (ptr), sizeof(*(ptr))) ?		\
+ 		__put_user((x), (ptr)) :				\
+ 		-EFAULT;						\
+-- 
+1.8.1.4
+

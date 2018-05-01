@@ -1,0 +1,28 @@
+From 66a31a73738b961f7a305b3d32d01ff764857e95 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:33 +0200
+Subject: [PATCH 37/48] Bug in linux because rax/rdx are listed in the output constraints
+ as also being used as input.
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ arch/x86/kvm/emulate.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/kvm/emulate.c b/arch/x86/kvm/emulate.c
+index 0982507..b671e0a 100644
+--- a/arch/x86/kvm/emulate.c
++++ b/arch/x86/kvm/emulate.c
+@@ -384,8 +384,7 @@ struct gprefix {
+ 			_ASM_EXTABLE(1b, 3b)				\
+ 			: "=m" ((ctxt)->eflags), "=&r" (_tmp),		\
+ 			  "+a" (*rax), "+d" (*rdx), "+qm"(_ex)		\
+-			: "i" (EFLAGS_MASK), "m" ((ctxt)->src.val),	\
+-			  "a" (*rax), "d" (*rdx));			\
++			: "i" (EFLAGS_MASK), "m" ((ctxt)->src.val));	\
+ 	} while (0)
+ 
+ /* instruction has only one source operand, destination is implicit (e.g. mul, div, imul, idiv) */
+-- 
+1.7.3.4
+

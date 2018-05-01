@@ -1,0 +1,48 @@
+From bd96ad89522b03587b82a840b43b6aebbe42d889 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:37:57 +0100
+Subject: [PATCH 15/51] Add no-integrated-as to arch/x86/boot/Makefile for
+ compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/boot/Makefile |    7 +++++--
+ 1 Datei geändert, 5 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
+index ccce0ed..0fd5b21 100644
+--- a/arch/x86/boot/Makefile
++++ b/arch/x86/boot/Makefile
+@@ -20,6 +20,8 @@ targets		:= vmlinux.bin setup.bin setup.elf bzImage
+ targets		+= fdimage fdimage144 fdimage288 image.iso mtools.conf
+ subdir-		:= compressed
+ 
++CFLAGS_cpucheck.o = -march=i586
++
+ setup-y		+= a20.o bioscall.o cmdline.o copy.o cpu.o cpucheck.o
+ setup-y		+= early_serial_console.o edd.o header.o main.o mca.o memory.o
+ setup-y		+= pm.o pmjump.o printf.o regs.o string.o tty.o video.o
+@@ -55,8 +57,9 @@ $(obj)/cpustr.h: $(obj)/mkcpustr FORCE
+ # that way we can complain to the user if the CPU is insufficient.
+ KBUILD_CFLAGS	:= $(USERINCLUDE) -g -Os -D_SETUP -D__KERNEL__ \
+ 		   -DDISABLE_BRANCH_PROFILING \
+-		   -Wall -Wstrict-prototypes \
+-		   -march=i386 -mregparm=3 \
++		   -Wall -W -Wstrict-prototypes \
++		   -Wno-unused-value -Wno-unused-parameter -mno-sse \
++		   -march=i386 -mregparm=3 -no-integrated-as \
+ 		   -include $(srctree)/$(src)/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   $(call cc-option, -ffreestanding) \
+-- 
+1.7.10.4
+

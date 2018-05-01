@@ -1,0 +1,36 @@
+From 166f7b1dcfa3dbd4670db8469bb10303239d2ba6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 10 Jul 2012 13:42:45 +0200
+Subject: [PATCH 4/6] pax-linux-llvm x86_integrated-as-single-quoted-string.patch
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ lib/MC/MCParser/AsmLexer.cpp |   12 ++++++++++--
+ 1 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/lib/MC/MCParser/AsmLexer.cpp b/lib/MC/MCParser/AsmLexer.cpp
+index bd7e969..bb67236 100644
+--- a/lib/MC/MCParser/AsmLexer.cpp
++++ b/lib/MC/MCParser/AsmLexer.cpp
+@@ -279,8 +279,16 @@ AsmToken AsmLexer::LexSingleQuote() {
+ 
+   CurChar = getNextChar();
+ 
+-  if (CurChar != '\'')
+-    return ReturnError(TokStart, "single quote way too long");
++  if (CurChar != '\'') {
++    while (CurChar != '\'') {
++      if (CurChar == EOF)
++        return ReturnError(TokStart, "unterminated string constant");
++
++      CurChar = getNextChar();
++    }
++
++    return AsmToken(AsmToken::String, StringRef(TokStart, CurPtr - TokStart));
++  }
+ 
+   // The idea here being that 'c' is basically just an integral
+   // constant.
+-- 
+1.7.3.4
+

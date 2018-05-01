@@ -1,0 +1,68 @@
+From 197fc1b8e38476517298c6ef69f9bd231fd3f115 Mon Sep 17 00:00:00 2001
+From: Daniel Sanders <daniel.sanders@imgtec.com>
+Date: Tue, 24 Feb 2015 12:02:36 +0000
+Subject: [PATCH v3] MIPS: Changed current_thread_info() to an equivalent
+ supported by both clang and GCC
+
+Without this, a 'break' instruction is executed very early in the boot and
+the boot hangs.
+
+The problem is that clang doesn't honour named registers on local variables
+and silently treats them as normal uninitialized variables. However, it
+does honour them on global variables.
+
+Signed-off-by: Daniel Sanders <daniel.sanders@imgtec.com>
+Acked-by: Behan Webster <behanw@converseincode.com>
+Cc: Ralf Baechle <ralf@linux-mips.org>
+Cc: Paul Burton <paul.burton@imgtec.com>
+Cc: Markos Chandras <markos.chandras@imgtec.com>
+Cc: James Hogan <james.hogan@imgtec.com>
+Cc: linux-mips@linux-mips.org
+Cc: Behan Webster <behanw@converseincode.com>
+Cc: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
+Cc: David Daney <ddaney.cavm@gmail.com>
+---
+v3 of this patch just rebases to master and adds some background discussion from
+the previous threads.
+
+v2 of this patch has been updated following David Daney's request to preserve
+the name of the original named register local.
+
+For reference, a similar patch for ARM's stack pointer has already been merged:
+  0abc08b ARM: 8170/1: Add global named register current_stack_pointer for ARM
+
+LLVM is unlikely to support uninitialized reads of named register locals in the
+foreseeable future. There are some significant implementation difficulties and
+there were objections based on the future direction of LLVM. The thread is at
+http://lists.cs.uiuc.edu/pipermail/llvmdev/2014-March/071555.html. I've linked
+to the bit where the issues started to be discussed rather than the start of
+the thread.
+
+Difficulty and objections aside, it's also a very large amount of work to
+support a single (as far as I know) user of named register locals, especially
+when the kernel has already accepted patches to switch named register locals to
+named register globals in the arm and arm64/aarch64 arches.
+
+ arch/mips/include/asm/thread_info.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/include/asm/thread_info.h b/arch/mips/include/asm/thread_info.h
+index 55ed660..2f0dba3 100644
+--- a/arch/mips/include/asm/thread_info.h
++++ b/arch/mips/include/asm/thread_info.h
+@@ -55,10 +55,10 @@ struct thread_info {
+ #define init_stack		(init_thread_union.stack)
+ 
+ /* How to get the thread information struct from C.  */
++register struct thread_info *__current_thread_info __asm__("$28");
++
+ static inline struct thread_info *current_thread_info(void)
+ {
+-	register struct thread_info *__current_thread_info __asm__("$28");
+-
+ 	return __current_thread_info;
+ }
+ 
+-- 
+2.1.4
+

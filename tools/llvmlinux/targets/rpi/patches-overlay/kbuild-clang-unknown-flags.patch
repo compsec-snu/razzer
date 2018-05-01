@@ -1,0 +1,11 @@
+--- rpi.orig/arch/arm/Makefile
++++ rpi/arch/arm/Makefile
+@@ -45,7 +45,7 @@
+ endif
+ 
+ ifeq ($(CONFIG_FRAME_POINTER),y)
+-KBUILD_CFLAGS	+=-fno-omit-frame-pointer -mapcs -mno-sched-prolog
++KBUILD_CFLAGS	+=-fno-omit-frame-pointer
+ endif
+ 
+ ifeq ($(CONFIG_CPU_BIG_ENDIAN),y)

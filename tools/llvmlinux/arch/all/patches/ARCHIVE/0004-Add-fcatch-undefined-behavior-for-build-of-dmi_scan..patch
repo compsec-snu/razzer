@@ -1,0 +1,38 @@
+From 67c74ca763170456d9b387466cf3c64ab1caf523 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:45:21 +0100
+Subject: [PATCH 04/51] Add -fcatch-undefined-behavior for build of dmi_scan.c
+ with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add -fcatch-undefined-behavior for build of dmi_scan.c with clang.
+---
+ drivers/firmware/Makefile |    3 +++
+ 1 Datei geändert, 3 Zeilen hinzugefügt(+)
+
+diff --git a/drivers/firmware/Makefile b/drivers/firmware/Makefile
+index 5a7e273..e636996 100644
+--- a/drivers/firmware/Makefile
++++ b/drivers/firmware/Makefile
+@@ -1,6 +1,9 @@
+ #
+ # Makefile for the linux kernel.
+ #
++
++CFLAGS_REMOVE_dmi_scan.o := -fcatch-undefined-behavior
++
+ obj-$(CONFIG_DMI)		+= dmi_scan.o
+ obj-$(CONFIG_DMI_SYSFS)		+= dmi-sysfs.o
+ obj-$(CONFIG_EDD)		+= edd.o
+-- 
+1.7.10.4
+

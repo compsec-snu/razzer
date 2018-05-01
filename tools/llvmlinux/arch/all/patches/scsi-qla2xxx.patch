@@ -1,0 +1,50 @@
+From 81b3a241245a859ead6e6b01b39711671657fd4f Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:14 -0700
+Subject: [PATCH] scsi, qla2xxx, LLVMLinux: Fix extern inline
+
+With compilers which follow the C99 standard (like modern versions of gcc and
+clang), "extern inline" does the opposite thing from older versions of gcc
+(emits code for an externally linkable version of the inline function). "static
+inline" does the intended behavior in all cases instead.
+
+qla8044_need_reset_handler was also defined as a static void function so the
+declaration in the header file was incorrect.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/scsi/qla2xxx/qla_gbl.h | 2 --
+ drivers/scsi/qla2xxx/qla_nx2.c | 2 +-
+ 2 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/scsi/qla2xxx/qla_gbl.h b/drivers/scsi/qla2xxx/qla_gbl.h
+index b1865a7..7686bfe 100644
+--- a/drivers/scsi/qla2xxx/qla_gbl.h
++++ b/drivers/scsi/qla2xxx/qla_gbl.h
+@@ -752,8 +752,6 @@ extern void qla8044_set_idc_dontreset(struct scsi_qla_host *ha);
+ extern int qla8044_rd_direct(struct scsi_qla_host *vha, const uint32_t crb_reg);
+ extern void qla8044_wr_direct(struct scsi_qla_host *vha,
+ 			      const uint32_t crb_reg, const uint32_t value);
+-extern inline void qla8044_set_qsnt_ready(struct scsi_qla_host *vha);
+-extern inline void qla8044_need_reset_handler(struct scsi_qla_host *vha);
+ extern int qla8044_device_state_handler(struct scsi_qla_host *vha);
+ extern void qla8044_clear_qsnt_ready(struct scsi_qla_host *vha);
+ extern void qla8044_clear_drv_active(struct qla_hw_data *);
+diff --git a/drivers/scsi/qla2xxx/qla_nx2.c b/drivers/scsi/qla2xxx/qla_nx2.c
+index 24a8528..ed4d6b6 100644
+--- a/drivers/scsi/qla2xxx/qla_nx2.c
++++ b/drivers/scsi/qla2xxx/qla_nx2.c
+@@ -238,7 +238,7 @@ qla8044_rmw_crb_reg(struct scsi_qla_host *vha,
+ 	return;
+ }
+ 
+-inline void
++static inline void
+ qla8044_set_qsnt_ready(struct scsi_qla_host *vha)
+ {
+ 	uint32_t qsnt_state;
+-- 
+1.9.1
+

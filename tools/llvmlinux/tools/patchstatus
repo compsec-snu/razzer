@@ -1,0 +1,298 @@
+#!/usr/bin/python
+##############################################################################
+# Copyright (c) 2013 Behan Webster
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+##############################################################################
+
+import ConfigParser
+from optparse import OptionParser
+import re, os
+import sys
+import datetime
+
+import gdata.docs
+import gdata.docs.service
+import gdata.spreadsheet.service
+
+import prettytable
+
+#-------------------------------------------------------------------------------
+parser = OptionParser()
+parser.add_option("-f", "--file", dest="filename", default='patchstatus.conf',
+                  help="write report to FILE", metavar="FILE")
+parser.add_option("-q", "--quiet",
+                  action="store_true", dest="quiet", default=False,
+                  help="don't print status messages to stdout")
+parser.add_option("-v", "--verbose",
+                  action="store_true", dest="verbose", default=False,
+                  help="print output to stdout as well as to --output")
+parser.add_option("-a", "--arch",
+                  action="store", type="string", dest="arch", default="any",
+                  help="Limit patches to arch")
+parser.add_option("-c", "--category",
+                  action="store", type="string", dest="category", default="any",
+                  help="Limit patches to category type")
+parser.add_option("-L", "--list-categories",
+                  action="store_true", dest="listcat", default=False,
+                  help="List possible categories")
+parser.add_option("-s", "--submit-patch",
+                  action="store_true", dest="submit", default=False,
+                  help="Mark patch as being submitted upstream")
+parser.add_option("", "--for-arm",
+                  action="store_const", const="for-arm", dest="branch",
+                  help="Patches for the for-arm branch")
+parser.add_option("", "--for-aarch64",
+                  action="store_const", const="for-aarch64", dest="branch",
+                  help="Patches for the for-aarch64 branch")
+parser.add_option("", "--for-linus",
+                  action="store_const", const="for-linus", dest="branch",
+                  help="Patches for the for-linus branch")
+parser.add_option("", "--for-next",
+                  action="store_const", const="for-next", dest="branch",
+                  help="Patches for the for-next branch")
+parser.add_option("", "--for-test",
+                  action="store_const", const="for-test", dest="branch",
+                  help="This is merely for testing the buildsystem")
+parser.add_option("", "--left-over",
+                  action="store_true", dest="leftover", default=False,
+                  help="List which patches in spreadsheet aren't being used")
+parser.add_option("-o", "--output", dest="output", default='-',
+                  help="write output to FILE")
+parser.add_option("-S", "--stats",
+                  action="store_true", dest="showstats", default=False,
+                  help="List patch stats only")
+
+(options, args) = parser.parse_args()
+
+def echo(txt):
+    if not(options.quiet):
+        print txt,
+
+def verbose(txt):
+    if options.verbose:
+        print txt,
+
+def writeoutput(data):
+    if data:
+        if options.output == '-':
+            print data,
+        else:
+            verbose(data)
+            f = open(options.output, "w")
+            f.write(data)
+
+#-------------------------------------------------------------------------------
+config = ConfigParser.RawConfigParser()
+files = config.read([options.filename, os.path.expanduser('~/.patchstatus.conf'), os.path.expanduser('~/.config/patchstatus/patchstatus.conf')])
+if len(files) == 0:
+    sys.stderr.write("E: No valid config file found to specify status spreadsheet: "+options.filename+"\n")
+    sys.exit(0)
+
+#-------------------------------------------------------------------------------
+# Connect to Google Drive
+gd_client = gdata.spreadsheet.service.SpreadsheetsService()
+try:
+    gd_client.email = config.get('spreadsheet', 'userid')
+    gd_client.password = config.get('spreadsheet', 'password')
+    gd_client.source = 'LLVMLinux patch script'
+except:
+    sys.stderr.write("E: No valid patch status spreadsheet information found in "+options.filename+"\n")
+    sys.exit(1)
+try:
+    gd_client.ProgrammaticLogin()
+except:
+    sys.stderr.write("E: Can't access spreadsheet (no network?)\n")
+    sys.exit(1)
+
+#-------------------------------------------------------------------------------
+# Query spreadsheet by name
+q = gdata.spreadsheet.service.DocumentQuery()
+q['title'] = config.get('spreadsheet', 'filename')
+q['title-exact'] = 'true'
+feed = gd_client.GetSpreadsheetsFeed(query=q)
+spreadsheet_id = feed.entry[0].id.text.rsplit('/',1)[1]
+feed = gd_client.GetWorksheetsFeed(spreadsheet_id)
+active_patches = feed.entry[2].id.text.rsplit('/',1)[1]
+
+#-------------------------------------------------------------------------------
+# Get row iterator for spreadsheet
+rows = gd_client.GetListFeed(spreadsheet_id, active_patches).entry
+
+#-------------------------------------------------------------------------------
+if options.listcat:
+    categories = {}
+    data = ''
+    for row in rows:
+        categories[row.custom["category"].text] = 1
+    for cat in sorted(categories):
+        data += cat+"\n"
+    writeoutput(data)
+    sys.exit(0)
+
+#-------------------------------------------------------------------------------
+if options.submit:
+    for row in rows:
+        if row.custom['patchname'].text in args:
+            data = {}
+            for column in row.custom:
+                data[column] = row.custom[column].text
+            data['submittedupstream'] = 'Y'
+            gd_client.UpdateRow(row, data)
+    sys.exit(0)
+
+#-------------------------------------------------------------------------------
+# Filter by column
+def ignored(row):
+    ignore = False
+    if options.arch != "any":
+        if row.custom['arch'].text != options.arch:
+            ignore = True
+    if options.category != "any":
+        if not re.match(options.category, row.custom['category'].text, flags=re.IGNORECASE):
+            ignore = True
+    return ignore
+
+#-------------------------------------------------------------------------------
+def enabled(row, col):
+    return re.match('^y', row.custom[col].text, flags=re.IGNORECASE)
+
+#-------------------------------------------------------------------------------
+# Print out patch names if value in for-branch is 'Y'
+if options.branch:
+    data = ''
+    for row in rows:
+        if ignored(row):
+            continue
+        if enabled(row, 'upstream-able') and enabled(row, options.branch):
+            data += row.custom['patchname'].text+"\n"
+    writeoutput(data)
+    sys.exit(0)
+
+#-------------------------------------------------------------------------------
+if options.leftover:
+    data = ''
+    for row in rows:
+        if ignored(row):
+            continue
+        patchname = row.custom['patchname'].text
+	verbose("Patchname: "+patchname+"\n")
+        if patchname not in args:
+            data += patchname+"\n"
+    writeoutput(data)
+    sys.exit(0)
+
+#-------------------------------------------------------------------------------
+# Build lists of table headers for later
+# ['arch', 'boots', 'comments', 'done', 'handledby', 'inout', 'patchinspection', 'patchname', 'remarks', 'category']
+headers = sorted(rows[0].custom)
+headers.remove('patchname')
+fixedhdr = ('arch', 'required', 'upstream-able', 'for-next', 'for-linus', 'for-arm', 'for-aarch64', 'boots', 'category', 'handledby', 'submittedupstream', 'ackedupstream', 'acceptedupstream')
+ignoredhdr = ('comments', 'inout', 'oldpatchname') + fixedhdr
+#fixednames = ('Arch', 'Req', 'Up', 'Linus', 'Next', 'Arm', 'A64', 'Boot', 'In?', 'Category', 'Handled by', 'Sent', 'Done')
+fixednames = ('Arch', 'Req', 'Up', 'Next', 'Linux', 'Arm', 'A64', 'Boot', 'Category', 'Handled by', 'Sent', 'Acked', 'Done')
+[headers.remove(x) for x in ignoredhdr]
+
+#-------------------------------------------------------------------------------
+# Initialize the pretty table
+table = prettytable.PrettyTable(['patchname'] + list(fixednames))
+table.align = "l"
+
+#-------------------------------------------------------------------------------
+# Print out the rows and build the pretty table
+numpatches = 0
+stats = {}
+stats['any'] = { 'count':0, 'submittedupstream':0, 'ackedupstream':0, 'acceptedupstream':0 }
+#nopatch = re.compile(r"\.patch$")
+for row in rows:
+    patchname = row.custom['patchname'].text
+    if patchname in args:
+	args.remove(patchname)
+        if ignored(row):
+            continue
+
+        key = row.custom['arch'].text
+        numpatches += 1
+        stats['any']['count'] += 1
+        if key in stats:
+            stats[key]['count'] += 1
+	else:
+            stats[key] = { 'count':1, 'submittedupstream':0, 'ackedupstream':0, 'acceptedupstream':0 }
+        for k in ['submittedupstream', 'ackedupstream', 'acceptedupstream']:
+            if row.custom[k].text == 'Y':
+                stats['any'][k] += 1
+                stats[key][k] += 1
+
+        if options.showstats == False:
+	    echo(patchname,)
+
+	    vals = [re.sub('\.patch$','',patchname)]
+            for key in fixedhdr:
+                value = str(row.custom[key].text)
+                echo(" %s: %s" % (key, value))
+                vals.append(value)
+            echo("\n")
+            table.add_row(vals)
+
+            for key in headers:
+                val = row.custom[key].text
+                if val and val != None and val != "None" and val != "-":
+                    echo("  %s: %s\n" % (key, val))
+
+#-------------------------------------------------------------------------------
+if options.showstats == False:
+    print
+    print table.get_string(sortby='patchname')
+
+#-------------------------------------------------------------------------------
+# Print active patch status
+print " " + str(datetime.date.today())
+print " Number of patches: %d" % (numpatches)
+for key in ("all", "aarch64", "arm", "mips", "x86", "any"):
+    try:
+        if key == "any":
+            name = "totals"
+        else:
+            name = key
+        print "%8s:%3d" % (name, stats[key]['count']),
+        print "%10s:%3d" % ("submitted", stats[key]['submittedupstream']),
+        print "%6s:%3d" % ("acked", stats[key]['ackedupstream']),
+        print "%9s:%3d" % ("accepted", stats[key]['acceptedupstream'])
+    except:
+	continue
+
+#-------------------------------------------------------------------------------
+# Print done patch status
+done_patches = feed.entry[3].id.text.rsplit('/',1)[1]
+done = gd_client.GetListFeed(spreadsheet_id, done_patches).entry
+ndone = 0;
+for key in done:
+    ndone += 1
+print " completed or obsoleted: "+str(ndone)
+
+#-------------------------------------------------------------------------------
+if args:
+    sys.stderr.write("Patches not found: ")
+    sys.stderr.write(str(args)+"\n")
+    sys.stderr.write("Adding missing patches to spreadsheet:")
+    for patch in args:
+	sys.stderr.write("  "+patch+"\n")
+	data = {'patchname':patch, 'arch':'?', 'required':'?', 'upstream-able':'?', 'for-next':'?','for-linus':'?', 'for-arm':'?', 'for-aarch64':'?', 'boots':'?', 'category':'?', 'submittedupstream':'N', 'acceptedupstream':'N'}
+        gd_client.InsertRow(data, spreadsheet_id, active_patches)
+

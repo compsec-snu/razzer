@@ -1,0 +1,8 @@
+#eabi-arm.patch
+kbuild-clang-arm.patch
+#bcm_kona_smc.patch
+#arm_teach__asmeq_that_r11_fp_and_r12_ip.patch
+hack_disable-big-endian.patch
+non-void-naked-function-trusted-foundations.patch
+unreachable_in_naked_function.patch
+#register_allocation_arm_psci.patch

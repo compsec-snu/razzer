@@ -1,0 +1,54 @@
+= Submitting code upstream =
+
+First, make sure you read the following files from the Linux Kernel source code
+Documentation directory:
+
+ linux/Documentation/SubmitChecklist
+ linux/Documentation/SubmittingDrivers
+ linux/Documentation/SubmittingPatches
+
+= Checking the basic format of your patches =
+
+You can check the format of your kernel patches by doing the following:
+
+ make list-kernel-checkpatch
+
+You can limit it to a subset of patches (or one patch) by specifying
+PATCH_FILTER_REGEX.
+
+ $ make PATCH_FILTER_REGEX=vlais.\* list-kernel-checkpatch
+ ---------------------------------------------------------------------
+ Running checkpatch for patches PATCH_FILTER_REGEX=vlais-netfilter
+ ---------------------------------------------------------------------
+ ---------------------------------------------------------------------
+ .../llvmlinux/arch/all/patches/vlais-netfilter.patch
+ ---------------------------------------------------------------------
+ total: 0 errors, 0 warnings, 36 lines checked
+ 
+ .../llvmlinux/arch/all/patches/vlais-netfilter.patch has no obvious style problems and is ready for submission.
+
+= Who do I send a patch to? =
+
+You can find out where to send your patch by doing the following:
+
+ make list-kernel-maintainer
+
+You can limit it to a subset of patches (or one patch) by specifying
+PATCH_FILTER_REGEX.
+
+ $ make PATCH_FILTER_REGEX=vlais-netfilter list-kernel-maintainer
+ ---------------------------------------------------------------------
+ Running get_maintainer for patches PATCH_FILTER_REGEX=vlais-netfilter
+ ---------------------------------------------------------------------
+ ---------------------------------------------------------------------
+ /home/behanw/src/kernel/llvmlinux/arch/all/patches/vlais-netfilter.patch
+ ---------------------------------------------------------------------
+ Pablo Neira Ayuso <pablo@netfilter.org> (supporter:NETFILTER/IPTABLE...)
+ Patrick McHardy <kaber@trash.net> (supporter:NETFILTER/IPTABLE...)
+ "David S. Miller" <davem@davemloft.net> (maintainer:NETWORKING [GENERAL])
+ netfilter-devel@vger.kernel.org (open list:NETFILTER/IPTABLE...)
+ netfilter@vger.kernel.org (open list:NETFILTER/IPTABLE...)
+ coreteam@netfilter.org (open list:NETFILTER/IPTABLE...)
+ netdev@vger.kernel.org (open list:NETWORKING [GENERAL])
+ linux-kernel@vger.kernel.org (open list)
+

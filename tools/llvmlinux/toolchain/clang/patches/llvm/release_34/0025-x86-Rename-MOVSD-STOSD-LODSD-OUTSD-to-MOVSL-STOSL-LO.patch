@@ -1,0 +1,120 @@
+From ed29e59b04772ec2a16434f97782296adbfce3e5 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Mon, 13 Jan 2014 11:25:22 +0000
+Subject: [PATCH 25/26] [x86] Rename MOVSD/STOSD/LODSD/OUTSD to
+ MOVSL/STOSL/LODSL/OUTSL
+
+The disassembler has a special case for 'L' vs. 'W' in its heuristic for
+checking for 32-bit and 16-bit equivalents. We could expand the heuristic,
+but better just to be consistent in using the 'L' suffix.
+
+(cherry picked from commit 40ae10f6e0956b958463fe7e969d58a3b0e654f4)
+---
+ lib/Target/X86/X86InstrInfo.td      | 10 +++++-----
+ test/MC/Disassembler/X86/x86-16.txt | 18 +++++++++---------
+ 2 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index 3ebd101..8e41256 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -1054,7 +1054,7 @@ let SchedRW = [WriteMicrocoded] in {
+ let Defs = [EDI,ESI], Uses = [EDI,ESI,EFLAGS] in {
+ def MOVSB : I<0xA4, RawFrm, (outs), (ins), "movsb", [], IIC_MOVS>;
+ def MOVSW : I<0xA5, RawFrm, (outs), (ins), "movsw", [], IIC_MOVS>, OpSize;
+-def MOVSD : I<0xA5, RawFrm, (outs), (ins), "movs{l|d}", [], IIC_MOVS>, OpSize16;
++def MOVSL : I<0xA5, RawFrm, (outs), (ins), "movs{l|d}", [], IIC_MOVS>, OpSize16;
+ def MOVSQ : RI<0xA5, RawFrm, (outs), (ins), "movsq", [], IIC_MOVS>;
+ }
+ 
+@@ -1064,7 +1064,7 @@ def STOSB : I<0xAA, RawFrm, (outs), (ins), "stosb", [], IIC_STOS>;
+ let Defs = [EDI], Uses = [AX,EDI,EFLAGS] in
+ def STOSW : I<0xAB, RawFrm, (outs), (ins), "stosw", [], IIC_STOS>, OpSize;
+ let Defs = [EDI], Uses = [EAX,EDI,EFLAGS] in
+-def STOSD : I<0xAB, RawFrm, (outs), (ins), "stos{l|d}", [], IIC_STOS>, OpSize16;
++def STOSL : I<0xAB, RawFrm, (outs), (ins), "stos{l|d}", [], IIC_STOS>, OpSize16;
+ let Defs = [RCX,RDI], Uses = [RAX,RCX,RDI,EFLAGS] in
+ def STOSQ : RI<0xAB, RawFrm, (outs), (ins), "stosq", [], IIC_STOS>;
+ 
+@@ -1662,14 +1662,14 @@ def REPNE_PREFIX : I<0xF2, RawFrm, (outs),  (ins), "repne", []>;
+ let SchedRW = [WriteMicrocoded] in {
+ def LODSB : I<0xAC, RawFrm, (outs), (ins), "lodsb", [], IIC_LODS>;
+ def LODSW : I<0xAD, RawFrm, (outs), (ins), "lodsw", [], IIC_LODS>, OpSize;
+-def LODSD : I<0xAD, RawFrm, (outs), (ins), "lods{l|d}", [], IIC_LODS>, OpSize16;
++def LODSL : I<0xAD, RawFrm, (outs), (ins), "lods{l|d}", [], IIC_LODS>, OpSize16;
+ def LODSQ : RI<0xAD, RawFrm, (outs), (ins), "lodsq", [], IIC_LODS>;
+ }
+ 
+ let SchedRW = [WriteSystem] in {
+ def OUTSB : I<0x6E, RawFrm, (outs), (ins), "outsb", [], IIC_OUTS>;
+ def OUTSW : I<0x6F, RawFrm, (outs), (ins), "outsw", [], IIC_OUTS>, OpSize;
+-def OUTSD : I<0x6F, RawFrm, (outs), (ins), "outs{l|d}", [], IIC_OUTS>, OpSize16;
++def OUTSL : I<0x6F, RawFrm, (outs), (ins), "outs{l|d}", [], IIC_OUTS>, OpSize16;
+ }
+ 
+ // Flag instructions
+@@ -2458,7 +2458,7 @@ def : InstAlias<"movq $src, $dst",
+ 
+ // movsd with no operands (as opposed to the SSE scalar move of a double) is an
+ // alias for movsl. (as in rep; movsd)
+-def : InstAlias<"movsd", (MOVSD), 0>;
++def : InstAlias<"movsd", (MOVSL), 0>;
+ 
+ // movsx aliases
+ def : InstAlias<"movsx $src, $dst", (MOVSX16rr8 GR16:$dst, GR8:$src), 0>;
+diff --git a/test/MC/Disassembler/X86/x86-16.txt b/test/MC/Disassembler/X86/x86-16.txt
+index 50d79c1..83be869 100644
+--- a/test/MC/Disassembler/X86/x86-16.txt
++++ b/test/MC/Disassembler/X86/x86-16.txt
+@@ -708,10 +708,10 @@
+ # CHECK: outsb
+ 0x6e
+ 
+-# CHECKX: outsw
++# CHECK: outsw
+ 0x6f
+ 
+-# CHECKX: outsl
++# CHECK: outsl
+ 0x66 0x6f
+ 
+ # CHECK: insb
+@@ -726,28 +726,28 @@
+ # CHECK: movsb
+ 0xa4
+ 
+-# CHECKX: movsw
++# CHECK: movsw
+ 0xa5
+ 
+-# CHECKX: movsl
++# CHECK: movsl
+ 0x66 0xa5
+ 
+-# CHECKX: lodsb
++# CHECK: lodsb
+ 0xac
+ 
+-# CHECKX: lodsw
++# CHECK: lodsw
+ 0xad
+ 
+-# CHECKX: lodsl
++# CHECK: lodsl
+ 0x66 0xad
+ 
+ # CHECK: stosb
+ 0xaa
+ 
+-# CHECKX: stosw
++# CHECK: stosw
+ 0xab
+ 
+-# CHECKX: stosl
++# CHECK: stosl
+ 0x66 0xab
+ 
+ # CHECK: strw %ax
+-- 
+1.8.4
+

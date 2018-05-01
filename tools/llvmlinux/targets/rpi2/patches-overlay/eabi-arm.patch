@@ -1,0 +1,94 @@
+From 0008329de1406211decd45c69239060290dc586d Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:26 -0400
+Subject: [PATCH] DO-NOT-UPSTREAM arm: LLVMLinux: Provide __aeabi_* symbols
+ which are needed for clang
+
+These symbols are required when compiling the Linux kernel for arch ARM with
+clang.
+
+KernelVersion:
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm/lib/Makefile |  4 ++++
+ arch/arm/lib/eabi.c   | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+)
+ create mode 100644 arch/arm/lib/eabi.c
+
+--- /dev/null
++++ rpi2/arch/arm/lib/eabi.c
+@@ -0,0 +1,59 @@
++/*
++ * EABI routines
++ *
++ *  Copyright (C) 2012  Mark Charlebois
++ */
++
++#include <linux/types.h>
++#include <linux/string.h>
++#include <linux/ctype.h>
++#include <linux/export.h>
++
++void __aeabi_memcpy(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy);
++
++void __aeabi_memcpy4(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy4);
++
++void __aeabi_memcpy8(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy8);
++
++void __aeabi_memmove(void *dest, const void *src, size_t n)
++{
++	(void)memmove(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memmove);
++
++void __aeabi_memset(void *s, size_t n, int c)
++{
++	(void)memset(s, c, n);
++}
++EXPORT_SYMBOL(__aeabi_memset);
++
++void __aeabi_memclr(void *dest, size_t n)
++{
++	(void)memset(dest, 0, n);
++}
++EXPORT_SYMBOL(__aeabi_memclr);
++
++void __aeabi_memclr4(void *dest, size_t n)
++{
++	(void)memset(dest, 0, n);
++}
++EXPORT_SYMBOL(__aeabi_memclr4);
++
++void __aeabi_memclr8(void *dest, size_t n)
++{
++	(void)memset(dest, 0, n);
++}
++EXPORT_SYMBOL(__aeabi_memclr8);
++
+--- rpi2.orig/arch/arm/lib/Makefile
++++ rpi2/arch/arm/lib/Makefile
+@@ -14,6 +14,10 @@
+ 		   io-readsb.o io-writesb.o io-readsl.o io-writesl.o  \
+ 		   call_with_stack.o bswapsdi2.o
+ 
++ifeq ($(COMPILER),clang)
++  lib-y += eabi.o
++endif
++
+ # Choose optimised implementations for Raspberry Pi
+ ifeq ($(CONFIG_MACH_BCM2708),y)
+   CFLAGS_uaccess_with_memcpy.o += -DCOPY_FROM_USER_THRESHOLD=1600

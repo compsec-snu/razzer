@@ -1,0 +1,32 @@
+From 3d7846a3bb3ee34078e5ae73d43756d0295e0718 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 7 Apr 2014 14:50:09 +0200
+Subject: [PATCH] WORKAROUND NON-UPSTREAM Temporarily disable M16_CFLAGS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+M16_CFLAGS does not work on CLANG 3.5 right now. While we investigate the issue
+allow the upstreaming work to continue with the old CODE16GCC_CFLAGS.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 8ea139f..c43008d 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -21,7 +21,7 @@ CODE16GCC_CFLAGS := -m32 -Wa,$(srctree)/arch/x86/boot/code16gcc.h \
+ 		    $(call cc-option, -no-integrated-as,)
+ M16_CFLAGS	 := $(call cc-option, -m16, $(CODE16GCC_CFLAGS))
+ 
+-REALMODE_CFLAGS	:= $(M16_CFLAGS) -g -Os -D__KERNEL__ \
++REALMODE_CFLAGS	:= $(CODE16GCC_CFLAGS) -g -Os -D__KERNEL__ \
+ 		   -DDISABLE_BRANCH_PROFILING \
+ 		   -Wall -Wstrict-prototypes -march=i386 -mregparm=3 \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+-- 
+1.9.1
+

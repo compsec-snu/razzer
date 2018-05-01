@@ -1,0 +1,170 @@
+#[21:27:48] <pipacs> it's an optimization to make use of rip relative addressing for kernel mode 
+#                    (something that gcc also does when mcmodel=kernel is active)
+#[21:28:31] <pipacs> it reduces the number of relocations that probably nobody cares about 
+#                    'cos reloctable kernel support works differently on amd64 than on i386
+###
+From c1f164857e997249b885141cc6e2df7832395b90 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 10 Jul 2012 13:44:13 +0200
+Subject: [PATCH 5/6] pax-linux-llvm  x86_kernel-riprel.patch
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ lib/Target/X86/X86FastISel.cpp     |    7 ++++---
+ lib/Target/X86/X86ISelDAGToDAG.cpp |    2 +-
+ lib/Target/X86/X86ISelLowering.cpp |    7 +++++--
+ lib/Target/X86/X86Subtarget.cpp    |    2 +-
+ test/CodeGen/X86/codemodel.ll      |    8 ++++----
+ 5 files changed, 15 insertions(+), 11 deletions(-)
+
+Index: llvm/lib/Target/X86/X86FastISel.cpp
+===================================================================
+--- llvm.orig/lib/Target/X86/X86FastISel.cpp	2012-07-20 12:46:04.598596860 -0400
++++ llvm/lib/Target/X86/X86FastISel.cpp	2012-07-20 15:19:45.260442055 -0400
+@@ -481,7 +481,7 @@
+   // Handle constant address.
+   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
+     // Can't handle alternate code models yet.
+-    if (TM.getCodeModel() != CodeModel::Small)
++    if (TM.getCodeModel() != CodeModel::Small && TM.getCodeModel() != CodeModel::Kernel)
+       return false;
+ 
+     // Can't handle TLS yet.
+@@ -627,7 +627,7 @@
+   // Handle constant address.
+   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
+     // Can't handle alternate code models yet.
+-    if (TM.getCodeModel() != CodeModel::Small)
++    if (TM.getCodeModel() != CodeModel::Small && TM.getCodeModel() != CodeModel::Kernel)
+       return false;
+ 
+     // RIP-relative addresses can't have additional register operands.
+@@ -1824,6 +1824,7 @@
+     // has hidden or protected visibility, or if it is static or local, then
+     // we don't need to use the PLT - we can directly call it.
+     if (Subtarget->isTargetELF() &&
++        TM.getCodeModel() != CodeModel::Kernel &&
+         TM.getRelocationModel() == Reloc::PIC_ &&
+         GV->hasDefaultVisibility() && !GV->hasLocalLinkage()) {
+       OpFlags = X86II::MO_PLT;
+@@ -2084,7 +2085,7 @@
+     OpFlag = X86II::MO_GOTOFF;
+     PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+   } else if (Subtarget->isPICStyleRIPRel() &&
+-             TM.getCodeModel() == CodeModel::Small) {
++             (TM.getCodeModel() == CodeModel::Small || TM.getCodeModel() == CodeModel::Kernel)) {
+     PICBase = X86::RIP;
+   }
+ 
+Index: llvm/lib/Target/X86/X86ISelDAGToDAG.cpp
+===================================================================
+--- llvm.orig/lib/Target/X86/X86ISelDAGToDAG.cpp	2012-07-20 12:45:59.054750510 -0400
++++ llvm/lib/Target/X86/X86ISelDAGToDAG.cpp	2012-07-20 15:19:45.260442055 -0400
+@@ -713,7 +713,7 @@
+   // Post-processing: Convert foo to foo(%rip), even in non-PIC mode,
+   // because it has a smaller encoding.
+   // TODO: Which other code models can use this?
+-  if (TM.getCodeModel() == CodeModel::Small &&
++  if ((TM.getCodeModel() == CodeModel::Small || TM.getCodeModel() == CodeModel::Kernel) &&
+       Subtarget->is64Bit() &&
+       AM.Scale == 1 &&
+       AM.BaseType == X86ISelAddressMode::RegBase &&
+Index: llvm/lib/Target/X86/X86ISelLowering.cpp
+===================================================================
+--- llvm.orig/lib/Target/X86/X86ISelLowering.cpp	2012-07-20 12:45:59.070750070 -0400
++++ llvm/lib/Target/X86/X86ISelLowering.cpp	2012-07-20 15:19:45.268441817 -0400
+@@ -2442,6 +2442,7 @@
+       // has hidden or protected visibility, or if it is static or local, then
+       // we don't need to use the PLT - we can directly call it.
+       if (Subtarget->isTargetELF() &&
++          getTargetMachine().getCodeModel() != CodeModel::Kernel &&
+           getTargetMachine().getRelocationModel() == Reloc::PIC_ &&
+           GV->hasDefaultVisibility() && !GV->hasLocalLinkage()) {
+         OpFlags = X86II::MO_PLT;
+@@ -2454,6 +2455,7 @@
+         // automatically synthesizes these stubs.
+         OpFlags = X86II::MO_DARWIN_STUB;
+       } else if (Subtarget->isPICStyleRIPRel() &&
++                 getTargetMachine().getCodeModel() != CodeModel::Kernel &&
+                  isa<Function>(GV) &&
+                  cast<Function>(GV)->hasFnAttr(Attribute::NonLazyBind)) {
+         // If the function is marked as non-lazy, generate an indirect call
+@@ -2482,6 +2484,7 @@
+     // On ELF targets, in either X86-64 or X86-32 mode, direct calls to
+     // external symbols should go through the PLT.
+     if (Subtarget->isTargetELF() &&
++        getTargetMachine().getCodeModel() != CodeModel::Kernel &&
+         getTargetMachine().getRelocationModel() == Reloc::PIC_) {
+       OpFlags = X86II::MO_PLT;
+     } else if (Subtarget->isPICStyleStubAny() &&
+@@ -3009,7 +3012,7 @@
+   // For kernel code model we know that all object resist in the negative half
+   // of 32bits address space. We may not accept negative offsets, since they may
+   // be just off and we may accept pretty large positive ones.
+-  if (M == CodeModel::Kernel && Offset > 0)
++  if (M == CodeModel::Kernel && (Offset > 0 || Offset < -2*1024*1024*1024+16*1024*1024))
+     return true;
+ 
+   return false;
+@@ -11301,7 +11304,7 @@
+       return false;
+ 
+     // If lower 4G is not available, then we must use rip-relative addressing.
+-    if ((M != CodeModel::Small || R != Reloc::Static) &&
++    if (((M != CodeModel::Small && M != CodeModel::Kernel) || R != Reloc::Static) &&
+         Subtarget->is64Bit() && (AM.BaseOffs || AM.Scale > 1))
+       return false;
+   }
+Index: llvm/lib/Target/X86/X86Subtarget.cpp
+===================================================================
+--- llvm.orig/lib/Target/X86/X86Subtarget.cpp	2012-07-20 12:46:04.606596645 -0400
++++ llvm/lib/Target/X86/X86Subtarget.cpp	2012-07-20 15:19:45.268441817 -0400
+@@ -81,7 +81,7 @@
+       assert(isTargetELF() && "Unknown rip-relative target");
+ 
+       // Extra load is needed for all externally visible.
+-      if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility())
++      if (TM.getCodeModel() != CodeModel::Kernel && !GV->hasLocalLinkage() && GV->hasDefaultVisibility())
+         return X86II::MO_GOTPCREL;
+     }
+ 
+Index: llvm/test/CodeGen/X86/codemodel.ll
+===================================================================
+--- llvm.orig/test/CodeGen/X86/codemodel.ll	2012-07-20 12:45:59.086749629 -0400
++++ llvm/test/CodeGen/X86/codemodel.ll	2012-07-20 15:19:45.268441817 -0400
+@@ -10,7 +10,7 @@
+ ; CHECK-SMALL:  foo:
+ ; CHECK-SMALL:   movl data(%rip), %eax
+ ; CHECK-KERNEL: foo:
+-; CHECK-KERNEL:  movl data, %eax
++; CHECK-KERNEL:  movl data(%rip), %eax
+ 	%0 = load i32* getelementptr ([0 x i32]* @data, i64 0, i64 0), align 4		; <i32> [#uses=1]
+ 	ret i32 %0
+ }
+@@ -20,7 +20,7 @@
+ ; CHECK-SMALL:  foo2:
+ ; CHECK-SMALL:   movl data+40(%rip), %eax
+ ; CHECK-KERNEL: foo2:
+-; CHECK-KERNEL:  movl data+40, %eax
++; CHECK-KERNEL:  movl data+40(%rip), %eax
+ 	%0 = load i32* getelementptr ([0 x i32]* @data, i32 0, i64 10), align 4		; <i32> [#uses=1]
+ 	ret i32 %0
+ }
+@@ -42,7 +42,7 @@
+ ; CHECK-SMALL:   movl $16777216, %eax
+ ; CHECK-SMALL:   movl data(%rax), %eax
+ ; CHECK-KERNEL: foo4:
+-; CHECK-KERNEL:  movl data+16777216, %eax
++; CHECK-KERNEL:  movl data+16777216(%rip), %eax
+ 	%0 = load i32* getelementptr ([0 x i32]* @data, i32 0, i64 4194304), align 4		; <i32> [#uses=1]
+ 	ret i32 %0
+ }
+@@ -52,7 +52,7 @@
+ ; CHECK-SMALL:  foo1:
+ ; CHECK-SMALL:   movl data+16777212(%rip), %eax
+ ; CHECK-KERNEL: foo1:
+-; CHECK-KERNEL:  movl data+16777212, %eax
++; CHECK-KERNEL:  movl data+16777212(%rip), %eax
+         %0 = load i32* getelementptr ([0 x i32]* @data, i32 0, i64 4194303), align 4            ; <i32> [#uses=1]
+         ret i32 %0
+ }

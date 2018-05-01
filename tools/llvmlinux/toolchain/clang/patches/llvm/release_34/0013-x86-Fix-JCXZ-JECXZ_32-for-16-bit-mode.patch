@@ -1,0 +1,54 @@
+From 9fc76d905e27e377df0b5e05ba6ec6a159a1cd31 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:12 +0000
+Subject: [PATCH 13/26] [x86] Fix JCXZ,JECXZ_32 for 16-bit mode
+
+JCXZ should have the 0x67 prefix only if we're in 32-bit mode, so make that
+appropriately conditional. And JECXZ needs the prefix instead.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198757 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 975fe2cfc34c605746a644e96ff2cb96a7855131)
+---
+ lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp | 6 +++++-
+ test/MC/X86/x86-16.s                             | 8 ++++++++
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+index ccbdb89..a06136f 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+@@ -1156,7 +1156,11 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
+ 
+   // Emit the address size opcode prefix as needed.
+   bool need_address_override;
+-  if (TSFlags & X86II::AdSize) {
++  // The AdSize prefix is only for 32-bit and 64-bit modes; in 16-bit mode we
++  // need the address override only for JECXZ instead. Since it's only one
++  // instruction, we special-case it rather than introducing an AdSize16 bit.
++  if ((!is16BitMode() && TSFlags & X86II::AdSize) ||
++      (is16BitMode() && MI.getOpcode() == X86::JECXZ_32)) {
+     need_address_override = true;
+   } else if (MemOperand == -1) {
+     need_address_override = false;
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 9fdd864..e395a77 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -356,6 +356,14 @@ cmovnae	%bx,%bx
+ lcalll $0x2, $0x1234
+ 
+ 
++L1:
++  jcxz L1
++// CHECK: jcxz L1
++// CHECK:   encoding: [0xe3,A]
++  jecxz L1
++// CHECK: jecxz L1
++// CHECK:   encoding: [0x67,0xe3,A]
++
+ iret
+ // CHECK: iretw
+ // CHECK: encoding: [0xcf]
+-- 
+1.8.4
+

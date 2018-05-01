@@ -1,0 +1,39 @@
+From 220fb253fad629a4477812f1e013bbe3263d96ea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:12:21 +0200
+Subject: [PATCH 34/48] Update Documentation/dontdiff . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ Documentation/dontdiff |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/Documentation/dontdiff b/Documentation/dontdiff
+index 0c083c5..9d7c90c 100644
+--- a/Documentation/dontdiff
++++ b/Documentation/dontdiff
+@@ -1,5 +1,6 @@
+ *.a
+ *.aux
++*.bc
+ *.bin
+ *.bz2
+ *.cis
+@@ -21,6 +22,7 @@
+ *.i
+ *.jpeg
+ *.ko
++*.ll
+ *.log
+ *.lst
+ *.lzma
+@@ -35,6 +37,7 @@
+ *.out
+ *.patch
+ *.pdf
++*.plist
+ *.png
+ *.pot
+ *.ps
+-- 
+1.7.3.4
+

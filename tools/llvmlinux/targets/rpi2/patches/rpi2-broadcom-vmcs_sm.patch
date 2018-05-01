@@ -1,0 +1,17 @@
+--- rpi2.orig/drivers/char/broadcom/vc_sm/vmcs_sm.c
++++ rpi2/drivers/char/broadcom/vc_sm/vmcs_sm.c
+@@ -198,12 +198,14 @@
+ static struct SM_STATE_T *sm_state;
+ static int sm_inited;
+ 
++#if 0
+ static const char *const sm_cache_map_vector[] = {
+ 	"(null)",
+ 	"host",
+ 	"videocore",
+ 	"host+videocore",
+ };
++#endif
+ 
+ /* ---- Private Function Prototypes -------------------------------------- */
+ 

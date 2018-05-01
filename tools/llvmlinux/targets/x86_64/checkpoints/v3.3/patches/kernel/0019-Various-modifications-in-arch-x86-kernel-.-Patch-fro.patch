@@ -1,0 +1,85 @@
+From 6a8e6e58756c961328f3a04ad91eb2e97c899a63 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:26:00 +0200
+Subject: [PATCH 19/48] Various modifications in arch/x86/kernel  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/kernel/apm_32.c      |    2 +-
+ arch/x86/kernel/cpu/vmware.c  |    2 +-
+ arch/x86/kernel/head_32.S     |    8 ++++----
+ arch/x86/kernel/head_64.S     |    3 ++-
+ arch/x86/kernel/vmlinux.lds.S |    1 +
+ 5 files changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/arch/x86/kernel/apm_32.c b/arch/x86/kernel/apm_32.c
+index f76623c..66fa130 100644
+--- a/arch/x86/kernel/apm_32.c
++++ b/arch/x86/kernel/apm_32.c
+@@ -372,7 +372,7 @@ struct apm_user {
+ static struct {
+ 	unsigned long	offset;
+ 	unsigned short	segment;
+-} apm_bios_entry;
++} apm_bios_entry __used;
+ static int clock_slowed;
+ static int idle_threshold __read_mostly = DEFAULT_IDLE_THRESHOLD;
+ static int idle_period __read_mostly = DEFAULT_IDLE_PERIOD;
+diff --git a/arch/x86/kernel/cpu/vmware.c b/arch/x86/kernel/cpu/vmware.c
+index d22d0c4..952669f 100644
+--- a/arch/x86/kernel/cpu/vmware.c
++++ b/arch/x86/kernel/cpu/vmware.c
+@@ -35,7 +35,7 @@
+ #define VMWARE_PORT_CMD_GETHZ		45
+ 
+ #define VMWARE_PORT(cmd, eax, ebx, ecx, edx)				\
+-	__asm__("inl (%%dx)" :						\
++	__asm__("inl %%dx" :						\
+ 			"=a"(eax), "=c"(ecx), "=d"(edx), "=b"(ebx) :	\
+ 			"0"(VMWARE_HYPERVISOR_MAGIC),			\
+ 			"1"(VMWARE_PORT_CMD_##cmd),			\
+diff --git a/arch/x86/kernel/head_32.S b/arch/x86/kernel/head_32.S
+index ce0be7c..d0a94bf 100644
+--- a/arch/x86/kernel/head_32.S
++++ b/arch/x86/kernel/head_32.S
+@@ -532,10 +532,10 @@ rp_sidt:
+ 	movl %edx,8*\trapno+4(%edi)
+ .endm
+ 
+-	set_early_handler handler=early_divide_err,trapno=0
+-	set_early_handler handler=early_illegal_opcode,trapno=6
+-	set_early_handler handler=early_protection_fault,trapno=13
+-	set_early_handler handler=early_page_fault,trapno=14
++	set_early_handler early_divide_err,0
++	set_early_handler early_illegal_opcode,6
++	set_early_handler early_protection_fault,13
++	set_early_handler early_page_fault,14
+ 
+ 	ret
+ 
+diff --git a/arch/x86/kernel/head_64.S b/arch/x86/kernel/head_64.S
+index 40f4eb3..39bf1e0 100644
+--- a/arch/x86/kernel/head_64.S
++++ b/arch/x86/kernel/head_64.S
+@@ -423,5 +423,6 @@ ENTRY(nmi_idt_table)
+ 
+ 	__PAGE_ALIGNED_BSS
+ 	.align PAGE_SIZE
+-ENTRY(empty_zero_page)
++.globl empty_zero_page
++empty_zero_page:
+ 	.skip PAGE_SIZE
+diff --git a/arch/x86/kernel/vmlinux.lds.S b/arch/x86/kernel/vmlinux.lds.S
+index 0f703f1..8b29a0b 100644
+--- a/arch/x86/kernel/vmlinux.lds.S
++++ b/arch/x86/kernel/vmlinux.lds.S
+@@ -316,6 +316,7 @@ SECTIONS
+ 		__bss_start = .;
+ 		*(.bss..page_aligned)
+ 		*(.bss)
++		*(.gnu.linkonce.b.*)
+ 		. = ALIGN(PAGE_SIZE);
+ 		__bss_stop = .;
+ 	}
+-- 
+1.7.3.4
+

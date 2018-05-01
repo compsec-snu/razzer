@@ -1,0 +1,39 @@
+From d1c0fb86e28225191f3874bc0b1a4adee01c9996 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:44:02 +0100
+Subject: [PATCH 03/51] Add -fcatch-undefined-behavior for build with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add -fcatch-undefined-behavior for build with clang
+---
+ drivers/acpi/acpica/Makefile |    5 +++++
+ 1 Datei geändert, 5 Zeilen hinzugefügt(+)
+
+diff --git a/drivers/acpi/acpica/Makefile b/drivers/acpi/acpica/Makefile
+index 7f1d407..0dfe603 100644
+--- a/drivers/acpi/acpica/Makefile
++++ b/drivers/acpi/acpica/Makefile
+@@ -128,6 +128,11 @@ acpi-y +=		\
+ 
+ acpi-$(ACPI_FUTURE_USAGE) += rsdump.o
+ 
++CFLAGS_REMOVE_tbfadt.o := -fcatch-undefined-behavior
++CFLAGS_REMOVE_tbinstal.o := -fcatch-undefined-behavior
++CFLAGS_REMOVE_tbutils.o := -fcatch-undefined-behavior
++CFLAGS_REMOVE_tbxface.o := -fcatch-undefined-behavior
++
+ acpi-y +=		\
+ 	tbfadt.o	\
+ 	tbfind.o	\
+-- 
+1.7.10.4
+

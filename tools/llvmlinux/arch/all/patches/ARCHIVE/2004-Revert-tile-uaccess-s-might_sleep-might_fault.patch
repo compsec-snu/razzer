@@ -1,0 +1,26 @@
+From 02816ca82bc0ffe8c1f2ea4122a92dae88c907b9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:42 +0200
+Subject: [PATCH 04/11] Revert "tile: uaccess s/might_sleep/might_fault/"
+
+This reverts commit f8abe86cc4fbd4ba083fd151b88e02fb3ce88b9c.
+---
+ arch/tile/include/asm/uaccess.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/tile/include/asm/uaccess.h b/arch/tile/include/asm/uaccess.h
+index e4d44bd..8a082bc 100644
+--- a/arch/tile/include/asm/uaccess.h
++++ b/arch/tile/include/asm/uaccess.h
+@@ -442,7 +442,7 @@ extern unsigned long __copy_in_user_inatomic(
+ static inline unsigned long __must_check
+ __copy_in_user(void __user *to, const void __user *from, unsigned long n)
+ {
+-	might_fault();
++	might_sleep();
+ 	return __copy_in_user_inatomic(to, from, n);
+ }
+ 
+-- 
+1.8.1.4
+

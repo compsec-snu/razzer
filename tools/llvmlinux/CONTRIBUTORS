@@ -1,0 +1,11 @@
+The LLVMLinux project consolidates the work of the lll-project, the PaX
+Team, and Mark Charlebois' work on the ARM kernel.
+
+Mark Charlebois <charlebm@gmail.com>
+Sedat Dilek <sedat.dilek@gmail.com> (formerly of lll-project)
+Bryce Lelbach <blelbach@cct.lsu.edu> (formerly of lll-project)
+Jan-Simon Möller <dl9pf@gmx.de>
+PaX Team <pageexec@freemail.hu> (formerly of lll-project)
+Vinicius Tinti <viniciustinti@gmail.com> (formerly of lll-project)
+Edwin Torok <edwin+llvmlinux@etorok.net> (formerly of lll-project)
+Behan Webster <behanw@converseincode.com>

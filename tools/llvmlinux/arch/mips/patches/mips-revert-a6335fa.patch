@@ -1,0 +1,41 @@
+From 35bc482f2183d088f1c910a6f380ec60c2d9e7e8 Mon Sep 17 00:00:00 2001
+From: Daniel Sanders <daniel.sanders@imgtec.com>
+Date: Tue, 14 Jul 2015 13:47:18 +0100
+Subject: [PATCH] Revert "MIPS: bootmem: Don't use memory holes for page
+ bitmap"
+
+This reverts commit a6335fa11e08fc386740557b2a4c1b7ff34bc499.
+It seems to break the boot for LLVMLinux.
+---
+ arch/mips/kernel/setup.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+--- linux.orig/arch/mips/kernel/setup.c
++++ linux/arch/mips/kernel/setup.c
+@@ -337,11 +337,6 @@
+ 			min_low_pfn = start;
+ 		if (end <= reserved_end)
+ 			continue;
+-#ifdef CONFIG_BLK_DEV_INITRD
+-		/* Skip zones before initrd and initrd itself */
+-		if (initrd_end && end <= (unsigned long)PFN_UP(__pa(initrd_end)))
+-			continue;
+-#endif
+ 		if (start >= mapstart)
+ 			continue;
+ 		mapstart = max(reserved_end, start);
+@@ -373,6 +368,14 @@
+ 
+ #ifdef CONFIG_BLK_DEV_INITRD
+ 	/*
++	 * mapstart should be after initrd_end
++	 */
++	if (initrd_end)
++		mapstart = max(mapstart, (unsigned long)PFN_UP(__pa(initrd_end)));
++#endif
++
++#ifdef CONFIG_BLK_DEV_INITRD
++	/*
+ 	 * mapstart should be after initrd_end
+ 	 */
+ 	if (initrd_end)

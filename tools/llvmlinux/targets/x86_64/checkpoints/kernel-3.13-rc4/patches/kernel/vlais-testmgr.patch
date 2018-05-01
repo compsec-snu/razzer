@@ -1,0 +1,59 @@
+From 5c2c83ce7d2eb34eef895da7bcbc0f9026d29bb5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:48:30 +0200
+Subject: [PATCH 18/39] crypto: LLVMLinux: Remove VLAIS usage from
+ crypto/testmgr.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The use of variable length arrays in structs (VLAIS) in the Linux Kernel code
+precludes the use of compilers which don't implement VLAIS (for instance the
+Clang compiler). This patch instead allocates the appropriate amount of memory
+using an char array.
+
+Patch from series at
+http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+by PaX Team.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: pageexec@freemail.hu
+[Use shash_desc_ctx() to calculate address of ctx]
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ crypto/testmgr.c | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index ecddf92..32f233d 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -1665,16 +1665,17 @@ static int alg_test_crc32c(const struct alg_test_desc *desc,
+ 	}
+ 
+ 	do {
+-		struct {
+-			struct shash_desc shash;
+-			char ctx[crypto_shash_descsize(tfm)];
+-		} sdesc;
++		char sdesc[sizeof(struct shash_desc)
++			+ crypto_shash_descsize(tfm)
++			+ CRYPTO_MINALIGN] CRYPTO_MINALIGN_ATTR;
++		struct shash_desc *shash = (struct shash_desc *)sdesc;
++		u32 *ctx = (u32 *)shash_desc_ctx(shash);
+ 
+-		sdesc.shash.tfm = tfm;
+-		sdesc.shash.flags = 0;
++		shash->tfm = tfm;
++		shash->flags = 0;
+ 
+-		*(u32 *)sdesc.ctx = le32_to_cpu(420553207);
+-		err = crypto_shash_final(&sdesc.shash, (u8 *)&val);
++		*ctx = le32_to_cpu(420553207);
++		err = crypto_shash_final(shash, (u8 *)&val);
+ 		if (err) {
+ 			printk(KERN_ERR "alg: crc32c: Operation failed for "
+ 			       "%s: %d\n", driver, err);
+-- 
+1.8.1.2
+

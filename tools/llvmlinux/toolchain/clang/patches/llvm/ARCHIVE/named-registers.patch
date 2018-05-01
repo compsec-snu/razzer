@@ -1,0 +1,429 @@
+diff --git a/docs/LangRef.rst b/docs/LangRef.rst
+index 752e357..00684eb 100644
+--- a/docs/LangRef.rst
++++ b/docs/LangRef.rst
+@@ -6787,6 +6787,88 @@ Note that calling this intrinsic does not prevent function inlining or
+ other aggressive transformations, so the value returned may not be that
+ of the obvious source-language caller.
+ 
++.. _int_read_register:
++
++'``llvm.read_register``' Intrinsic
++^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++
++Syntax:
++"""""""
++
++::
++
++      declare i8* @llvm.read_register(metadata)
++
++Overview:
++"""""""""
++
++The '``llvm.read_register``' intrinsic provides access to the named
++register. The register must be valid on the architecture being compiled
++to and will abort in case the register is not supported or not existent.
++
++Semantics:
++""""""""""
++
++The '``llvm.read_register``' intrinsic returns the current value of the
++register, where possible, and it's only available on a small selection
++of targets (x86, ARM, AArch64) and small selection of registers per target.
++
++Pointer types are used to make sure it has the same bit width as the
++register itself.
++
++This is useful to implement named register global variables that need
++to always be mapped to a specific register, as is common practice on
++bare-metal programs including OS kernels.
++
++The behaviour of the program when the register is used by interleaving
++code is undefined, but it's as undefined as its usage from register variables,
++inline assembly associations ``asm("sp")`` etc. in user code.
++
++Warning: There is no register reservation at the moment, so it only
++works reliably on non-allocatable registers.
++
++.. _int_write_register:
++
++'``llvm.write_register``' Intrinsic
++^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++
++Syntax:
++"""""""
++
++::
++
++      declare void @llvm.write_register(metadata, i8* @value)
++
++Overview:
++"""""""""
++
++The '``llvm.write_register``' intrinsic is similar to the '``llvm.read_register``'
++and provides write access to the named register. The register must be valid
++on the architecture being compiled to and will abort in case the register
++is not supported or not existent.
++
++Semantics:
++""""""""""
++
++The '``llvm.write_register``' intrinsic sets the current value of the
++register, where possible, with the value of the pointer (not what the pointer
++is pointing to), and it's only available on a small selection of targets
++(x86, ARM, AArch64) and small selection of registers per target.
++
++Pointer types are used to make sure it has the same bit width as the
++register itself.
++
++This is useful to implement named register global variables that need
++to always be mapped to a specific register, as is common practice on
++bare-metal programs including OS kernels.
++
++The behaviour of the program when the register is used by interleaving
++code is undefined, but it's as undefined as its usage from register variables,
++inline assembly associations ``asm("sp")`` etc. in user code.
++
++Warning: There is no register reservation at the moment, so it only
++works reliably on non-allocatable registers.
++
+ .. _int_stacksave:
+ 
+ '``llvm.stacksave``' Intrinsic
+diff --git a/include/llvm/CodeGen/ISDOpcodes.h b/include/llvm/CodeGen/ISDOpcodes.h
+index 89b0908..49891b2 100644
+--- a/include/llvm/CodeGen/ISDOpcodes.h
++++ b/include/llvm/CodeGen/ISDOpcodes.h
+@@ -72,6 +72,11 @@ namespace ISD {
+     /// the parent's frame or return address, and so on.
+     FRAMEADDR, RETURNADDR,
+ 
++    /// READ_REGISTER, WRITE_REGISTER - This node represents llvm.register on
++    /// the DAG, which implements the named register global variables extension.
++    READ_REGISTER,
++    WRITE_REGISTER,
++
+     /// FRAME_TO_ARGS_OFFSET - This node represents offset from frame pointer to
+     /// first (possible) on-stack argument. This is needed for correct stack
+     /// adjustment during unwind.
+diff --git a/include/llvm/IR/Intrinsics.td b/include/llvm/IR/Intrinsics.td
+index 6a48f17..f830754 100644
+--- a/include/llvm/IR/Intrinsics.td
++++ b/include/llvm/IR/Intrinsics.td
+@@ -250,6 +250,10 @@ def int_gcwrite : Intrinsic<[],
+ //
+ def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;
+ def int_frameaddress  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;
++def int_read_register  : Intrinsic<[llvm_ptr_ty], [llvm_metadata_ty],
++                                   [IntrNoMem], "llvm.read_register">;
++def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_ptr_ty],
++                                   [IntrNoMem], "llvm.write_register">;
+ 
+ // Note: we treat stacksave/stackrestore as writemem because we don't otherwise
+ // model their dependencies on allocas.
+diff --git a/include/llvm/Target/TargetLowering.h b/include/llvm/Target/TargetLowering.h
+index 5afcd80..21de13c 100644
+--- a/include/llvm/Target/TargetLowering.h
++++ b/include/llvm/Target/TargetLowering.h
+@@ -2188,6 +2188,13 @@ public:
+     return "__clear_cache";
+   }
+ 
++  /// Return the register ID of the name passed in. Used by named register
++  /// global variables extension. There is no target-independent behaviour
++  /// so the default action is to bail.
++  unsigned getRegisterByName(const char* RegName) const {
++    llvm_unreachable("Named registers not implemented for this target");
++  }
++
+   /// Return the type that should be used to zero or sign extend a
+   /// zeroext/signext integer argument or return value.  FIXME: Most C calling
+   /// convention requires the return type to be promoted, but this is not true
+diff --git a/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp b/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
+index f5f0a1d..6972d6e 100644
+--- a/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
++++ b/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
+@@ -1262,6 +1262,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
+   case ISD::ADJUST_TRAMPOLINE:
+   case ISD::FRAMEADDR:
+   case ISD::RETURNADDR:
++  case ISD::READ_REGISTER:
++  case ISD::WRITE_REGISTER:
+     // These operations lie about being legal: when they claim to be legal,
+     // they should actually be custom-lowered.
+     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+index 1aaac5f..37f0d86 100644
+--- a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+@@ -4644,6 +4644,21 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
+     setValue(&I, DAG.getNode(ISD::FRAMEADDR, sdl, TLI->getPointerTy(),
+                              getValue(I.getArgOperand(0))));
+     return nullptr;
++  case Intrinsic::read_register: {
++    SDValue RegName = DAG.getMDNode(cast<MDNode>(I.getArgOperand(0)));
++    setValue(&I, DAG.getNode(ISD::READ_REGISTER, sdl, TLI->getPointerTy(),
++                             RegName));
++    return 0;
++  }
++  case Intrinsic::write_register: {
++    // FIXME: The Chain doesn't look generic enough...
++    SDValue Chain = getValue(I.getArgOperand(1)).getOperand(0);
++    SDValue RegName = DAG.getMDNode(cast<MDNode>(I.getArgOperand(0)));
++    DAG.setRoot(DAG.getNode(ISD::WRITE_REGISTER, sdl, MVT::Other, Chain,
++                            RegName,
++                            getValue(I.getArgOperand(1))));
++    return 0;
++  }
+   case Intrinsic::setjmp:
+     return &"_setjmp"[!TLI->usesUnderscoreSetJmp()];
+   case Intrinsic::longjmp:
+diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp
+index aebda04..d6b5255 100644
+--- a/lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp
++++ b/lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp
+@@ -93,6 +93,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
+   case ISD::GLOBAL_OFFSET_TABLE:        return "GLOBAL_OFFSET_TABLE";
+   case ISD::RETURNADDR:                 return "RETURNADDR";
+   case ISD::FRAMEADDR:                  return "FRAMEADDR";
++  case ISD::READ_REGISTER:              return "READ_REGISTER";
++  case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";
+   case ISD::FRAME_TO_ARGS_OFFSET:       return "FRAME_TO_ARGS_OFFSET";
+   case ISD::EH_RETURN:                  return "EH_RETURN";
+   case ISD::EH_SJLJ_SETJMP:             return "EH_SJLJ_SETJMP";
+diff --git a/lib/Target/AArch64/AArch64ISelLowering.cpp b/lib/Target/AArch64/AArch64ISelLowering.cpp
+index 0310f1b..57fb640 100644
+--- a/lib/Target/AArch64/AArch64ISelLowering.cpp
++++ b/lib/Target/AArch64/AArch64ISelLowering.cpp
+@@ -16,6 +16,7 @@
+ #include "AArch64.h"
+ #include "AArch64ISelLowering.h"
+ #include "AArch64MachineFunctionInfo.h"
++#include "AArch64Subtarget.h"
+ #include "AArch64TargetMachine.h"
+ #include "AArch64TargetObjectFile.h"
+ #include "Utils/AArch64BaseInfo.h"
+@@ -2401,6 +2402,36 @@ SDValue AArch64TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG)
+ }
+ 
+ SDValue
++AArch64TargetLowering::LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(0));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, Op.getValueType());
++}
++
++SDValue
++AArch64TargetLowering::LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(1));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  SDValue Value = Op.getOperand(2);
++  return DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, Value);
++}
++
++// FIXME? Maybe this could be a TableGen attribute on some registers and
++// this table could be generated automatically from RegInfo.
++unsigned AArch64TargetLowering::getRegisterByName(const char* RegName) const {
++  unsigned Reg = StringSwitch<unsigned>(RegName)
++                       .Cases("xsp", "stack", AArch64::XSP)
++                       .Default(0);
++  if (Reg)
++    return Reg;
++  llvm_unreachable("Register not supported in named register global variable");
++}
++
++SDValue
+ AArch64TargetLowering::LowerGlobalAddressELFLarge(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+   assert(getTargetMachine().getCodeModel() == CodeModel::Large);
+@@ -3301,6 +3332,8 @@ AArch64TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+   case ISD::FP_EXTEND: return LowerFP_EXTEND(Op, DAG);
+   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
+   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
++  case ISD::READ_REGISTER: return LowerREAD_REGISTER(Op, DAG);
++  case ISD::WRITE_REGISTER: return LowerWRITE_REGISTER(Op, DAG);
+ 
+   case ISD::SHL_PARTS:     return LowerShiftLeftParts(Op, DAG);
+   case ISD::SRL_PARTS:
+diff --git a/lib/Target/AArch64/AArch64ISelLowering.h b/lib/Target/AArch64/AArch64ISelLowering.h
+index 154c1d7..938ef0a 100644
+--- a/lib/Target/AArch64/AArch64ISelLowering.h
++++ b/lib/Target/AArch64/AArch64ISelLowering.h
+@@ -329,6 +329,8 @@ public:
+   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG, bool IsSigned) const;
+   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
++  SDValue LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const;
++  SDValue LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+ 
+   SDValue LowerGlobalAddressELFSmall(SDValue Op, SelectionDAG &DAG) const;
+   SDValue LowerGlobalAddressELFLarge(SDValue Op, SelectionDAG &DAG) const;
+@@ -347,6 +349,8 @@ public:
+   SDValue LowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
+   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+ 
++  unsigned getRegisterByName(const char* RegName) const;
++
+   SDValue PerformDAGCombine(SDNode *N,DAGCombinerInfo &DCI) const override;
+ 
+   /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
+diff --git a/lib/Target/ARM/ARMISelLowering.cpp b/lib/Target/ARM/ARMISelLowering.cpp
+index bdd547f..af1cd1b 100644
+--- a/lib/Target/ARM/ARMISelLowering.cpp
++++ b/lib/Target/ARM/ARMISelLowering.cpp
+@@ -3778,6 +3778,36 @@ SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+   return FrameAddr;
+ }
+ 
++SDValue
++ARMTargetLowering::LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(0));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, Op.getValueType());
++}
++
++SDValue
++ARMTargetLowering::LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(1));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  SDValue Value = Op.getOperand(2);
++  return DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, Value);
++}
++
++// FIXME? Maybe this could be a TableGen attribute on some registers and
++// this table could be generated automatically from RegInfo.
++unsigned ARMTargetLowering::getRegisterByName(const char* RegName) const {
++  unsigned Reg = StringSwitch<unsigned>(RegName)
++                       .Cases("sp", "stack", ARM::SP)
++                       .Default(0);
++  if (Reg)
++    return Reg;
++  llvm_unreachable("Register not supported in named register global variable");
++}
++
+ /// ExpandBITCAST - If the target supports VFP, this function is called to
+ /// expand a bit convert where either the source or destination type is i64 to
+ /// use a VMOVDRR or VMOVRRD node.  This should not be done when the non-i64
+@@ -6040,6 +6070,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
+   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
+   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
++  case ISD::READ_REGISTER:  return LowerREAD_REGISTER(Op, DAG);
++  case ISD::WRITE_REGISTER: return LowerWRITE_REGISTER(Op, DAG);
+   case ISD::GLOBAL_OFFSET_TABLE: return LowerGLOBAL_OFFSET_TABLE(Op, DAG);
+   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
+   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
+diff --git a/lib/Target/ARM/ARMISelLowering.h b/lib/Target/ARM/ARMISelLowering.h
+index e8dd043..cb50ad3 100644
+--- a/lib/Target/ARM/ARMISelLowering.h
++++ b/lib/Target/ARM/ARMISelLowering.h
+@@ -451,6 +451,8 @@ namespace llvm {
+     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
++    SDValue LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const;
++    SDValue LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+@@ -461,6 +463,8 @@ namespace llvm {
+     SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
+ 
++    unsigned getRegisterByName(const char* RegName) const;
++
+     /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
+     /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
+     /// expanded to FMAs when this method returns true, otherwise fmuladd is
+diff --git a/lib/Target/X86/X86ISelLowering.cpp b/lib/Target/X86/X86ISelLowering.cpp
+index 306fb7e..e3b3d4c 100644
+--- a/lib/Target/X86/X86ISelLowering.cpp
++++ b/lib/Target/X86/X86ISelLowering.cpp
+@@ -23,6 +23,7 @@
+ #include "llvm/ADT/SmallSet.h"
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/ADT/StringExtras.h"
++#include "llvm/ADT/StringSwitch.h"
+ #include "llvm/ADT/VariadicFunction.h"
+ #include "llvm/CodeGen/IntrinsicLowering.h"
+ #include "llvm/CodeGen/MachineFrameInfo.h"
+@@ -12476,6 +12477,39 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+   return FrameAddr;
+ }
+ 
++SDValue
++X86TargetLowering::LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(0));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, Op.getValueType());
++}
++
++SDValue
++X86TargetLowering::LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const {
++  SDLoc dl(Op);
++  MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op.getOperand(1));
++  const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
++  unsigned Reg = getRegisterByName(RegStr->getString().data());
++  SDValue Value = Op.getOperand(2);
++  return DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, Value);
++}
++
++// FIXME? Maybe this could be a TableGen attribute on some registers and
++// this table could be generated automatically from RegInfo.
++unsigned X86TargetLowering::getRegisterByName(const char* RegName) const {
++  unsigned StackPointer = Subtarget->is64Bit() ? X86::RSP : X86::ESP;
++  unsigned Reg = StringSwitch<unsigned>(RegName)
++                       .Case("esp", X86::ESP)
++                       .Case("rsp", X86::RSP)
++                       .Case("stack", StackPointer)
++                       .Default(0);
++  if (Reg)
++    return Reg;
++  llvm_unreachable("Register not supported in named register global variable");
++}
++
+ SDValue X86TargetLowering::LowerFRAME_TO_ARGS_OFFSET(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+   const X86RegisterInfo *RegInfo =
+@@ -13992,6 +14026,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+   case ISD::INTRINSIC_W_CHAIN:  return LowerINTRINSIC_W_CHAIN(Op, Subtarget, DAG);
+   case ISD::RETURNADDR:         return LowerRETURNADDR(Op, DAG);
+   case ISD::FRAMEADDR:          return LowerFRAMEADDR(Op, DAG);
++  case ISD::READ_REGISTER:      return LowerREAD_REGISTER(Op, DAG);
++  case ISD::WRITE_REGISTER:     return LowerWRITE_REGISTER(Op, DAG);
+   case ISD::FRAME_TO_ARGS_OFFSET:
+                                 return LowerFRAME_TO_ARGS_OFFSET(Op, DAG);
+   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
+diff --git a/lib/Target/X86/X86ISelLowering.h b/lib/Target/X86/X86ISelLowering.h
+index d7b3794..d1c6fd5 100644
+--- a/lib/Target/X86/X86ISelLowering.h
++++ b/lib/Target/X86/X86ISelLowering.h
+@@ -776,6 +776,8 @@ namespace llvm {
+       return 0; // nothing to do, move along.
+     }
+ 
++    unsigned getRegisterByName(const char* RegName) const;
++
+     /// createFastISel - This method returns a target specific FastISel object,
+     /// or null if the target does not support "fast" ISel.
+     FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+@@ -904,6 +906,8 @@ namespace llvm {
+     SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
++    SDValue LowerREAD_REGISTER(SDValue Op, SelectionDAG &DAG) const;
++    SDValue LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerFRAME_TO_ARGS_OFFSET(SDValue Op, SelectionDAG &DAG) const;
+     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
+     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;

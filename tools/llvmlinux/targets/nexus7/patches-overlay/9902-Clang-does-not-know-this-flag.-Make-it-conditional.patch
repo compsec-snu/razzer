@@ -1,0 +1,24 @@
+From f82782a93a416226a04d48dfbfbfbffed691fc39 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Sat, 19 Oct 2013 18:31:38 +0200
+Subject: [PATCH] Clang does not know this flag. Make it conditional.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/arm/boot/compressed/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- android_kernel_nexus7-gcc.orig/arch/arm/boot/compressed/Makefile
++++ android_kernel_nexus7-gcc/arch/arm/boot/compressed/Makefile
+@@ -101,7 +101,7 @@
+ KBUILD_CFLAGS = $(subst -pg, , $(ORIG_CFLAGS))
+ endif
+ 
+-ccflags-y := -fpic -fno-builtin
++ccflags-y := -fpic $(call cc-option,-mno-single-pic-base,) -fno-builtin -I$(obj)
+ asflags-y := -Wa,-march=all
+ 
+ # Supply ZRELADDR to the decompressor via a linker symbol.

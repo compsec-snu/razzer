@@ -1,0 +1,42 @@
+From e2b417cfdde2e45bad60d9ffbdd08367f7aafee5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:49:31 +0100
+Subject: [PATCH 05/51] Add noinline_for_stack to sound/pci/ac97/ac97_codec.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add noinline_for_stack to sound/pci/ac97/ac97_codec.c
+---
+ sound/pci/ac97/ac97_codec.c |    8 +++++++-
+ 1 Datei geändert, 7 Zeilen hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/sound/pci/ac97/ac97_codec.c b/sound/pci/ac97/ac97_codec.c
+index 8b0f996..f9a5fa0 100644
+--- a/sound/pci/ac97/ac97_codec.c
++++ b/sound/pci/ac97/ac97_codec.c
+@@ -1170,7 +1170,13 @@ static inline int printable(unsigned int x)
+ 	return x;
+ }
+ 
+-static struct snd_kcontrol *snd_ac97_cnew(const struct snd_kcontrol_new *_template,
++/*
++ * Rather then using noinline to prevent stack consumption, use
++ * noinline_for_stack instead.  For documentaiton reasons.
++ * Neede for build with clang.
++ */
++
++static noinline_for_stack struct snd_kcontrol *snd_ac97_cnew(const struct snd_kcontrol_new *_template,
+ 					  struct snd_ac97 * ac97)
+ {
+ 	struct snd_kcontrol_new template;
+-- 
+1.7.10.4
+

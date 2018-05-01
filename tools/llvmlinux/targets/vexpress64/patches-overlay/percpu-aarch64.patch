@@ -1,0 +1,108 @@
+From 44c5841a19bddd62556c99092775cd9a3d45de33 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Tue, 11 Mar 2014 10:43:45 -0700
+Subject: [PATCH] NO UPSTREAM arm64, LLVMLinux: Remove use of named register for ARM64
+ percpu
+
+This is a port of the similar patch for arm (currently broken)
+
+The use of sp as a named register variable is not supported in clang and
+the behavior they are working around in GCC may not even be present
+in clang.
+
+See commit 509eb76ebf97
+
+Unfortunately, GCC doesn't treat a "memory" clobber on a non-volatile
+asm block as a side-effect, and will happily re-order it before other
+memory clobbers (including those in prempt_disable()) and cache the
+value. This has been observed to break the cmpxchg logic in the slub
+allocator, leading to livelock in kmem_cache_alloc in mainline kernels.
+
+Because the GCC workaround causes numerous warnings, revert the change
+until it can be verified that it is in fact an issue for clang.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm64/include/asm/compiler.h | 33 +++++++++++++++++++++++++++++++++
+ arch/arm64/include/asm/percpu.h   | 17 +++--------------
+ 2 files changed, 36 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm64/include/asm/compiler.h b/arch/arm64/include/asm/compiler.h
+index ee35fd0..d96919d 100644
+--- a/arch/arm64/include/asm/compiler.h
++++ b/arch/arm64/include/asm/compiler.h
+@@ -27,4 +27,37 @@
+  */
+ #define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
+ 
++#if defined(CONFIG_SMP) && !defined(CONFIG_CPU_V6)
++/*
++ * Read TPIDRPRW.
++ * GCC requires a workaround as it does not treat a "memory" clobber on a
++ * non-volatile asm block as a side-effect.
++ * We want to allow caching the value, so for GCC avoid using volatile and
++ * instead use a fake stack read to hazard against barrier().
++ */
++#if defined(__clang__)
++static inline unsigned long read_TPIDRPRW(void)
++{
++	unsigned long off = 1;
++
++	/*
++	 * Read TPIDRPRW.
++	 */
++	// FIXME: asm("mrs %0, tpidr_el1" : "=r" (off) : : "memory");
++
++	return off;
++}
++#else
++static inline unsigned long read_TPIDRPRW(void)
++{
++	unsigned long off;
++	register unsigned long *sp asm ("sp");
++
++	asm("mrs %0, tpidr_el1" : "=r" (off) : "Q" (*sp));
++
++	return off;
++}
++#endif
++#endif
++
+ #endif	/* __ASM_COMPILER_H */
+diff --git a/arch/arm64/include/asm/percpu.h b/arch/arm64/include/asm/percpu.h
+index 453a179..5d51078 100644
+--- a/arch/arm64/include/asm/percpu.h
++++ b/arch/arm64/include/asm/percpu.h
+@@ -18,25 +18,14 @@
+ 
+ #ifdef CONFIG_SMP
+ 
++#include "asm/compiler.h"
++
+ static inline void set_my_cpu_offset(unsigned long off)
+ {
+ 	asm volatile("msr tpidr_el1, %0" :: "r" (off) : "memory");
+ }
+ 
+-static inline unsigned long __my_cpu_offset(void)
+-{
+-	unsigned long off;
+-	register unsigned long *sp asm ("sp");
+-
+-	/*
+-	 * We want to allow caching the value, so avoid using volatile and
+-	 * instead use a fake stack read to hazard against barrier().
+-	 */
+-	asm("mrs %0, tpidr_el1" : "=r" (off) : "Q" (*sp));
+-
+-	return off;
+-}
+-#define __my_cpu_offset __my_cpu_offset()
++#define __my_cpu_offset read_TPIDRPRW()
+ 
+ #else	/* !CONFIG_SMP */
+ 
+-- 
+1.9.1
+

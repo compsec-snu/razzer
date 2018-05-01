@@ -1,0 +1,59 @@
+From a4dff6d47d45406cb93079cca605a61cbb9f12bb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:58:51 +0200
+Subject: [PATCH 25/48] Clang related fixes in arch/x86/boot/compressed  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/compressed/Makefile |    2 +-
+ arch/x86/boot/compressed/misc.c   |    8 ++++----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index b123b9a..98d1e2a 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -7,7 +7,7 @@
+ targets := vmlinux.lds vmlinux vmlinux.bin vmlinux.bin.gz vmlinux.bin.bz2 vmlinux.bin.lzma vmlinux.bin.xz vmlinux.bin.lzo head_$(BITS).o misc.o string.o cmdline.o early_serial_console.o piggy.o
+ 
+ KBUILD_CFLAGS := -m$(BITS) -D__KERNEL__ $(LINUX_INCLUDE) -O2
+-KBUILD_CFLAGS += -fno-strict-aliasing -fPIC
++KBUILD_CFLAGS += -fno-strict-aliasing -fPIC -mno-sse -Wno-unused-value -no-integrated-as
+ KBUILD_CFLAGS += -DDISABLE_BRANCH_PROFILING
+ cflags-$(CONFIG_X86_32) := -march=i386
+ cflags-$(CONFIG_X86_64) := -mcmodel=small
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 7116dcb..3e059d3 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -111,8 +111,8 @@ struct boot_params *real_mode;		/* Pointer to real-mode data */
+ static int quiet;
+ static int debug;
+ 
+-void *memset(void *s, int c, size_t n);
+-void *memcpy(void *dest, const void *src, size_t n);
++asmlinkage void *memset(void *s, int c, size_t n);
++asmlinkage void *memcpy(void *dest, const void *src, size_t n);
+ 
+ #ifdef CONFIG_X86_64
+ #define memptr long
+@@ -224,7 +224,7 @@ void __putstr(int error, const char *s)
+ 	outb(0xff & (pos >> 1), vidport+1);
+ }
+ 
+-void *memset(void *s, int c, size_t n)
++asmlinkage void *memset(void *s, int c, size_t n)
+ {
+ 	int i;
+ 	char *ss = s;
+@@ -234,7 +234,7 @@ void *memset(void *s, int c, size_t n)
+ 	return s;
+ }
+ #ifdef CONFIG_X86_32
+-void *memcpy(void *dest, const void *src, size_t n)
++asmlinkage void *memcpy(void *dest, const void *src, size_t n)
+ {
+ 	int d0, d1, d2;
+ 	asm volatile(
+-- 
+1.7.3.4
+

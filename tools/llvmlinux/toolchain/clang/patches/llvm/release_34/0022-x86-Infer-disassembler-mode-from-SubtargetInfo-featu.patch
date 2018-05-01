@@ -1,0 +1,105 @@
+From 48636ce9a2a8386c56e31050c9ecbfb994fe291e Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Mon, 13 Jan 2014 09:41:12 +0000
+Subject: [PATCH 22/26] [x86] Infer disassembler mode from SubtargetInfo
+ feature bits
+
+Aside from cleaning up the code, this also adds support for the -code16
+environment and actually enables the MODE_16BIT mode that was previously
+not accessible.
+
+There is no point adding any testing for 16-bit yet though; basically
+nothing will work because we aren't handling the OpSize prefix correctly
+for 16-bit mode.
+
+(cherry picked from commit a700038c973d1cd355bb5386aae2e0b1007ea604)
+---
+ lib/Target/X86/Disassembler/X86Disassembler.cpp | 36 ++++++++++++++++---------
+ lib/Target/X86/Disassembler/X86Disassembler.h   |  4 +--
+ 2 files changed, 24 insertions(+), 16 deletions(-)
+
+diff --git a/lib/Target/X86/Disassembler/X86Disassembler.cpp b/lib/Target/X86/Disassembler/X86Disassembler.cpp
+index 903e36c..3155cbd 100644
+--- a/lib/Target/X86/Disassembler/X86Disassembler.cpp
++++ b/lib/Target/X86/Disassembler/X86Disassembler.cpp
+@@ -31,6 +31,8 @@
+ #include "X86GenRegisterInfo.inc"
+ #define GET_INSTRINFO_ENUM
+ #include "X86GenInstrInfo.inc"
++#define GET_SUBTARGETINFO_ENUM
++#include "X86GenSubtargetInfo.inc"
+ 
+ using namespace llvm;
+ using namespace llvm::X86Disassembler;
+@@ -73,9 +75,23 @@ static bool translateInstruction(MCInst &target,
+                                 const MCDisassembler *Dis);
+ 
+ X86GenericDisassembler::X86GenericDisassembler(const MCSubtargetInfo &STI,
+-                                               DisassemblerMode mode,
+                                                const MCInstrInfo *MII)
+-  : MCDisassembler(STI), MII(MII), fMode(mode) {}
++  : MCDisassembler(STI), MII(MII) {
++  switch (STI.getFeatureBits() &
++          (X86::Mode16Bit | X86::Mode32Bit | X86::Mode64Bit)) {
++  case X86::Mode16Bit:
++    fMode = MODE_16BIT;
++    break;
++  case X86::Mode32Bit:
++    fMode = MODE_32BIT;
++    break;
++  case X86::Mode64Bit:
++    fMode = MODE_64BIT;
++    break;
++  default:
++    llvm_unreachable("Invalid CPU mode");
++  }
++}
+ 
+ X86GenericDisassembler::~X86GenericDisassembler() {
+   delete MII;
+@@ -708,22 +724,16 @@ static bool translateInstruction(MCInst &mcInst,
+   return false;
+ }
+ 
+-static MCDisassembler *createX86_32Disassembler(const Target &T,
+-                                                const MCSubtargetInfo &STI) {
+-  return new X86Disassembler::X86GenericDisassembler(STI, MODE_32BIT,
+-                                                     T.createMCInstrInfo());
+-}
+-
+-static MCDisassembler *createX86_64Disassembler(const Target &T,
+-                                                const MCSubtargetInfo &STI) {
+-  return new X86Disassembler::X86GenericDisassembler(STI, MODE_64BIT,
++static MCDisassembler *createX86Disassembler(const Target &T,
++                                             const MCSubtargetInfo &STI) {
++  return new X86Disassembler::X86GenericDisassembler(STI,
+                                                      T.createMCInstrInfo());
+ }
+ 
+ extern "C" void LLVMInitializeX86Disassembler() { 
+   // Register the disassembler.
+   TargetRegistry::RegisterMCDisassembler(TheX86_32Target, 
+-                                         createX86_32Disassembler);
++                                         createX86Disassembler);
+   TargetRegistry::RegisterMCDisassembler(TheX86_64Target,
+-                                         createX86_64Disassembler);
++                                         createX86Disassembler);
+ }
+diff --git a/lib/Target/X86/Disassembler/X86Disassembler.h b/lib/Target/X86/Disassembler/X86Disassembler.h
+index b92427a..b2959c0 100644
+--- a/lib/Target/X86/Disassembler/X86Disassembler.h
++++ b/lib/Target/X86/Disassembler/X86Disassembler.h
+@@ -105,9 +105,7 @@ class X86GenericDisassembler : public MCDisassembler {
+ public:
+   /// Constructor     - Initializes the disassembler.
+   ///
+-  /// @param mode     - The X86 architecture mode to decode for.
+-  X86GenericDisassembler(const MCSubtargetInfo &STI, DisassemblerMode mode,
+-                         const MCInstrInfo *MII);
++  X86GenericDisassembler(const MCSubtargetInfo &STI, const MCInstrInfo *MII);
+ private:
+   ~X86GenericDisassembler();
+ public:
+-- 
+1.8.4
+

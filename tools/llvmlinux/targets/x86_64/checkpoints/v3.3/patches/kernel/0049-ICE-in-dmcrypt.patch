@@ -1,0 +1,21 @@
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index 8c2a000..3e5138a 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -847,13 +847,14 @@ static struct bio *crypt_alloc_buffer(struct dm_crypt_io *io, unsigned size,
+ 			break;
+ 		}
+ 
++
+ 		/*
+ 		 * if additional pages cannot be allocated without waiting,
+ 		 * return a partially allocated bio, the caller will then try
+ 		 * to allocate additional bios while submitting this partial bio
+ 		 */
+-		if (i == (MIN_BIO_PAGES - 1))
+-			gfp_mask = (gfp_mask | __GFP_NOWARN) & ~__GFP_WAIT;
++/*		if (i == (MIN_BIO_PAGES - 1))
++			gfp_mask = (gfp_mask | __GFP_NOWARN) & ~__GFP_WAIT; */
+ 
+ 		len = (size > PAGE_SIZE) ? PAGE_SIZE : size;
+ 

@@ -1,0 +1,32 @@
+From 3a0759b3d9a21885e730c5ae7bf2850c0474a312 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:11 -0700
+Subject: [PATCH] scsi, be2iscsi, LLVMLinux: Remove duplicated MODULE_DEVICE_TABLE() definition
+
+MODULE_DEVICE_TABLE(pci, beiscsi_pci_id_table) is defined twice on the same
+file. Remove one of them.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/scsi/be2iscsi/be_main.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/scsi/be2iscsi/be_main.c b/drivers/scsi/be2iscsi/be_main.c
+index f319340..96241b2 100644
+--- a/drivers/scsi/be2iscsi/be_main.c
++++ b/drivers/scsi/be2iscsi/be_main.c
+@@ -48,7 +48,6 @@ static unsigned int be_iopoll_budget = 10;
+ static unsigned int be_max_phys_size = 64;
+ static unsigned int enable_msix = 1;
+ 
+-MODULE_DEVICE_TABLE(pci, beiscsi_pci_id_table);
+ MODULE_DESCRIPTION(DRV_DESC " " BUILD_STR);
+ MODULE_VERSION(BUILD_STR);
+ MODULE_AUTHOR("Emulex Corporation");
+-- 
+1.9.1
+

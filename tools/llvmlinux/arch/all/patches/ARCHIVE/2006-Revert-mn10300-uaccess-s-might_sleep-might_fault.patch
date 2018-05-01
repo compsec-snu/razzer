@@ -1,0 +1,33 @@
+From 29613dd859ef12b297d45640d4fd4cbe0c970b1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:47 +0200
+Subject: [PATCH 06/11] Revert "mn10300: uaccess s/might_sleep/might_fault/"
+
+This reverts commit 3837a3cfe4a27836e0e9f207eb2d4f00b5a8fcba.
+---
+ arch/mn10300/include/asm/uaccess.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mn10300/include/asm/uaccess.h b/arch/mn10300/include/asm/uaccess.h
+index 5372787..d7966e0 100644
+--- a/arch/mn10300/include/asm/uaccess.h
++++ b/arch/mn10300/include/asm/uaccess.h
+@@ -471,13 +471,13 @@ extern unsigned long __generic_copy_from_user(void *, const void __user *,
+ 
+ #define __copy_to_user(to, from, n)			\
+ ({							\
+-	might_fault();					\
++	might_sleep();					\
+ 	__copy_to_user_inatomic((to), (from), (n));	\
+ })
+ 
+ #define __copy_from_user(to, from, n)			\
+ ({							\
+-	might_fault();					\
++	might_sleep();					\
+ 	__copy_from_user_inatomic((to), (from), (n));	\
+ })
+ 
+-- 
+1.8.1.4
+

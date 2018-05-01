@@ -1,0 +1,52 @@
+From 75e3e3338afe4a41881b02d9bfececb9772d74b6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:50:05 +0200
+Subject: [PATCH 12/48] Add noinline_for_stack to drivers/block/loop.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ drivers/block/loop.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/block/loop.c b/drivers/block/loop.c
+index cd50435..1325e09 100644
+--- a/drivers/block/loop.c
++++ b/drivers/block/loop.c
+@@ -1192,7 +1192,7 @@ loop_info64_to_old(const struct loop_info64 *info64, struct loop_info *info)
+ 	return 0;
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_set_status_old(struct loop_device *lo, const struct loop_info __user *arg)
+ {
+ 	struct loop_info info;
+@@ -1204,7 +1204,7 @@ loop_set_status_old(struct loop_device *lo, const struct loop_info __user *arg)
+ 	return loop_set_status(lo, &info64);
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)
+ {
+ 	struct loop_info64 info64;
+@@ -1214,7 +1214,7 @@ loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)
+ 	return loop_set_status(lo, &info64);
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {
+ 	struct loop_info info;
+ 	struct loop_info64 info64;
+@@ -1232,7 +1232,7 @@ loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {
+ 	return err;
+ }
+ 
+-static int
++static noinline_for_stack int
+ loop_get_status64(struct loop_device *lo, struct loop_info64 __user *arg) {
+ 	struct loop_info64 info64;
+ 	int err = 0;
+-- 
+1.7.3.4
+

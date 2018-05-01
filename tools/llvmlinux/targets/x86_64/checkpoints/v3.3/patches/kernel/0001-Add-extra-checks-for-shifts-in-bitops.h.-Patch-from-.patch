@@ -1,0 +1,76 @@
+From a3e20079c5215e5966dd7484d159ecf7450c396a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 11:28:47 +0200
+Subject: [PATCH 01/48] Add extra checks for shifts in bitops.h. Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ include/linux/bitops.h |   18 ++++++++++++++++++
+ 1 files changed, 18 insertions(+), 0 deletions(-)
+
+diff --git a/include/linux/bitops.h b/include/linux/bitops.h
+index 94300fe..fc041f4 100644
+--- a/include/linux/bitops.h
++++ b/include/linux/bitops.h
+@@ -82,6 +82,9 @@ static inline __u64 ror64(__u64 word, unsigned int shift)
+  */
+ static inline __u32 rol32(__u32 word, unsigned int shift)
+ {
++	shift &= 0x1fu;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (32 - shift));
+ }
+ 
+@@ -92,6 +95,9 @@ static inline __u32 rol32(__u32 word, unsigned int shift)
+  */
+ static inline __u32 ror32(__u32 word, unsigned int shift)
+ {
++	shift &= 0x1fu;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (32 - shift));
+ }
+ 
+@@ -102,6 +108,9 @@ static inline __u32 ror32(__u32 word, unsigned int shift)
+  */
+ static inline __u16 rol16(__u16 word, unsigned int shift)
+ {
++	shift &= 0xfu;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (16 - shift));
+ }
+ 
+@@ -112,6 +121,9 @@ static inline __u16 rol16(__u16 word, unsigned int shift)
+  */
+ static inline __u16 ror16(__u16 word, unsigned int shift)
+ {
++	shift &= 0xfu;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (16 - shift));
+ }
+ 
+@@ -122,6 +134,9 @@ static inline __u16 ror16(__u16 word, unsigned int shift)
+  */
+ static inline __u8 rol8(__u8 word, unsigned int shift)
+ {
++	shift &= 0x7u;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (8 - shift));
+ }
+ 
+@@ -132,6 +147,9 @@ static inline __u8 rol8(__u8 word, unsigned int shift)
+  */
+ static inline __u8 ror8(__u8 word, unsigned int shift)
+ {
++	shift &= 0x7u;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (8 - shift));
+ }
+ 
+-- 
+1.7.3.4
+

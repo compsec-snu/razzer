@@ -1,0 +1,9 @@
+foo-gcc.c
+foo-gcc.mod.c
+foo-gcc.o
+foo.mod.c
+foo.o
+objdump
+objdump-gcc
+outfile
+outfile-gcc

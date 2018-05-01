@@ -1,0 +1,34 @@
+From 9cd6633d352b45a92edf0773593f7db796f2be83 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:02:31 +0100
+Subject: [PATCH 39/51] Workaround build error with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/vdso/vdsox32.S |    3 ++-
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/vdso/vdsox32.S b/arch/x86/vdso/vdsox32.S
+index d6b9a7f..57962ea 100644
+--- a/arch/x86/vdso/vdsox32.S
++++ b/arch/x86/vdso/vdsox32.S
+@@ -18,5 +18,6 @@ vdsox32_end:
+ 	.align 8
+ 	.type vdsox32_pages, @object
+ vdsox32_pages:
+-	.zero (vdsox32_end - vdsox32_start + PAGE_SIZE - 1) / PAGE_SIZE * 8
++#	.zero (vdsox32_end - vdsox32_start + PAGE_SIZE - 1) / PAGE_SIZE * 8
++	.zero (2996 + PAGE_SIZE - 1) / PAGE_SIZE * 8
+ 	.size vdsox32_pages, .-vdsox32_pages
+-- 
+1.7.10.4
+

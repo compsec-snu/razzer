@@ -1,0 +1,6 @@
+ssh*
+vm.pid
+wheezy*
+/*workdir*
+log
+/nohup.out

@@ -1,0 +1,77 @@
+From cb99b98898c78f1859bb0b54eb326af48cc2967e Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Thu, 13 Feb 2014 12:21:48 -0800
+Subject: [PATCH] x86: LLVMLinux: Fix "incomplete type const struct
+ x86cpu_device_id"
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Similar to the fix in 40413dcb7b273bda681dca38e6ff0bbb3728ef11
+
+MODULE_DEVICE_TABLE(x86cpu, ...) expects the struct to be called struct
+x86cpu_device_id, and not struct x86_cpu_id which is what is used in the rest
+of the kernel code.  Although gcc seems to ignore this error, clang fails
+without this define to fix the name.
+
+Code from drivers/thermal/x86_pkg_temp_thermal.c
+static const struct x86_cpu_id __initconst pkg_temp_thermal_ids[] = { ... };
+MODULE_DEVICE_TABLE(x86cpu, pkg_temp_thermal_ids);
+
+Error from clang:
+drivers/thermal/x86_pkg_temp_thermal.c:577:1: error: variable has
+      incomplete type 'const struct x86cpu_device_id'
+MODULE_DEVICE_TABLE(x86cpu, pkg_temp_thermal_ids);
+^
+include/linux/module.h:145:3: note: expanded from macro
+      'MODULE_DEVICE_TABLE'
+  MODULE_GENERIC_TABLE(type##_device, name)
+  ^
+include/linux/module.h:87:32: note: expanded from macro
+      'MODULE_GENERIC_TABLE'
+extern const struct gtype##_id __mod_##gtype##_table            \
+                               ^
+<scratch space>:143:1: note: expanded from here
+__mod_x86cpu_device_table
+^
+drivers/thermal/x86_pkg_temp_thermal.c:577:1: note: forward declaration of
+      'struct x86cpu_device_id'
+include/linux/module.h:145:3: note: expanded from macro
+      'MODULE_DEVICE_TABLE'
+  MODULE_GENERIC_TABLE(type##_device, name)
+  ^
+include/linux/module.h:87:21: note: expanded from macro
+      'MODULE_GENERIC_TABLE'
+extern const struct gtype##_id __mod_##gtype##_table            \
+                    ^
+<scratch space>:141:1: note: expanded from here
+x86cpu_device_id
+^
+1 error generated.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Acked-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ include/linux/mod_devicetable.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/linux/mod_devicetable.h b/include/linux/mod_devicetable.h
+index 45e9214..dbb5cf0 100644
+--- a/include/linux/mod_devicetable.h
++++ b/include/linux/mod_devicetable.h
+@@ -548,6 +548,11 @@ struct amba_id {
+  * See documentation of "x86_match_cpu" for details.
+  */
+ 
++/*
++ * MODULE_DEVICE_TABLE expects this struct to be called x86cpu_device_id.
++ * Although gcc seems to ignore this error, clang fails without this define.
++ */
++#define x86cpu_device_id x86_cpu_id
+ struct x86_cpu_id {
+ 	__u16 vendor;
+ 	__u16 family;
+-- 
+1.8.3.2
+

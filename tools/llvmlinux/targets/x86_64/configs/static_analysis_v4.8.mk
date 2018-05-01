@@ -1,0 +1,3 @@
+KERNEL_TAG=v4.8
+KERNEL_CFG=configs/config_v4.8_custom_config
+KERNELDIR=${STATIC_ANALYSIS_KERNEL_DIR}

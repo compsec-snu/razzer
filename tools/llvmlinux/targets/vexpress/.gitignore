@@ -1,0 +1,4 @@
+*.img
+initramfs
+tmp
+warnings*

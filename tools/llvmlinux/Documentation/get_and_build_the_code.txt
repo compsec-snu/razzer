@@ -1,0 +1,97 @@
+= Overview =
+
+The code in this project provides an [[Automated Build Framework]] which builds all the Clang/LLVM, the Linux kernel (with appropriate patches) and testing framework (where possible).
+
+The testing framework (for supported targets) uses QEMU and LTP to run test cases. They are currently both built with GCC instead of LLVM unless Clang is the default system compiler.
+
+This page only contains the bare minimum information and steps to get people started. More detailed information about this build system is also [[Automated Build Framework|available]].
+
+'''Note: You will need at least 9GiB (~6GiB Kernel and ~3GiB Toolchain) free space to build one target. Add another 4GiB for each additional target.'''
+
+= Git the Code =
+
+The LLVMLinux code is in a [http://git.linuxfoundation.org/?p=llvmlinux.git;a=summary git repo].
+
+ git clone http://git.linuxfoundation.org/llvmlinux.git
+
+= Installing Build Dependencies =
+
+There are a few things that this code base requires to have installed in order to build.
+
+* cmake (used to build llvm and clang)
+* git
+* kpartx (used to build the ltp test image)
+* patch
+* rsync
+* subversion (used to get llvm and clang)
+* zlib (used to build qemu)
+* gcc (used for compiling llvm, clang, qemu and ltp)
+* cross gcc (for cross compiling for a target)
+
+== Debian/Ubuntu ==
+
+ sudo apt-get install build-essential cmake git kpartx libglib2.0-dev patch quilt rsync \
+                                    subversion zlib1g-dev
+
+If you are building this on a x86_64 machine, you may have to install the i386 libraries for the cross compiler:
+ sudo apt-get install libc6:i386 libncurses5:i386
+
+Additionally if you want to build the LTP image from scratch on a Debian/Ubuntu system:
+ sudo apt-get install linaro-image-tools
+
+== RHEL/Fedora ==
+
+ sudo yum install cmake gcc git kpartx patch quilt rsync subversion zlib-devel
+
+
+== SUSE/openSUSE ==
+
+  sudo zypper install cmake gcc git kpartx patch quilt rsync subversion zlib-devel glibc-32bit
+
+== Arch Linux ==
+
+For Arch Linux (i686 and x86_64) systems, the easiest way is to use AUR:
+
+ toolchain: https://aur.archlinux.org/packages.php?ID=60611
+
+ patched kernel: https://aur.archlinux.org/packages.php?ID=60600
+
+This should handle dependencies and patching automatically with minimal manual intervention while still giving the option to easily make custom configurations.
+
+= Building the Code =
+
+The code is built for one of several targets which are found in the ''targets'' directory.
+
+ cd llvmlinux
+ ls targets
+ [[MSM|msm]]  [[Versatile Express|vexpress]]  [[X86 64|x86_64]] [[i586|i586]]
+
+For the remainder of this howto, we will arbitrarily build and test the vexpress ([[Versatile Express]]) target.
+
+ cd targets/vexpress
+
+Next build llvm, clang, the linux (patched linux kernel) and qemu.
+
+ make
+
+To test the newly built kernel in QEMU (vexpress is one of the supported targets to do so)
+
+ make test
+
+= Updating the Sources =
+
+To update and rebuild the sources for the target and its dependencies, run:
+
+ make sync-all
+ make
+
+= I Want More Information About This Build System =
+
+There is more detailed information available about all these topics around the [[Automated Build Framework|build system]] as well as the steps to take to [[Manual Build Instructions|replicate this work manually]].
+
+There are also various target specific instructions available:
+
+* [[ARM]]
+* [[MIPS]]
+* [[i586]]
+* [[x86_64]]

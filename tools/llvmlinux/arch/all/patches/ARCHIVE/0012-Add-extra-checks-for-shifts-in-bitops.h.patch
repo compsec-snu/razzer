@@ -1,0 +1,87 @@
+From 2780900fe2e87b55b7f5f634ca2ef26dc06bc733 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:26:44 +0100
+Subject: [PATCH 12/51] Add extra checks for shifts in bitops.h.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add extra checks for shifts in bitops.h.
+---
+ include/linux/bitops.h |   18 ++++++++++++++++++
+ 1 Datei geändert, 18 Zeilen hinzugefügt(+)
+
+diff --git a/include/linux/bitops.h b/include/linux/bitops.h
+index a3b6b82..872e160 100644
+--- a/include/linux/bitops.h
++++ b/include/linux/bitops.h
+@@ -93,6 +93,9 @@ static inline __u64 ror64(__u64 word, unsigned int shift)
+  */
+ static inline __u32 rol32(__u32 word, unsigned int shift)
+ {
++	shift &= 0x1fu;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (32 - shift));
+ }
+ 
+@@ -103,6 +106,9 @@ static inline __u32 rol32(__u32 word, unsigned int shift)
+  */
+ static inline __u32 ror32(__u32 word, unsigned int shift)
+ {
++	shift &= 0x1fu;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (32 - shift));
+ }
+ 
+@@ -113,6 +119,9 @@ static inline __u32 ror32(__u32 word, unsigned int shift)
+  */
+ static inline __u16 rol16(__u16 word, unsigned int shift)
+ {
++	shift &= 0xfu;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (16 - shift));
+ }
+ 
+@@ -123,6 +132,9 @@ static inline __u16 rol16(__u16 word, unsigned int shift)
+  */
+ static inline __u16 ror16(__u16 word, unsigned int shift)
+ {
++	shift &= 0xfu;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (16 - shift));
+ }
+ 
+@@ -133,6 +145,9 @@ static inline __u16 ror16(__u16 word, unsigned int shift)
+  */
+ static inline __u8 rol8(__u8 word, unsigned int shift)
+ {
++	shift &= 0x7u;
++	if (!shift)
++		return word;
+ 	return (word << shift) | (word >> (8 - shift));
+ }
+ 
+@@ -143,6 +158,9 @@ static inline __u8 rol8(__u8 word, unsigned int shift)
+  */
+ static inline __u8 ror8(__u8 word, unsigned int shift)
+ {
++	shift &= 0x7u;
++	if (!shift)
++		return word;
+ 	return (word >> shift) | (word << (8 - shift));
+ }
+ 
+-- 
+1.7.10.4
+

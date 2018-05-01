@@ -1,0 +1,33 @@
+diff --git a/Makefile b/Makefile
+index 80b8671..4489e5b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -619,7 +619,6 @@ ARCH_AFLAGS :=
+ ARCH_CFLAGS :=
+ include arch/$(SRCARCH)/Makefile
+ 
+-KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
+ KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
+ 
+ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
+@@ -679,15 +678,19 @@ KBUILD_CPPFLAGS += $(call cc-option,-Wno-unknown-warning-option,)
+ KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable)
+ KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
+ KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
++KBUILD_CFLAGS += -Wno-asm-operand-widths
++KBUILD_CFLAGS += -Wno-initializer-overrides
++KBUILD_CFLAGS += -fno-builtin
+ # Quiet clang warning: comparison of unsigned expression < 0 is always false
+ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
+ # CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
+ # source of a reference will be _MergedGlobals and not on of the whitelisted names.
+ # See modpost pattern 2
+ KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
+-KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
+ else
+ 
++KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
++
+ # These warnings generated too much noise in a regular build.
+ # Use make W=1 to enable them (see scripts/Makefile.build)
+ KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)

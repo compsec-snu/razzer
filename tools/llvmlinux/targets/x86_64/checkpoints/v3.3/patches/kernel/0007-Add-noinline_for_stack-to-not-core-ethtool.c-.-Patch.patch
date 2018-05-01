@@ -1,0 +1,38 @@
+From 330c5d042656086300d506d07e5630bfa2334e81 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:22:09 +0200
+Subject: [PATCH 07/48] Add noinline_for_stack to not/core/ethtool.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+/*
+ * Rather then using noinline to prevent stack consumption, use
+ * noinline_for_stack instead.  For documentaiton reasons.
+ */
+---
+ net/core/ethtool.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/net/core/ethtool.c b/net/core/ethtool.c
+index 3f79db1..a8364b7 100644
+--- a/net/core/ethtool.c
++++ b/net/core/ethtool.c
+@@ -305,7 +305,7 @@ int __ethtool_get_settings(struct net_device *dev, struct ethtool_cmd *cmd)
+ }
+ EXPORT_SYMBOL(__ethtool_get_settings);
+ 
+-static int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
++static noinline_for_stack int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
+ {
+ 	int err;
+ 	struct ethtool_cmd cmd;
+@@ -319,7 +319,7 @@ static int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
+ 	return 0;
+ }
+ 
+-static int ethtool_set_settings(struct net_device *dev, void __user *useraddr)
++static noinline_for_stack int ethtool_set_settings(struct net_device *dev, void __user *useraddr)
+ {
+ 	struct ethtool_cmd cmd;
+ 
+-- 
+1.7.3.4
+

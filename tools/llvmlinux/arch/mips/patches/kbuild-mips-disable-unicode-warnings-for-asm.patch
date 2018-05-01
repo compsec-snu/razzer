@@ -1,0 +1,41 @@
+From c4afb8dca6fb3fb61239255a1b88c051deebaaf7 Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Wed, 20 May 2015 10:52:19 +0100
+Subject: [PATCH] MIPS: kbuild: LLVMLinux: Disable unicode warnings when
+ preprocessing assembly.
+
+clang's preprocessor will emit -Wunicode warnings for some .macro's because
+they use '\u' as arguments, such as:
+
+arch/mips/include/asm/asmmacro.h:197:51: warning: \u used with no following hex digits; treating as '\' followed by identifier [-Wunicode]
+         .word  0x41000000 | (\rt << 16) | (\rd << 11) | (\u << 5) | (\sel)
+                                                          ^
+
+This disables that warning for both gcc and clang, as Unicode characters are
+not used in MIPS assembly code.
+
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+---
+ arch/mips/Kbuild | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/mips/Kbuild b/arch/mips/Kbuild
+index dd29533..36e2a6c 100644
+--- a/arch/mips/Kbuild
++++ b/arch/mips/Kbuild
+@@ -3,6 +3,12 @@
+ # CFLAGS_<file.o> := -Wno-error
+ subdir-ccflags-y := -Werror
+ 
++# clang's preprocessor will emit -Wunicode warnings for some .macro's because
++# they use '\u' as arguments.
++# This disables that warning for both gcc and clang, as Unicode characters are
++# not used in MIPS assembly code.
++subdir-asflags-y := -Wno-unicode
++
+ # platform specific definitions
+ include arch/mips/Kbuild.platforms
+ obj-y := $(platform-y)
+-- 
+1.9.1
+

@@ -1,0 +1,31 @@
+From 45763bc47015f776604afa176ad2c41a4f40227f Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:25 -0400
+Subject: [PATCH 20/39] LLVMLinux: Clang doesn't support the gcc flags set by
+ CONFIG_ARCH_HWEIGHT_CFLAGS
+
+Ignore the flags set in Kconfig for hweight if the compiler is clang.
+
+Author: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ lib/Makefile | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/Makefile b/lib/Makefile
+index f2cb308..75bec5f 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -46,7 +46,9 @@ lib-$(CONFIG_RWSEM_GENERIC_SPINLOCK) += rwsem-spinlock.o
+ lib-$(CONFIG_RWSEM_XCHGADD_ALGORITHM) += rwsem.o
+ lib-$(CONFIG_PERCPU_RWSEM) += percpu-rwsem.o
+ 
++ifneq ($(COMPILER),clang)
+ CFLAGS_hweight.o = $(subst $(quote),,$(CONFIG_ARCH_HWEIGHT_CFLAGS))
++endif
+ obj-$(CONFIG_GENERIC_HWEIGHT) += hweight.o
+ 
+ obj-$(CONFIG_BTREE) += btree.o
+-- 
+1.8.1.2
+

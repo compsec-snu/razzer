@@ -1,0 +1,72 @@
+./arch/x86/built-in.bc		5.9M
+# ./arch/x86/entry/built-in.bc		240K
+# ./arch/x86/entry/vdso/built-in.bc		68K
+# ./arch/x86/entry/vsyscall/built-in.bc		123K
+# ./arch/x86/events/built-in.bc		1.8M
+# ./arch/x86/events/intel/built-in.bc		1.2M
+# ./arch/x86/kernel/apic/built-in.bc		459K
+# ./arch/x86/kernel/built-in.bc		3.1M
+# ./arch/x86/kernel/cpu/built-in.bc		320K
+# ./arch/x86/kernel/fpu/built-in.bc		276K
+# ./arch/x86/lib/built-in.bc		13K
+# ./arch/x86/mm/built-in.bc		915K
+# ./arch/x86/realmode/built-in.bc		13K
+
+./crypto/built-in.bc		1.8M
+
+./drivers/built-in.bc		6.6M
+# ./drivers/base/built-in.bc		1.3M
+# ./drivers/char/built-in.bc		346K
+# ./drivers/clocksource/built-in.bc		11K
+# ./drivers/hid/built-in.bc		645K
+# ./drivers/input/built-in.bc		1.5M
+# ./drivers/input/keyboard/built-in.bc		149K
+# ./drivers/input/mouse/built-in.bc		902K
+# ./drivers/input/serio/built-in.bc		385K
+# ./drivers/net/built-in.bc		296K
+# ./drivers/rtc/built-in.bc		22K
+# ./drivers/tty/built-in.bc		2.1M
+# ./drivers/tty/vt/built-in.bc		1005K
+# ./drivers/video/built-in.bc		259K
+# ./drivers/video/console/built-in.bc		259K
+./fs/built-in.bc		4.4M
+# ./fs/devpts/built-in.bc		116K
+# ./fs/ramfs/built-in.bc		135K
+
+./init/built-in.bc		460K
+
+./kernel/built-in.bc		6.9M
+# ./kernel/bpf/built-in.bc		242K
+# ./kernel/events/built-in.bc		1010K
+# ./kernel/irq/built-in.bc		619K
+# ./kernel/locking/built-in.bc		250K
+# ./kernel/power/built-in.bc		137K
+# ./kernel/printk/built-in.bc		148K
+# ./kernel/rcu/built-in.bc		145K
+# ./kernel/sched/built-in.bc		920K
+# ./kernel/time/built-in.bc		1.2M
+
+./lib/built-in.bc		1.2M
+./mm/built-in.bc		4.8M
+
+./net/built-in.bc		51M
+# ./net/atm/built-in.bc		1.5M
+# ./net/core/built-in.bc		5.3M
+# ./net/dccp/built-in.bc		3.1M
+# ./net/ethernet/built-in.bc		228K
+# ./net/ipv4/built-in.bc		13M
+# ./net/ipv4/netfilter/built-in.bc		1010K
+# ./net/ipv6/built-in.bc		9.2M
+# ./net/ipv6/netfilter/built-in.bc		554K
+# ./net/key/built-in.bc		420K
+# ./net/netfilter/built-in.bc		7.9M
+# ./net/netfilter/ipset/built-in.bc		489K
+# ./net/netfilter/ipvs/built-in.bc		2.0M
+# ./net/netlink/built-in.bc		582K
+# ./net/packet/built-in.bc		485K
+# ./net/sched/built-in.bc		370K
+# ./net/sctp/built-in.bc		5.5M
+# ./net/unix/built-in.bc		531K
+# ./net/xfrm/built-in.bc		1.5M
+
+./security/built-in.bc		160K

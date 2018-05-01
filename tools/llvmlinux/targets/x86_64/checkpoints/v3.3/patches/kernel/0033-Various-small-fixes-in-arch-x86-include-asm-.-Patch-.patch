@@ -1,0 +1,62 @@
+From 178849659ebc7d3cadc416158eb6b837bfd8591a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:09:40 +0200
+Subject: [PATCH 33/48] Various small fixes in arch/x86/include/asm/ . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/include/asm/dma-mapping.h |    2 +-
+ arch/x86/include/asm/dwarf2.h      |    2 +-
+ arch/x86/include/asm/ftrace.h      |   11 +++++++++++
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/include/asm/dma-mapping.h b/arch/x86/include/asm/dma-mapping.h
+index ed3065f..70dfe70 100644
+--- a/arch/x86/include/asm/dma-mapping.h
++++ b/arch/x86/include/asm/dma-mapping.h
+@@ -93,7 +93,7 @@ static inline unsigned long dma_alloc_coherent_mask(struct device *dev,
+ 
+ 	dma_mask = dev->coherent_dma_mask;
+ 	if (!dma_mask)
+-		dma_mask = (gfp & GFP_DMA) ? DMA_BIT_MASK(24) : DMA_BIT_MASK(32);
++		dma_mask = (gfp & GFP_DMA) ? (unsigned long)DMA_BIT_MASK(24) : (unsigned long)DMA_BIT_MASK(32);
+ 
+ 	return dma_mask;
+ }
+diff --git a/arch/x86/include/asm/dwarf2.h b/arch/x86/include/asm/dwarf2.h
+index f6f1598..8c4ae73 100644
+--- a/arch/x86/include/asm/dwarf2.h
++++ b/arch/x86/include/asm/dwarf2.h
+@@ -53,7 +53,7 @@
+  * Due to the structure of pre-exisiting code, don't use assembler line
+  * comment character # to ignore the arguments. Instead, use a dummy macro.
+  */
+-.macro cfi_ignore a=0, b=0, c=0, d=0
++.macro cfi_ignore a=0, b=0, c=0, d=0, e=0, f=0, g=0, h=0
+ .endm
+ 
+ #define CFI_STARTPROC		cfi_ignore
+diff --git a/arch/x86/include/asm/ftrace.h b/arch/x86/include/asm/ftrace.h
+index 268c783..527f318 100644
+--- a/arch/x86/include/asm/ftrace.h
++++ b/arch/x86/include/asm/ftrace.h
+@@ -26,6 +26,17 @@
+ 	addq $0x38, %rsp
+ 	.endm
+ 
++#else
++
++#define HAVE_ARCH_CALLER_ADDR
++
++#define CALLER_ADDR0 ((unsigned long)__builtin_return_address(0))
++#define CALLER_ADDR1 0UL
++#define CALLER_ADDR2 0UL
++#define CALLER_ADDR3 0UL
++#define CALLER_ADDR4 0UL
++#define CALLER_ADDR5 0UL
++#define CALLER_ADDR6 0UL
+ #endif
+ 
+ #ifdef CONFIG_FUNCTION_TRACER
+-- 
+1.7.3.4
+

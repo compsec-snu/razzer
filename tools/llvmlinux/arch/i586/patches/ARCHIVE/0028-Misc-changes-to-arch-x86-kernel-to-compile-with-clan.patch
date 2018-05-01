@@ -1,0 +1,52 @@
+From c7015a74c0ea0402274b4a55135c3d31da3b063b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:49:59 +0100
+Subject: [PATCH 28/51] Misc changes to arch/x86/kernel/ to compile with
+ clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/kernel/head.c        |    4 +++-
+ arch/x86/kernel/head_64.S     |    3 ++-
+ arch/x86/kernel/vmlinux.lds.S |    1 +
+ 3 Dateien geändert, 6 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+--- linux.orig/arch/x86/kernel/head.c
++++ linux/arch/x86/kernel/head.c
+@@ -29,6 +29,7 @@
+ void __init reserve_ebda_region(void)
+ {
+ 	unsigned int lowmem, ebda_addr;
++	unsigned char *p;
+ 
+ 	/*
+ 	 * To determine the position of the EBDA and the
+@@ -42,7 +43,8 @@
+ 		return;
+ 
+ 	/* end of low (conventional) memory */
+-	lowmem = *(unsigned short *)__va(BIOS_LOWMEM_KILOBYTES);
++	p = __va(BIOS_LOWMEM_KILOBYTES);
++	lowmem = p[0] + 256 * p[1];
+ 	lowmem <<= 10;
+ 
+ 	/* start of EBDA area */
+--- linux.orig/arch/x86/kernel/vmlinux.lds.S
++++ linux/arch/x86/kernel/vmlinux.lds.S
+@@ -304,6 +304,7 @@
+ 		__bss_start = .;
+ 		*(.bss..page_aligned)
+ 		*(.bss)
++		*(.gnu.linkonce.b.*)
+ 		. = ALIGN(PAGE_SIZE);
+ 		__bss_stop = .;
+ 	}

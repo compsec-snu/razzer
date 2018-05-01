@@ -1,0 +1,9 @@
+From 2171ea13b7751a44f6e7d3278cf6252c5002bd43 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 28 Jul 2015 00:42:55 -0400
+Subject: [PATCH] kbuild-clang-detect
+
+---
+ Makefile | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+

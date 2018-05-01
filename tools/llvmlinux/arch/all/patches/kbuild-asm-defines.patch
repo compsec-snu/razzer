@@ -1,0 +1,102 @@
+From 8fb70fe06013a88f84cd6fe693bd8a0939aeeb5b Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Sat, 20 Sep 2014 00:14:43 -0700
+Subject: [PATCH] kbuild, LLVMLinux: Fix asm-offset generation to work with
+ clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When using clang with -no-integerated-as clang will use the gnu assembler instead
+of the integrated assembler. However clang will still perform asm error checking
+before sending the inline assembly language to gas.
+
+The generation of asm-offsets from within C code is dependent on gcc's blind
+passing of whatever is in asm() through to gas. Arbirary text is
+passed through which is then modified by a sed script into the appropriate .h
+and .S code. Since the arbitrary text is not valid assembly language, clang fails.
+
+This can be fixed by making the arbitrary text into an ASM comment and then
+updating the sed scripts accordingly to work as expected.
+
+This solution works for both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: Jan Moskyto Matejka <mq@suse.cz>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: "H. Peter Anvin" <hpa@linux.intel.com>
+Cc: Tom Gundersen <teg@jklm.no>
+Cc: Masahiro Yamada <yamada.m@jp.panasonic.com>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ Kbuild                 | 8 ++++----
+ include/linux/kbuild.h | 6 +++---
+ scripts/mod/Makefile   | 8 ++++----
+ 3 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/Kbuild b/Kbuild
+index f55cefd..0bbb863 100644
+--- a/Kbuild
++++ b/Kbuild
+@@ -8,10 +8,10 @@
+ 
+ # Default sed regexp - multiline due to syntax constraints
+ define sed-y
+-	"/^->/{s:->#\(.*\):/* \1 */:; \
+-	s:^->\([^ ]*\) [\$$#]*\([-0-9]*\) \(.*\):#define \1 \2 /* \3 */:; \
+-	s:^->\([^ ]*\) [\$$#]*\([^ ]*\) \(.*\):#define \1 \2 /* \3 */:; \
+-	s:->::; p;}"
++	"/^@->/{s:@->#\(.*\):/* \1 */:; \
++	s:^@->\([^ ]*\) [\$$#]*\([-0-9]*\) \(.*\):#define \1 \2 /* \3 */:; \
++	s:^@->\([^ ]*\) [\$$#]*\([^ ]*\) \(.*\):#define \1 \2 /* \3 */:; \
++	s:@->::; p;}"
+ endef
+ 
+ # Use filechk to avoid rebuilds when a header changes, but the resulting file
+diff --git a/include/linux/kbuild.h b/include/linux/kbuild.h
+index 22a7219..75fa2c3 100644
+--- a/include/linux/kbuild.h
++++ b/include/linux/kbuild.h
+@@ -2,14 +2,14 @@
+ #define __LINUX_KBUILD_H
+ 
+ #define DEFINE(sym, val) \
+-        asm volatile("\n->" #sym " %0 " #val : : "i" (val))
++	asm volatile("\n@->" #sym " %0 " #val : : "i" (val))
+ 
+-#define BLANK() asm volatile("\n->" : : )
++#define BLANK() asm volatile("\n@->" : : )
+ 
+ #define OFFSET(sym, str, mem) \
+ 	DEFINE(sym, offsetof(struct str, mem))
+ 
+ #define COMMENT(x) \
+-	asm volatile("\n->#" x)
++	asm volatile("\n@->#" x)
+ 
+ #endif
+diff --git a/scripts/mod/Makefile b/scripts/mod/Makefile
+index c11212f..86f6b85 100644
+--- a/scripts/mod/Makefile
++++ b/scripts/mod/Makefile
+@@ -6,10 +6,10 @@ modpost-objs	:= modpost.o file2alias.o sumversion.o
+ devicetable-offsets-file := devicetable-offsets.h
+ 
+ define sed-y
+-	"/^->/{s:->#\(.*\):/* \1 */:; \
+-	s:^->\([^ ]*\) [\$$#]*\([-0-9]*\) \(.*\):#define \1 \2 /* \3 */:; \
+-	s:^->\([^ ]*\) [\$$#]*\([^ ]*\) \(.*\):#define \1 \2 /* \3 */:; \
+-	s:->::; p;}"
++	"/^@->/{s:@->#\(.*\):/* \1 */:; \
++	s:^@->\([^ ]*\) [\$$#]*\([-0-9]*\) \(.*\):#define \1 \2 /* \3 */:; \
++	s:^@->\([^ ]*\) [\$$#]*\([^ ]*\) \(.*\):#define \1 \2 /* \3 */:; \
++	s:@->::; p;}"
+ endef
+ 
+ quiet_cmd_offsets = GEN     $@
+-- 
+1.9.1
+

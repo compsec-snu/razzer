@@ -1,0 +1,21 @@
+Fix uninitialized return code in default case in cmpxchg-local.h
+
+This patch fixes warning when compiling the Linux kernel with Clang
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ cmpxchg-local.h |    1 +
+ 1 file changed, 1 insertion(+)
+
+Index: linux/include/asm-generic/cmpxchg-local.h
+===================================================================
+--- linux.orig/include/asm-generic/cmpxchg-local.h
++++ linux/include/asm-generic/cmpxchg-local.h
+@@ -41,6 +41,7 @@
+ 		break;
+ 	default:
+ 		wrong_size_cmpxchg(ptr);
++		prev=0;
+ 	}
+ 	local_irq_restore(flags);
+ 	return prev;

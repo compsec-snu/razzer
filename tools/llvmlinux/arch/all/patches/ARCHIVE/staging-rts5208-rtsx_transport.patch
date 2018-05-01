@@ -1,0 +1,34 @@
+From eb443ee8f52725cde2946af19c1a7bb704f47ad3 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:15 -0700
+Subject: [PATCH] staging, rts5208, LLVMLinux: Change extern inline to static
+ inline
+
+With compilers which follow the C99 standard (like modern versions of gcc and
+clang), "extern inline" does the opposite thing from older versions of gcc
+(emits code for an externally linkable version of the inline function). "static
+inline" does the intended behavior in both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/staging/rts5208/rtsx_transport.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/rts5208/rtsx_transport.h b/drivers/staging/rts5208/rtsx_transport.h
+index b4b1123..899bc20 100644
+--- a/drivers/staging/rts5208/rtsx_transport.h
++++ b/drivers/staging/rts5208/rtsx_transport.h
+@@ -46,7 +46,7 @@ void rtsx_add_cmd(struct rtsx_chip *chip,
+ void rtsx_send_cmd_no_wait(struct rtsx_chip *chip);
+ int rtsx_send_cmd(struct rtsx_chip *chip, u8 card, int timeout);
+ 
+-extern inline u8 *rtsx_get_cmd_data(struct rtsx_chip *chip)
++static inline u8 *rtsx_get_cmd_data(struct rtsx_chip *chip)
+ {
+ #ifdef CMD_USING_SG
+ 	return (u8 *)(chip->host_sg_tbl_ptr);
+-- 
+1.9.1
+

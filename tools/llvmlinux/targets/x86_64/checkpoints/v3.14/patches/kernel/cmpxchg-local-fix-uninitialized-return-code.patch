@@ -1,0 +1,37 @@
+From 3a30e83170a51adc07e62d1c7e6a621b5dc50339 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 20 Nov 2012 21:19:50 +0100
+Subject: [PATCH] LLVMLinux: Remove warning about returning an uninitialized
+ variable
+
+Fix uninitialized return code in default case in cmpxchg-local.h
+
+This patch fixes the code to prevent an uninitialized return value that is detected
+when compiling with clang. The bug produces numerous warnings when compiling the
+Linux kernel with clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: David Howells <dhowells@redhat.com>
+Acked-by: Arnd Bergmann <arnd@arndb.de>
+---
+ include/asm-generic/cmpxchg-local.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/asm-generic/cmpxchg-local.h b/include/asm-generic/cmpxchg-local.h
+index d8d4c89..70bef78 100644
+--- a/include/asm-generic/cmpxchg-local.h
++++ b/include/asm-generic/cmpxchg-local.h
+@@ -4,7 +4,8 @@
+ #include <linux/types.h>
+ #include <linux/irqflags.h>
+ 
+-extern unsigned long wrong_size_cmpxchg(volatile void *ptr);
++extern unsigned long wrong_size_cmpxchg(volatile void *ptr)
++	__noreturn;
+ 
+ /*
+  * Generic version of __cmpxchg_local (disables interrupts). Takes an unsigned
+-- 
+1.8.3.2
+

@@ -1,0 +1,17 @@
+
+Fixup loader to boot mainline on Qualcomm platforms that needs adjustment of
+ATAG MEM.
+
+Found at [1], built by issuing:
+
+  arm-eabi-as -o fixup.o fixup.S
+  arm-eabi-objcopy -O binary fixup.o fixup.bin
+
+
+Use by concatenating together with zImage:
+
+  cat fixup.bin arch/arm/boot/zImage > zImage
+
+
+[1] https://www.codeaurora.org/cgit/quic/kernel/skales/tree/atag-fix/fixup.S
+

@@ -1,0 +1,40 @@
+From ad366fd715f5e9bb556223dd78275742c3431042 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Tue, 20 Nov 2012 21:21:12 +0100
+Subject: [PATCH] Kbuild: LLVMLinux: Disable the use of the Integrated
+ Assembler when compiling with Clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Globally disable the use of the Clang Integrated Assembler (IA) unless
+IA=1 is set. If CLANG_ENABLE_IA=1 is not set, use gas instead. IA doesn't
+support the gas assembly extensions used in the kernel code.
+
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Vinícius Tinti <viniciustinti@gmail.com>
+---
+ Makefile | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index be179bd..1750e41 100644
+--- a/Makefile
++++ b/Makefile
+@@ -381,7 +381,10 @@ endif
+ ifneq ($(GCC_TOOLCHAIN),)
+ CLANG_GCC_TC	:= -gcc-toolchain $(GCC_TOOLCHAIN)
+ endif
+-CLANG_FLAGS	:= $(CLANG_TARGET) $(CLANG_GCC_TC)
++ifneq ($(CLANG_ENABLE_IA),1)
++CLANG_IA_FLAG	= -no-integrated-as
++endif
++CLANG_FLAGS	:= $(CLANG_TARGET) $(CLANG_GCC_TC) $(CLANG_IA_FLAG)
+ endif
+ 
+ # Use USERINCLUDE when you must reference the UAPI directories only.
+-- 
+1.9.1
+

@@ -1,0 +1,41 @@
+From ad5e28d006782c143317218129d8f5a304554b9c Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Sat, 19 Apr 2014 22:59:49 -0700
+Subject: [PATCH] unhandled else in arch_timer_reg_read_cp15
+
+Clang complains about return value being undefined which could happen if enum
+value was corrupted.
+
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ arch/arm64/include/asm/arch_timer.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/include/asm/arch_timer.h b/arch/arm64/include/asm/arch_timer.h
+index 34cb7e6..fa3d17c 100644
+--- a/arch/arm64/include/asm/arch_timer.h
++++ b/arch/arm64/include/asm/arch_timer.h
+@@ -52,6 +52,9 @@ void arch_timer_reg_write_cp15(int access, enum arch_timer_reg reg, u32 val)
+ 			asm volatile("msr cntv_tval_el0, %0" : : "r" ((u64)val));
+ 			break;
+ 		}
++	} else {
++		BUG();
++		__compiletime_error();
+ 	}
+ 
+ 	isb();
+@@ -80,6 +83,9 @@ u32 arch_timer_reg_read_cp15(int access, enum arch_timer_reg reg)
+ 			asm volatile("mrs %0, cntv_tval_el0" : "=r" (val));
+ 			break;
+ 		}
++	} else {
++		BUG();
++		__compiletime_error();
+ 	}
+ 
+ 	return (u32)val;
+-- 
+1.9.1
+

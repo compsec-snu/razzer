@@ -1,0 +1,14 @@
+diff --git a/lib/Makefile b/lib/Makefile
+index 5dc77a8..01103a0 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -70,7 +70,9 @@ obj-$(CONFIG_HAS_IOMEM) += iomap_copy.o devres.o
+ obj-$(CONFIG_CHECK_SIGNATURE) += check_signature.o
+ obj-$(CONFIG_DEBUG_LOCKING_API_SELFTESTS) += locking-selftest.o
+ 
++ifneq ($(COMPILER),clang)
+ obj-$(CONFIG_GENERIC_HWEIGHT) += hweight.o
++endif
+ 
+ obj-$(CONFIG_BTREE) += btree.o
+ obj-$(CONFIG_INTERVAL_TREE) += interval_tree.o

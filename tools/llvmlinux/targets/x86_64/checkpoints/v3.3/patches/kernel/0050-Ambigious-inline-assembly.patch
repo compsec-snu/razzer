@@ -1,0 +1,26 @@
+diff --git a/arch/x86/include/asm/bitops.h b/arch/x86/include/asm/bitops.h
+index b97596e..e5712fb 100644
+--- a/arch/x86/include/asm/bitops.h
++++ b/arch/x86/include/asm/bitops.h
+@@ -159,7 +159,7 @@ static inline void __clear_bit_unlock(unsigned nr, volatile unsigned long *addr)
+  */
+ static inline void __change_bit(int nr, volatile unsigned long *addr)
+ {
+-	asm volatile("btc %1,%0" : ADDR : "Ir" (nr));
++	asm volatile("btcl %1,%0" : ADDR : "Ir" (nr));
+ }
+ 
+ /**
+diff --git a/arch/x86/include/asm/bitops.h b/arch/x86/include/asm/bitops.h
+index b97596e..ed0efae 100644
+--- a/arch/x86/include/asm/bitops.h
++++ b/arch/x86/include/asm/bitops.h
+@@ -178,7 +178,7 @@ static inline void change_bit(int nr, volatile unsigned long *addr)
+ 			: CONST_MASK_ADDR(nr, addr)
+ 			: "iq" ((u8)CONST_MASK(nr)));
+ 	} else {
+-		asm volatile(LOCK_PREFIX "btc %1,%0"
++		asm volatile(LOCK_PREFIX "btcl %1,%0"
+ 			: BITOP_ADDR(addr)
+ 			: "Ir" (nr));
+ 	}

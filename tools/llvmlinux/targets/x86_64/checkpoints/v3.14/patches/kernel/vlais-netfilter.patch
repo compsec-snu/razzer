@@ -1,0 +1,82 @@
+From e9351eee3fc23ddfc1e3d1bb92845052481c6317 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Tue, 11 Feb 2014 19:26:05 -0800
+Subject: [PATCH] net: netfilter: LLVMLinux: vlais-netfilter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced non-standard C use of Variable Length Arrays In Structs (VLAIS) in
+xt_repldata.h with a C99 compliant flexible array member and then calculated
+offsets to the other struct members. These other members aren't referenced by
+name in this code, however this patch maintains the same memory layout and
+padding as was previously accomplished using VLAIS.
+
+Had the original structure been ordered differently, with the entries VLA at
+the end, then it could have been a flexible member, and this patch would have
+been a lot simpler. However since the data stored in this structure is
+ultimately exported to userspace, the order of this structure can't be changed.
+
+This patch makes no attempt to change the existing behavior, merely the way in
+which the current layout is accomplished using standard C99 constructs. As such
+the code can now be compiled with either gcc or clang.
+
+This version of the patch removes the trailing alignment that the VLAIS
+structure would allocate in order to simplify the patch.
+
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+---
+ net/netfilter/xt_repldata.h | 22 +++++++++++++++++-----
+ 1 file changed, 17 insertions(+), 5 deletions(-)
+
+diff --git a/net/netfilter/xt_repldata.h b/net/netfilter/xt_repldata.h
+index 6efe4e5..8fd3241 100644
+--- a/net/netfilter/xt_repldata.h
++++ b/net/netfilter/xt_repldata.h
+@@ -5,23 +5,35 @@
+  * they serve as the hanging-off data accessed through repl.data[].
+  */
+ 
++/* tbl has the following structure equivalent, but is C99 compliant:
++ * struct {
++ *	struct type##_replace repl;
++ *	struct type##_standard entries[nhooks];
++ *	struct type##_error term;
++ * } *tbl;
++ */
++
+ #define xt_alloc_initial_table(type, typ2) ({ \
+ 	unsigned int hook_mask = info->valid_hooks; \
+ 	unsigned int nhooks = hweight32(hook_mask); \
+ 	unsigned int bytes = 0, hooknum = 0, i = 0; \
+ 	struct { \
+ 		struct type##_replace repl; \
+-		struct type##_standard entries[nhooks]; \
+-		struct type##_error term; \
+-	} *tbl = kzalloc(sizeof(*tbl), GFP_KERNEL); \
++		struct type##_standard entries[]; \
++	} *tbl; \
++	struct type##_error *term; \
++	size_t term_offset = (offsetof(typeof(*tbl), entries[nhooks]) + \
++		__alignof__(*term) - 1) & ~(__alignof__(*term) - 1); \
++	tbl = kzalloc(term_offset + sizeof(*term), GFP_KERNEL); \
+ 	if (tbl == NULL) \
+ 		return NULL; \
++	term = (struct type##_error *)&(((char *)tbl)[term_offset]); \
+ 	strncpy(tbl->repl.name, info->name, sizeof(tbl->repl.name)); \
+-	tbl->term = (struct type##_error)typ2##_ERROR_INIT;  \
++	*term = (struct type##_error)typ2##_ERROR_INIT;  \
+ 	tbl->repl.valid_hooks = hook_mask; \
+ 	tbl->repl.num_entries = nhooks + 1; \
+ 	tbl->repl.size = nhooks * sizeof(struct type##_standard) + \
+-	                 sizeof(struct type##_error); \
++			 sizeof(struct type##_error); \
+ 	for (; hook_mask != 0; hook_mask >>= 1, ++hooknum) { \
+ 		if (!(hook_mask & 1)) \
+ 			continue; \
+-- 
+1.8.3.2
+

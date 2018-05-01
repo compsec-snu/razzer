@@ -1,0 +1,91 @@
+# WAS ALREADY MERGED BUT REVERTED AGAIN !
+#
+##commit 360355db57d15ce3c90051b05cca993a4c5ee8db                                                                      
+#Author: Weiming Zhao <weimingz@codeaurora.org>                                                                       
+#Date:   Wed Mar 6 02:08:54 2013 +0000                                                                                
+#                                                                                                                     
+#    revert r176531 due to clan-native-arm fails                                                                      
+#                                                                                                                     
+#                                                                                                                                   
+#                                                                                                                                   
+#    git-svn-id: https://llvm.org/svn/llvm-project/cfe/trunk@176544 91177308-0d34-0410-b5e6-96231b3b80d8                            
+#                                                                                                                                   
+##commit 46a2290c030597e26022fe2b535c8e4b0d30a765                                                                                    
+#Author: Weiming Zhao <weimingz@codeaurora.org>                                                                                     
+#Date:   Tue Mar 5 23:27:21 2013 +0000                                                                                              
+#                                                                                                                                   
+#    PR 11326: Lack diagnosic message when ABI conflicts on ARM                                                                     
+#                                                                                                                                   
+#    When both Triple and -mabi are used, it may result into conflicting ABI value.                                                 
+#                                                                                                                                                      
+#                                                                                                                                                      
+#    git-svn-id: https://llvm.org/svn/llvm-project/cfe/trunk@176531 91177308-0d34-0410-b5e6-96231b3b80d8     
+
+From 792f3a195c3ff42614a064f8a2ba45cd7ec62eac Mon Sep 17 00:00:00 2001
+From: Weiming Zhao <weimingz@codeaurora.org>
+Date: Tue, 18 Sep 2012 23:09:56 -0700
+Subject: [PATCH] PR 11326: Lack diagnosic message when ABI conflicts on ARM
+
+When both Triple and -mabi are used, it may result into conflicting
+ABI value.
+---
+ include/clang/Basic/DiagnosticCommonKinds.td |    1 +
+ lib/Frontend/CompilerInvocation.cpp          |   23 +++++++++++++++++++++--
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+--- clang.orig/include/clang/Basic/DiagnosticCommonKinds.td
++++ clang/include/clang/Basic/DiagnosticCommonKinds.td
+@@ -107,6 +107,7 @@
+ def err_target_unknown_abi : Error<"unknown target ABI '%0'">;
+ def err_target_unknown_cxxabi : Error<"unknown C++ ABI '%0'">;
+ def err_target_invalid_feature : Error<"invalid target feature '%0'">;
++def warn_target_override_abi: Warning<"environment value '%0' of triple is overrided by ABI option value '%1'">;
+ 
+ // Source manager
+ def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
+--- clang.orig/lib/Frontend/CompilerInvocation.cpp
++++ clang/lib/Frontend/CompilerInvocation.cpp
+@@ -1444,7 +1444,8 @@
+   Opts.RewriteIncludes = Args.hasArg(OPT_frewrite_includes);
+ }
+ 
+-static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args) {
++static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
++                            DiagnosticsEngine &Diags) {
+   using namespace options;
+   Opts.ABI = Args.getLastArgValue(OPT_target_abi);
+   Opts.CXXABI = Args.getLastArgValue(OPT_cxx_abi);
+@@ -1456,6 +1457,24 @@
+   // Use the default target triple if unspecified.
+   if (Opts.Triple.empty())
+     Opts.Triple = llvm::sys::getDefaultTargetTriple();
++
++  // Use Opts.ABI to override the environment of triple for ARM.
++  llvm::Triple T(Opts.Triple);
++  if (T.getArch()==llvm::Triple::arm && !Opts.ABI.empty()) {
++    llvm::Triple::EnvironmentType env = T.getEnvironment();
++    // Env and ABI (Triple::EnvironmentType and ARMABIInfo::ABIKind) are not
++    // 1-to-1 mapping. Env is overrided only when inconsistence between EABI
++    // and legacy ABI occurs.
++    bool isOpsEABI = StringRef(Opts.ABI).startswith("aapcs");
++    bool isEnvEABI = (env == llvm::Triple::GNUEABI || env == llvm::Triple::EABI
++        || env == llvm::Triple::Android);
++    if (isEnvEABI != isOpsEABI) {
++      T.setEnvironment(isOpsEABI ? llvm::Triple::GNUEABI : llvm::Triple::GNU);
++      Opts.Triple = T.getTriple();
++      Diags.Report(diag::warn_target_override_abi) << T.getEnvironmentName()
++        << Opts.ABI ;
++    }
++  }
+ }
+ 
+ //
+@@ -1519,7 +1538,7 @@
+   ParsePreprocessorArgs(Res.getPreprocessorOpts(), *Args, FileMgr, Diags);
+   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), *Args,
+                               Res.getFrontendOpts().ProgramAction);
+-  ParseTargetArgs(Res.getTargetOpts(), *Args);
++  ParseTargetArgs(Res.getTargetOpts(), *Args, Diags);
+ 
+   return Success;
+ }

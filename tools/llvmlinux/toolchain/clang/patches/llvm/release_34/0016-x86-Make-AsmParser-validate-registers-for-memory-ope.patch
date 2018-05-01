@@ -1,0 +1,137 @@
+From 364b9de5d3927be5ac09057597253ce9bc3ecf84 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:28 +0000
+Subject: [PATCH 16/26] [x86] Make AsmParser validate registers for memory
+ operands a bit better
+
+We can't do a perfect job here. We *have* to allow (%dx) even in 64-bit
+mode, for example, because it might be used for an unofficial form of
+the in/out instructions. We actually want to do a better job of validation
+*later*. Perhaps *instead* of doing it where we are at the moment.
+
+But for now, doing what validation we *can* do in the place that the code
+already has its validation, is an improvement.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198760 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit ab5b9489e9e91ef21d9cebf5cf9453d2e9fce1d7)
+---
+ lib/Target/X86/AsmParser/X86AsmParser.cpp | 41 ++++++++++++++++++++++++++++---
+ test/MC/X86/x86_errors.s                  | 17 ++++++++++++-
+ 2 files changed, 54 insertions(+), 4 deletions(-)
+
+diff --git a/lib/Target/X86/AsmParser/X86AsmParser.cpp b/lib/Target/X86/AsmParser/X86AsmParser.cpp
+index ef04719..c922212 100644
+--- a/lib/Target/X86/AsmParser/X86AsmParser.cpp
++++ b/lib/Target/X86/AsmParser/X86AsmParser.cpp
+@@ -1817,10 +1817,11 @@ X86Operand *X86AsmParser::ParseMemOperand(unsigned SegReg, SMLoc MemStart) {
+   // If we reached here, then we just ate the ( of the memory operand.  Process
+   // the rest of the memory operand.
+   unsigned BaseReg = 0, IndexReg = 0, Scale = 1;
+-  SMLoc IndexLoc;
++  SMLoc IndexLoc, BaseLoc;
+ 
+   if (getLexer().is(AsmToken::Percent)) {
+     SMLoc StartLoc, EndLoc;
++    BaseLoc = Parser.getTok().getLoc();
+     if (ParseRegister(BaseReg, StartLoc, EndLoc)) return 0;
+     if (BaseReg == X86::EIZ || BaseReg == X86::RIZ) {
+       Error(StartLoc, "eiz and riz can only be used as index registers",
+@@ -1863,6 +1864,11 @@ X86Operand *X86AsmParser::ParseMemOperand(unsigned SegReg, SMLoc MemStart) {
+           }
+ 
+           // Validate the scale amount.
++	  if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
++              ScaleVal != 1) {
++            Error(Loc, "scale factor in 16-bit address must be 1");
++            return 0;
++	  }
+           if (ScaleVal != 1 && ScaleVal != 2 && ScaleVal != 4 && ScaleVal != 8){
+             Error(Loc, "scale factor in address must be 1, 2, 4 or 8");
+             return 0;
+@@ -1893,6 +1899,21 @@ X86Operand *X86AsmParser::ParseMemOperand(unsigned SegReg, SMLoc MemStart) {
+   SMLoc MemEnd = Parser.getTok().getEndLoc();
+   Parser.Lex(); // Eat the ')'.
+ 
++  // Check for use of invalid 16-bit registers. Only BX/BP/SI/DI are allowed,
++  // and then only in non-64-bit modes. Except for DX, which is a special case
++  // because an unofficial form of in/out instructions uses it.
++  if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
++      (is64BitMode() || (BaseReg != X86::BX && BaseReg != X86::BP &&
++                         BaseReg != X86::SI && BaseReg != X86::DI)) &&
++      BaseReg != X86::DX) {
++    Error(BaseLoc, "invalid 16-bit base register");
++    return 0;
++  }
++  if (BaseReg == 0 &&
++      X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg)) {
++    Error(IndexLoc, "16-bit memory operand may not include only index register");
++    return 0;
++  }
+   // If we have both a base register and an index register make sure they are
+   // both 64-bit or 32-bit registers.
+   // To support VSIB, IndexReg can be 128-bit or 256-bit registers.
+@@ -1901,16 +1922,30 @@ X86Operand *X86AsmParser::ParseMemOperand(unsigned SegReg, SMLoc MemStart) {
+         (X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg) ||
+          X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg)) &&
+         IndexReg != X86::RIZ) {
+-      Error(IndexLoc, "index register is 32-bit, but base register is 64-bit");
++      Error(BaseLoc, "base register is 64-bit, but index register is not");
+       return 0;
+     }
+     if (X86MCRegisterClasses[X86::GR32RegClassID].contains(BaseReg) &&
+         (X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg) ||
+          X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg)) &&
+         IndexReg != X86::EIZ){
+-      Error(IndexLoc, "index register is 64-bit, but base register is 32-bit");
++      Error(BaseLoc, "base register is 32-bit, but index register is not");
+       return 0;
+     }
++    if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg)) {
++      if (X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg) ||
++          X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg)) {
++        Error(BaseLoc, "base register is 16-bit, but index register is not");
++        return 0;
++      }
++      if (((BaseReg == X86::BX || BaseReg == X86::BP) &&
++           IndexReg != X86::SI && IndexReg != X86::DI) ||
++          ((BaseReg == X86::SI || BaseReg == X86::DI) &&
++           IndexReg != X86::BX && IndexReg != X86::BP)) {
++        Error(BaseLoc, "invalid 16-bit base/index register combination");
++        return 0;
++      }
++    }
+   }
+ 
+   return X86Operand::CreateMem(SegReg, Disp, BaseReg, IndexReg, Scale,
+diff --git a/test/MC/X86/x86_errors.s b/test/MC/X86/x86_errors.s
+index a974233..51f2e8e 100644
+--- a/test/MC/X86/x86_errors.s
++++ b/test/MC/X86/x86_errors.s
+@@ -26,8 +26,23 @@ sysexitq
+ lea (%rsp, %rbp, $4), %rax
+ 
+ // rdar://10423777
+-// 64: error: index register is 32-bit, but base register is 64-bit
++// 64: error: base register is 64-bit, but index register is not
+ movq (%rsi,%ecx),%xmm0
+ 
++// 64: error: invalid 16-bit base register
++movl %eax,(%bp,%si)
++
++// 32: error: scale factor in 16-bit address must be 1
++movl %eax,(%bp,%si,2)
++
++// 32: error: invalid 16-bit base register
++movl %eax,(%cx)
++
++// 32: error: invalid 16-bit base/index register combination
++movl %eax,(%bp,%bx)
++
++// 32: error: 16-bit memory operand may not include only index register
++movl %eax,(,%bx)
++
+ // 32: error: invalid operand for instruction
+ outb al, 4
+-- 
+1.8.4
+

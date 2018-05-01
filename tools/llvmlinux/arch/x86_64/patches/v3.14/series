@@ -1,0 +1,4 @@
+current_stack_pointer_x86_64.patch
+incomplete_type_for_struct_x86cpu_device_id.patch
+kbuild-clang-x86.patch
+thinkpad-nested-functions.patch

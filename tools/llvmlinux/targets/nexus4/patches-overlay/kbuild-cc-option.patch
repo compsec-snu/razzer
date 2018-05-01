@@ -1,0 +1,52 @@
+From 68495a840865fddd3f09b472d45f90675a90c3a9 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Mon, 22 Sep 2014 14:33:05 -0700
+Subject: [PATCH] kbuild, LLVMLinux: Add -Werror to cc-option to support clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clang will warn about unknown warnings but will not return false
+unless -Werror is set. GCC will return false if an unknown
+warning is passed.
+
+Adding -Werror make both compiler behave the same.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ scripts/Kbuild.include | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 8a9a4e1..e37ca5c 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -111,12 +111,12 @@ as-instr = $(call try-run,\
+ # Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
+ 
+ cc-option = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -xc /dev/null -o "$$TMP",$(1),$(2))
++	$(CC) -Werror $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
+ 
+ # cc-option-yn
+ # Usage: flag := $(call cc-option-yn,-march=winchip-c6)
+ cc-option-yn = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -xc /dev/null -o "$$TMP",y,n)
++	$(CC) -Werror $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
+ 
+ # cc-option-align
+ # Prefix align with either -falign or -malign
+@@ -126,7 +126,7 @@ cc-option-align = $(subst -functions=0,,\
+ # cc-disable-warning
+ # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
+ cc-disable-warning = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -xc /dev/null -o "$$TMP",-Wno-$(strip $(1)))
++	$(CC) -Werror $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
+ 
+ # cc-version
+ # Usage gcc-ver := $(call cc-version)
+-- 
+1.9.1
+

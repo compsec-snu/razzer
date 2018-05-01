@@ -1,0 +1,85 @@
+From 27bcd2d873f6fe592911c736fca3daff37656e14 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:50:54 +0200
+Subject: [PATCH 13/39] crypto, dm: LLVMLinux: Remove VLAIS usage from dm-crypt
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The use of variable length arrays in structs (VLAIS) in the Linux Kernel code
+precludes the use of compilers which don't implement VLAIS (for instance the
+Clang compiler). This patch instead allocates the appropriate amount of memory
+using an char array.
+
+Patch from series at
+http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+by PaX Team.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: pageexec@freemail.hu
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ drivers/md/dm-crypt.c | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index 6d2d41a..c511e30 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -525,29 +525,29 @@ static int crypt_iv_lmk_one(struct crypt_config *cc, u8 *iv,
+ 			    u8 *data)
+ {
+ 	struct iv_lmk_private *lmk = &cc->iv_gen_private.lmk;
+-	struct {
+-		struct shash_desc desc;
+-		char ctx[crypto_shash_descsize(lmk->hash_tfm)];
+-	} sdesc;
++	char sdesc[sizeof(struct shash_desc)
++		+ crypto_shash_descsize(lmk->hash_tfm)
++		+ CRYPTO_MINALIGN] CRYPTO_MINALIGN_ATTR;
++	struct shash_desc *desc = (struct shash_desc *)sdesc;
+ 	struct md5_state md5state;
+ 	u32 buf[4];
+ 	int i, r;
+ 
+-	sdesc.desc.tfm = lmk->hash_tfm;
+-	sdesc.desc.flags = CRYPTO_TFM_REQ_MAY_SLEEP;
++	desc->tfm = lmk->hash_tfm;
++	desc->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+ 
+-	r = crypto_shash_init(&sdesc.desc);
++	r = crypto_shash_init(desc);
+ 	if (r)
+ 		return r;
+ 
+ 	if (lmk->seed) {
+-		r = crypto_shash_update(&sdesc.desc, lmk->seed, LMK_SEED_SIZE);
++		r = crypto_shash_update(desc, lmk->seed, LMK_SEED_SIZE);
+ 		if (r)
+ 			return r;
+ 	}
+ 
+ 	/* Sector is always 512B, block size 16, add data of blocks 1-31 */
+-	r = crypto_shash_update(&sdesc.desc, data + 16, 16 * 31);
++	r = crypto_shash_update(desc, data + 16, 16 * 31);
+ 	if (r)
+ 		return r;
+ 
+@@ -556,12 +556,12 @@ static int crypt_iv_lmk_one(struct crypt_config *cc, u8 *iv,
+ 	buf[1] = cpu_to_le32((((u64)dmreq->iv_sector >> 32) & 0x00FFFFFF) | 0x80000000);
+ 	buf[2] = cpu_to_le32(4024);
+ 	buf[3] = 0;
+-	r = crypto_shash_update(&sdesc.desc, (u8 *)buf, sizeof(buf));
++	r = crypto_shash_update(desc, (u8 *)buf, sizeof(buf));
+ 	if (r)
+ 		return r;
+ 
+ 	/* No MD5 padding here */
+-	r = crypto_shash_export(&sdesc.desc, &md5state);
++	r = crypto_shash_export(desc, &md5state);
+ 	if (r)
+ 		return r;
+ 
+-- 
+1.8.1.2
+

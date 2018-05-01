@@ -1,0 +1,35 @@
+From 12b8001d9ee2bd30c1646e844754f83c28025536 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:43:00 +0100
+Subject: [PATCH 19/51] Fix kernel/acpi/wakeup_32.S for compilation with
+ clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/kernel/acpi/wakeup_32.S |    1 -
+ 1 Datei geändert, 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/kernel/acpi/wakeup_32.S b/arch/x86/kernel/acpi/wakeup_32.S
+index 13ab720..4a20695 100644
+--- a/arch/x86/kernel/acpi/wakeup_32.S
++++ b/arch/x86/kernel/acpi/wakeup_32.S
+@@ -9,7 +9,6 @@
+ 	ALIGN
+ 
+ ENTRY(wakeup_pmode_return)
+-wakeup_pmode_return:
+ 	movw	$__KERNEL_DS, %ax
+ 	movw	%ax, %ss
+ 	movw	%ax, %ds
+-- 
+1.7.10.4
+

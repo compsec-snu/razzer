@@ -1,0 +1,19 @@
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 118e6de..fe35453 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -77,11 +77,12 @@ else
+         KBUILD_AFLAGS += -m64
+         KBUILD_CFLAGS += -m64
+ 
++ifneq ($(COMPILER),clang)
+         # Align jump targets to 1 byte, not the default 16 bytes:
+         KBUILD_CFLAGS += -falign-jumps=1
+-
+         # Pack loops tightly as well:
+         KBUILD_CFLAGS += -falign-loops=1
++endif
+ 
+         # Don't autogenerate traditional x87 instructions
+         KBUILD_CFLAGS += $(call cc-option,-mno-80387)
+

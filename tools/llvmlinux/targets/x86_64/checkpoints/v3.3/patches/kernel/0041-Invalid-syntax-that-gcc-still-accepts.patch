@@ -1,0 +1,35 @@
+From 938cc4397d9a8ab6b8cdc1a8603891938e7d131b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:36 +0200
+Subject: [PATCH 41/48] Invalid syntax that gcc still accepts.
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ drivers/scsi/in2000.h |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/scsi/in2000.h b/drivers/scsi/in2000.h
+index 5821e1f..cd8d852 100644
+--- a/drivers/scsi/in2000.h
++++ b/drivers/scsi/in2000.h
+@@ -72,7 +72,7 @@ int __dummy_1,__dummy_2; \
+    orl %%ecx, %%ecx       \n \
+    jz 1f                  \n \
+    rep                    \n \
+-   insw (%%dx),%%es:(%%edi) \n \
++   insw %%dx,%%es:(%%edi) \n \
+ 1: "                       \
+    : "=D" (sp) ,"=c" (__dummy_1) ,"=d" (__dummy_2)  /* output */   \
+    : "2" (f), "0" (sp), "1" (i)  /* input */    \
+@@ -87,7 +87,7 @@ int __dummy_1,__dummy_2; \
+    orl %%ecx, %%ecx       \n \
+    jz 1f                  \n \
+    rep                    \n \
+-   outsw %%ds:(%%esi),(%%dx) \n \
++   outsw %%ds:(%%esi),%%dx \n \
+ 1: "                       \
+    : "=S" (sp) ,"=c" (__dummy_1) ,"=d" (__dummy_2)/* output */   \
+    : "2" (f), "0" (sp), "1" (i)  /* input */    \
+-- 
+1.7.3.4
+

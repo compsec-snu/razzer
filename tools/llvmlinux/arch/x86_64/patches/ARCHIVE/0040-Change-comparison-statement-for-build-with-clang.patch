@@ -1,0 +1,30 @@
+From 7b80adf9ffdac3d920270d15e7d9a3ea6aee2aa6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:03:13 +0100
+Subject: [PATCH 40/51] Change comparison statement for build with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ lib/dynamic_debug.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+--- linux.orig/lib/dynamic_debug.c
++++ linux/lib/dynamic_debug.c
+@@ -1033,7 +1033,7 @@
+ 	int n = 0, entries = 0, modct = 0;
+ 	int verbose_bytes = 0;
+ 
+-	if (__start___verbose == __stop___verbose) {
++	if (&__start___verbose == &__stop___verbose) {
+ 		pr_warn("_ddebug table is empty in a CONFIG_DYNAMIC_DEBUG build\n");
+ 		return 1;
+ 	}

@@ -1,0 +1,1 @@
+../syzkaller/rebuild.sh

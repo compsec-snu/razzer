@@ -1,0 +1,57 @@
+From 814235fde381a67a6388af48bcbc610b97b47a64 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:38:47 +0100
+Subject: [PATCH 16/51] Ad no-integrated-as to arch/x86/realmode/rm/Makefile.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/realmode/rm/Makefile |   12 ++++++++++--
+ 1 Datei geändert, 10 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+diff --git a/arch/x86/realmode/rm/Makefile b/arch/x86/realmode/rm/Makefile
+index 8869287..8e29781 100644
+--- a/arch/x86/realmode/rm/Makefile
++++ b/arch/x86/realmode/rm/Makefile
+@@ -19,6 +19,13 @@ wakeup-objs	+= video-vga.o
+ wakeup-objs	+= video-vesa.o
+ wakeup-objs	+= video-bios.o
+ 
++AFLAGS_wakeup_asm.o	= -no-integrated-as
++AFLAGS_bioscall.o	= -no-integrated-as
++AFLAGS_copy.o		= -no-integrated-as
++AFLAGS_trampoline_32.o	= -no-integrated-as
++AFLAGS_trampoline_64.o	= -no-integrated-as
++AFLAGS_reboot_32.o	= -no-integrated-as
++
+ realmode-y			+= header.o
+ realmode-y			+= trampoline_$(BITS).o
+ realmode-y			+= stack.o
+@@ -70,13 +77,14 @@ KBUILD_CFLAGS	:= $(LINUXINCLUDE) -m32 -g -Os -D_SETUP -D__KERNEL__ -D_WAKEUP \
+ 		   -I$(srctree)/arch/x86/boot \
+ 		   -DDISABLE_BRANCH_PROFILING \
+ 		   -Wall -Wstrict-prototypes \
+-		   -march=i386 -mregparm=3 \
++		   -march=i586 -mregparm=3 \
+ 		   -include $(srctree)/$(src)/../../boot/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   $(call cc-option, -ffreestanding) \
+ 		   $(call cc-option, -fno-toplevel-reorder,\
+ 			$(call cc-option, -fno-unit-at-a-time)) \
+ 		   $(call cc-option, -fno-stack-protector) \
+-		   $(call cc-option, -mpreferred-stack-boundary=2)
++		   $(call cc-option, -mpreferred-stack-boundary=2) \
++		   -no-integrated-as
+ KBUILD_AFLAGS	:= $(KBUILD_CFLAGS) -D__ASSEMBLY__
+ GCOV_PROFILE := n
+-- 
+1.7.10.4
+

@@ -1,0 +1,27 @@
+From c7f2471988749a2de23f5709512185fa2f379a14 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 20 Nov 2012 21:19:50 +0100
+Subject: [PATCH 09/39] LLVMLinux:
+ cmpxchg-local-fix-uninitialized-return-code.patch
+
+Fix uninitialized return code in default case in cmpxchg-local.h
+
+This patch fixes warning when compiling the Linux kernel with Clang.
+
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ include/asm-generic/cmpxchg-local.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- linux.orig/include/asm-generic/cmpxchg-local.h
++++ linux/include/asm-generic/cmpxchg-local.h
+@@ -41,6 +41,7 @@
+ 		break;
+ 	default:
+ 		wrong_size_cmpxchg(ptr);
++		prev = 0; /* Shut the compiler up */
+ 	}
+ 	raw_local_irq_restore(flags);
+ 	return prev;

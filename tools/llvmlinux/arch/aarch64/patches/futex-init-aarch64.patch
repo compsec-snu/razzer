@@ -1,0 +1,33 @@
+From fce53abf76dca656c4ae95d13bdb40b9b6e5e0c3 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Wed, 12 Feb 2014 12:16:58 -0800
+Subject: [PATCH] DO-NOT-UPSTREAM arm64: LLVMLinux: Check for NULL in
+ futext_atomic_cmpxchg_inatomic()
+
+futex_init passes in uaddr = 0. The LLVM optimizer will see
+that *uaddr is 0, set the register to xzr and compilation
+will fail.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm64/include/asm/futex.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/include/asm/futex.h b/arch/arm64/include/asm/futex.h
+index 5f750dc..9e5ed17 100644
+--- a/arch/arm64/include/asm/futex.h
++++ b/arch/arm64/include/asm/futex.h
+@@ -108,7 +108,8 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
+ 	int ret = 0;
+ 	u32 val, tmp;
+ 
+-	if (!access_ok(VERIFY_WRITE, uaddr, sizeof(u32)))
++	/* compiler may optimize uaddr to xzr if all uses are 0 which fails */
++	if (uaddr == 0 || !access_ok(VERIFY_WRITE, uaddr, sizeof(u32)))
+ 		return -EFAULT;
+ 
+ 	asm volatile("// futex_atomic_cmpxchg_inatomic\n"
+-- 
+1.9.1
+

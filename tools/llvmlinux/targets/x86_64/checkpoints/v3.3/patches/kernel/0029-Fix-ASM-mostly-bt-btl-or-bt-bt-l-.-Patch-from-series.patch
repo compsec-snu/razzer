@@ -1,0 +1,133 @@
+From e13a4e15e78325a6dedaf4a31ea2596a69444fb8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:03:23 +0200
+Subject: [PATCH 29/48] Fix ASM - mostly bt->btl or bt?->bt?l  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/include/asm/bitops.h |   26 +++++++++++++-------------
+ 1 files changed, 13 insertions(+), 13 deletions(-)
+
+diff --git a/arch/x86/include/asm/bitops.h b/arch/x86/include/asm/bitops.h
+index b97596e..e374c46 100644
+--- a/arch/x86/include/asm/bitops.h
++++ b/arch/x86/include/asm/bitops.h
+@@ -65,7 +65,7 @@ set_bit(unsigned int nr, volatile unsigned long *addr)
+ 			: "iq" ((u8)CONST_MASK(nr))
+ 			: "memory");
+ 	} else {
+-		asm volatile(LOCK_PREFIX "bts %1,%0"
++		asm volatile(LOCK_PREFIX "btsl %1,%0"
+ 			: BITOP_ADDR(addr) : "Ir" (nr) : "memory");
+ 	}
+ }
+@@ -81,7 +81,7 @@ set_bit(unsigned int nr, volatile unsigned long *addr)
+  */
+ static inline void __set_bit(int nr, volatile unsigned long *addr)
+ {
+-	asm volatile("bts %1,%0" : ADDR : "Ir" (nr) : "memory");
++	asm volatile("btsl %1,%0" : ADDR : "Ir" (nr) : "memory");
+ }
+ 
+ /**
+@@ -102,7 +102,7 @@ clear_bit(int nr, volatile unsigned long *addr)
+ 			: CONST_MASK_ADDR(nr, addr)
+ 			: "iq" ((u8)~CONST_MASK(nr)));
+ 	} else {
+-		asm volatile(LOCK_PREFIX "btr %1,%0"
++		asm volatile(LOCK_PREFIX "btrl %1,%0"
+ 			: BITOP_ADDR(addr)
+ 			: "Ir" (nr));
+ 	}
+@@ -124,7 +124,7 @@ static inline void clear_bit_unlock(unsigned nr, volatile unsigned long *addr)
+ 
+ static inline void __clear_bit(int nr, volatile unsigned long *addr)
+ {
+-	asm volatile("btr %1,%0" : ADDR : "Ir" (nr));
++	asm volatile("btrl %1,%0" : ADDR : "Ir" (nr));
+ }
+ 
+ /*
+@@ -196,7 +196,7 @@ static inline int test_and_set_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile(LOCK_PREFIX "bts %2,%1\n\t"
++	asm volatile(LOCK_PREFIX "btsl %2,%1\n\t"
+ 		     "sbb %0,%0" : "=r" (oldbit), ADDR : "Ir" (nr) : "memory");
+ 
+ 	return oldbit;
+@@ -228,7 +228,7 @@ static inline int __test_and_set_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm("bts %2,%1\n\t"
++	asm("btsl %2,%1\n\t"
+ 	    "sbb %0,%0"
+ 	    : "=r" (oldbit), ADDR
+ 	    : "Ir" (nr));
+@@ -247,7 +247,7 @@ static inline int test_and_clear_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile(LOCK_PREFIX "btr %2,%1\n\t"
++	asm volatile(LOCK_PREFIX "btrl %2,%1\n\t"
+ 		     "sbb %0,%0"
+ 		     : "=r" (oldbit), ADDR : "Ir" (nr) : "memory");
+ 
+@@ -267,7 +267,7 @@ static inline int __test_and_clear_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile("btr %2,%1\n\t"
++	asm volatile("btrl %2,%1\n\t"
+ 		     "sbb %0,%0"
+ 		     : "=r" (oldbit), ADDR
+ 		     : "Ir" (nr));
+@@ -279,7 +279,7 @@ static inline int __test_and_change_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile("btc %2,%1\n\t"
++	asm volatile("btcl %2,%1\n\t"
+ 		     "sbb %0,%0"
+ 		     : "=r" (oldbit), ADDR
+ 		     : "Ir" (nr) : "memory");
+@@ -299,7 +299,7 @@ static inline int test_and_change_bit(int nr, volatile unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile(LOCK_PREFIX "btc %2,%1\n\t"
++	asm volatile(LOCK_PREFIX "btcl %2,%1\n\t"
+ 		     "sbb %0,%0"
+ 		     : "=r" (oldbit), ADDR : "Ir" (nr) : "memory");
+ 
+@@ -316,7 +316,7 @@ static inline int variable_test_bit(int nr, volatile const unsigned long *addr)
+ {
+ 	int oldbit;
+ 
+-	asm volatile("bt %2,%1\n\t"
++	asm volatile("btl %2,%1\n\t"
+ 		     "sbb %0,%0"
+ 		     : "=r" (oldbit)
+ 		     : "m" (*(unsigned long *)addr), "Ir" (nr));
+@@ -408,7 +408,7 @@ static inline int ffs(int x)
+ 	 * We cannot do this on 32 bits because at the very least some
+ 	 * 486 CPUs did not behave this way.
+ 	 */
+-	long tmp = -1;
++	int tmp = -1;
+ 	asm("bsfl %1,%0"
+ 	    : "=r" (r)
+ 	    : "rm" (x), "0" (tmp));
+@@ -450,7 +450,7 @@ static inline int fls(int x)
+ 	 * We cannot do this on 32 bits because at the very least some
+ 	 * 486 CPUs did not behave this way.
+ 	 */
+-	long tmp = -1;
++	int tmp = -1;
+ 	asm("bsrl %1,%0"
+ 	    : "=r" (r)
+ 	    : "rm" (x), "0" (tmp));
+-- 
+1.7.3.4
+

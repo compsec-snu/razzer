@@ -1,0 +1,88 @@
+From 53fc560d96499836be7dd214f101660a2103f5eb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:45 +0200
+Subject: [PATCH 05/11] Revert "powerpc: uaccess s/might_sleep/might_fault/"
+
+This reverts commit 1af1717dbf96eba8a74a2d6a99e75a7795075a02.
+---
+ arch/powerpc/include/asm/uaccess.h | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/arch/powerpc/include/asm/uaccess.h b/arch/powerpc/include/asm/uaccess.h
+index 9485b43..4db4959 100644
+--- a/arch/powerpc/include/asm/uaccess.h
++++ b/arch/powerpc/include/asm/uaccess.h
+@@ -178,7 +178,7 @@ do {								\
+ 	long __pu_err;						\
+ 	__typeof__(*(ptr)) __user *__pu_addr = (ptr);		\
+ 	if (!is_kernel_addr((unsigned long)__pu_addr))		\
+-		might_fault();					\
++		might_sleep();					\
+ 	__chk_user_ptr(ptr);					\
+ 	__put_user_size((x), __pu_addr, (size), __pu_err);	\
+ 	__pu_err;						\
+@@ -188,7 +188,7 @@ do {								\
+ ({									\
+ 	long __pu_err = -EFAULT;					\
+ 	__typeof__(*(ptr)) __user *__pu_addr = (ptr);			\
+-	might_fault();							\
++	might_sleep();							\
+ 	if (access_ok(VERIFY_WRITE, __pu_addr, size))			\
+ 		__put_user_size((x), __pu_addr, (size), __pu_err);	\
+ 	__pu_err;							\
+@@ -268,7 +268,7 @@ do {								\
+ 	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);	\
+ 	__chk_user_ptr(ptr);					\
+ 	if (!is_kernel_addr((unsigned long)__gu_addr))		\
+-		might_fault();					\
++		might_sleep();					\
+ 	__get_user_size(__gu_val, __gu_addr, (size), __gu_err);	\
+ 	(x) = (__typeof__(*(ptr)))__gu_val;			\
+ 	__gu_err;						\
+@@ -282,7 +282,7 @@ do {								\
+ 	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);	\
+ 	__chk_user_ptr(ptr);					\
+ 	if (!is_kernel_addr((unsigned long)__gu_addr))		\
+-		might_fault();					\
++		might_sleep();					\
+ 	__get_user_size(__gu_val, __gu_addr, (size), __gu_err);	\
+ 	(x) = (__typeof__(*(ptr)))__gu_val;			\
+ 	__gu_err;						\
+@@ -294,7 +294,7 @@ do {								\
+ 	long __gu_err = -EFAULT;					\
+ 	unsigned long  __gu_val = 0;					\
+ 	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);		\
+-	might_fault();							\
++	might_sleep();							\
+ 	if (access_ok(VERIFY_READ, __gu_addr, (size)))			\
+ 		__get_user_size(__gu_val, __gu_addr, (size), __gu_err);	\
+ 	(x) = (__typeof__(*(ptr)))__gu_val;				\
+@@ -419,14 +419,14 @@ static inline unsigned long __copy_to_user_inatomic(void __user *to,
+ static inline unsigned long __copy_from_user(void *to,
+ 		const void __user *from, unsigned long size)
+ {
+-	might_fault();
++	might_sleep();
+ 	return __copy_from_user_inatomic(to, from, size);
+ }
+ 
+ static inline unsigned long __copy_to_user(void __user *to,
+ 		const void *from, unsigned long size)
+ {
+-	might_fault();
++	might_sleep();
+ 	return __copy_to_user_inatomic(to, from, size);
+ }
+ 
+@@ -434,7 +434,7 @@ extern unsigned long __clear_user(void __user *addr, unsigned long size);
+ 
+ static inline unsigned long clear_user(void __user *addr, unsigned long size)
+ {
+-	might_fault();
++	might_sleep();
+ 	if (likely(access_ok(VERIFY_WRITE, addr, size)))
+ 		return __clear_user(addr, size);
+ 	if ((unsigned long)addr < TASK_SIZE) {
+-- 
+1.8.1.4
+

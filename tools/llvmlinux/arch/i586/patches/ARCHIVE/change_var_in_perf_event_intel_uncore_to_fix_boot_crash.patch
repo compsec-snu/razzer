@@ -1,0 +1,62 @@
+commit 1b0dac2ac6debdbf1541e15f2cede03613cf4465
+Author: Jan-Simon Möller <dl9pf@gmx.de>
+Date:   Tue Apr 30 12:02:33 2013 +0200
+
+    perf/x86/intel: Fix unintended variable name reuse
+    
+    The variable name events_group is already in used and led to a
+    compilation error when using clang to build the Linux Kernel .
+    The fix is just to rename the var. No functional change. Please
+    apply.
+    
+    Fix suggested in discussion by PaX Team <pageexec@freemail.hu>
+    
+    Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+    Cc: rostedt@goodmis.org
+    Cc: a.p.zijlstra@chello.nl
+    Cc: paulus@samba.org
+    Cc: acme@ghostprotocols.net
+    Link: http://lkml.kernel.org/r/1367316153-14808-1-git-send-email-dl9pf@gmx.de
+    Cc: <stable@kernel.org>
+    Signed-off-by: Ingo Molnar <mingo@kernel.org>
+
+diff --git a/arch/x86/kernel/cpu/perf_event_intel_uncore.c b/arch/x86/kernel/cpu/perf_event_intel_uncore.c
+index 22ebaa8..45f6d13 100644
+--- a/arch/x86/kernel/cpu/perf_event_intel_uncore.c
++++ b/arch/x86/kernel/cpu/perf_event_intel_uncore.c
+@@ -2428,7 +2428,7 @@ static void __init uncore_types_exit(struct intel_uncore_type **types)
+ static int __init uncore_type_init(struct intel_uncore_type *type)
+ {
+ 	struct intel_uncore_pmu *pmus;
+-	struct attribute_group *events_group;
++	struct attribute_group *attr_group;
+ 	struct attribute **attrs;
+ 	int i, j;
+ 
+@@ -2455,19 +2455,19 @@ static int __init uncore_type_init(struct intel_uncore_type *type)
+ 		while (type->event_descs[i].attr.attr.name)
+ 			i++;
+ 
+-		events_group = kzalloc(sizeof(struct attribute *) * (i + 1) +
+-					sizeof(*events_group), GFP_KERNEL);
+-		if (!events_group)
++		attr_group = kzalloc(sizeof(struct attribute *) * (i + 1) +
++					sizeof(*attr_group), GFP_KERNEL);
++		if (!attr_group)
+ 			goto fail;
+ 
+-		attrs = (struct attribute **)(events_group + 1);
+-		events_group->name = "events";
+-		events_group->attrs = attrs;
++		attrs = (struct attribute **)(attr_group + 1);
++		attr_group->name = "events";
++		attr_group->attrs = attrs;
+ 
+ 		for (j = 0; j < i; j++)
+ 			attrs[j] = &type->event_descs[j].attr.attr;
+ 
+-		type->events_group = events_group;
++		type->events_group = attr_group;
+ 	}
+ 
+ 	type->pmu_group = &uncore_pmu_attr_group;

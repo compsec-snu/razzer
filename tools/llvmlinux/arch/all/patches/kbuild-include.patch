@@ -1,0 +1,32 @@
+From b3486cb0d6b019971db4e6e4bdfb0fabf97ff89c Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Sat, 20 Sep 2014 00:14:36 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM LLVMLinux: Output all cc-option commands to a temp file
+
+This patch captures all commands (and results) used by the cc-option (and other
+related) macros.
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+
+---
+ scripts/Kbuild.include | 18 +++++++++++-------
+ 1 file changed, 11 insertions(+), 7 deletions(-)
+
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 8a9a4e1..83ec4f1 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -90,8 +90,8 @@ try-run = $(shell set -e;		\
+ 	TMP="$(TMPOUT).$$$$.tmp";	\
+ 	TMPO="$(TMPOUT).$$$$.o";	\
+ 	if ($(1)) >/dev/null 2>&1;	\
+-	then echo "$(2)";		\
+-	else echo "$(3)";		\
++	then echo "$(2)"; echo '$(1) => 0 ([$(2)], not [$(3)])' 2>&1 >>/tmp/cc-option.txt;		\
++	else echo "$(3)"; echo '$(1) => 1 ([$(3)], not [$(2)])' 2>&1 >>/tmp/cc-option.txt;		\
+ 	fi;				\
+ 	rm -f "$$TMP" "$$TMPO")
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,25 @@
+From 1171ca675cf758cee67cab2c9550974d5caa815a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 12:18:45 +0200
+Subject: [PATCH 03/48] Change section from __initdata to __init of include/acpi/acpiosxf.h . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ include/acpi/acpiosxf.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/acpi/acpiosxf.h b/include/acpi/acpiosxf.h
+index 7c9aebe..ae8bad3 100644
+--- a/include/acpi/acpiosxf.h
++++ b/include/acpi/acpiosxf.h
+@@ -78,7 +78,7 @@ struct acpi_signal_fatal_info {
+ /*
+  * OSL Initialization and shutdown primitives
+  */
+-acpi_status __initdata acpi_os_initialize(void);
++acpi_status __init acpi_os_initialize(void);
+ 
+ acpi_status acpi_os_terminate(void);
+ 
+-- 
+1.7.3.4
+

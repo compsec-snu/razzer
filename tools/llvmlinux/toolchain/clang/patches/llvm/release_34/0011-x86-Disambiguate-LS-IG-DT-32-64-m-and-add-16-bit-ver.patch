@@ -1,0 +1,263 @@
+From ec4af65d5fc5f46d9a56d6621de3516d9f27de3e Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:57:55 +0000
+Subject: [PATCH 11/26] [x86] Disambiguate [LS][IG]DT{32,64}m and add 16-bit
+ versions, fix aliases
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198755 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 1c75f15a60f83ad520cea34143aa21507ea46336)
+---
+ lib/Target/X86/X86InstrInfo.td   | 20 ++++++++++-------
+ lib/Target/X86/X86InstrSystem.td | 24 +++++++++++++-------
+ test/MC/X86/x86-16.s             | 48 ++++++++++++++++++++++++++++++++++++++++
+ test/MC/X86/x86-32.s             | 16 +++++++-------
+ test/MC/X86/x86-64.s             | 16 +++++++-------
+ 5 files changed, 92 insertions(+), 32 deletions(-)
+
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index 29aaaf7..f4c6eb4 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -2193,14 +2193,18 @@ def : MnemonicAlias<"iret",    "iretl",    "att">;
+ def : MnemonicAlias<"sysret",  "sysretl",  "att">;
+ def : MnemonicAlias<"sysexit", "sysexitl", "att">;
+ 
+-def : MnemonicAlias<"lgdtl", "lgdt", "att">, Requires<[Not64BitMode]>;
+-def : MnemonicAlias<"lgdtq", "lgdt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"lidtl", "lidt", "att">, Requires<[Not64BitMode]>;
+-def : MnemonicAlias<"lidtq", "lidt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"sgdtl", "sgdt", "att">, Requires<[Not64BitMode]>;
+-def : MnemonicAlias<"sgdtq", "sgdt", "att">, Requires<[In64BitMode]>;
+-def : MnemonicAlias<"sidtl", "sidt", "att">, Requires<[Not64BitMode]>;
+-def : MnemonicAlias<"sidtq", "sidt", "att">, Requires<[In64BitMode]>;
++def : MnemonicAlias<"lgdt", "lgdtw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"lgdt", "lgdtl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"lgdt", "lgdtq", "att">, Requires<[In64BitMode]>;
++def : MnemonicAlias<"lidt", "lidtw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"lidt", "lidtl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"lidt", "lidtq", "att">, Requires<[In64BitMode]>;
++def : MnemonicAlias<"sgdt", "sgdtw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"sgdt", "sgdtl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"sgdt", "sgdtq", "att">, Requires<[In64BitMode]>;
++def : MnemonicAlias<"sidt", "sidtw", "att">, Requires<[In16BitMode]>;
++def : MnemonicAlias<"sidt", "sidtl", "att">, Requires<[In32BitMode]>;
++def : MnemonicAlias<"sidt", "sidtq", "att">, Requires<[In64BitMode]>;
+ 
+ 
+ // Floating point stack aliases.
+diff --git a/lib/Target/X86/X86InstrSystem.td b/lib/Target/X86/X86InstrSystem.td
+index 90a51c8..6b47240 100644
+--- a/lib/Target/X86/X86InstrSystem.td
++++ b/lib/Target/X86/X86InstrSystem.td
+@@ -379,12 +379,16 @@ def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg),
+ let SchedRW = [WriteSystem] in {
+ def SGDT16m : I<0x01, MRM0m, (outs opaque48mem:$dst), (ins),
+               "sgdt{w}\t$dst", [], IIC_SGDT>, TB, OpSize, Requires<[Not64BitMode]>;
+-def SGDTm : I<0x01, MRM0m, (outs opaque48mem:$dst), (ins),
+-              "sgdt\t$dst", [], IIC_SGDT>, OpSize16, TB;
++def SGDT32m : I<0x01, MRM0m, (outs opaque48mem:$dst), (ins),
++              "sgdt{l}\t$dst", [], IIC_SGDT>, OpSize16, TB, Requires <[Not64BitMode]>;
++def SGDT64m : I<0x01, MRM0m, (outs opaque80mem:$dst), (ins),
++              "sgdt{q}\t$dst", [], IIC_SGDT>, TB, Requires <[In64BitMode]>;
+ def SIDT16m : I<0x01, MRM1m, (outs opaque48mem:$dst), (ins),
+               "sidt{w}\t$dst", [], IIC_SIDT>, TB, OpSize, Requires<[Not64BitMode]>;
+-def SIDTm : I<0x01, MRM1m, (outs opaque48mem:$dst), (ins),
+-              "sidt\t$dst", []>, OpSize16, TB;
++def SIDT32m : I<0x01, MRM1m, (outs opaque48mem:$dst), (ins),
++              "sidt{l}\t$dst", []>, OpSize16, TB, Requires <[Not64BitMode]>;
++def SIDT64m : I<0x01, MRM1m, (outs opaque80mem:$dst), (ins),
++              "sidt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
+ def SLDT16r : I<0x00, MRM0r, (outs GR16:$dst), (ins),
+                 "sldt{w}\t$dst", [], IIC_SLDT>, TB, OpSize;
+ def SLDT16m : I<0x00, MRM0m, (outs i16mem:$dst), (ins),
+@@ -401,12 +405,16 @@ def SLDT64m : RI<0x00, MRM0m, (outs i16mem:$dst), (ins),
+ 
+ def LGDT16m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+               "lgdt{w}\t$src", [], IIC_LGDT>, TB, OpSize, Requires<[Not64BitMode]>;
+-def LGDTm : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+-              "lgdt\t$src", [], IIC_LGDT>, OpSize16, TB;
++def LGDT32m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
++              "lgdt{l}\t$src", [], IIC_LGDT>, OpSize16, TB, Requires<[Not64BitMode]>;
++def LGDT64m : I<0x01, MRM2m, (outs), (ins opaque80mem:$src),
++              "lgdt{q}\t$src", [], IIC_LGDT>, TB, Requires<[In64BitMode]>;
+ def LIDT16m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+               "lidt{w}\t$src", [], IIC_LIDT>, TB, OpSize, Requires<[Not64BitMode]>;
+-def LIDTm : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+-              "lidt\t$src", [], IIC_LIDT>, OpSize16, TB;
++def LIDT32m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
++              "lidt{l}\t$src", [], IIC_LIDT>, OpSize16, TB, Requires<[Not64BitMode]>;
++def LIDT64m : I<0x01, MRM3m, (outs), (ins opaque80mem:$src),
++              "lidt{q}\t$src", [], IIC_LIDT>, TB, Requires<[In64BitMode]>;
+ def LLDT16r : I<0x00, MRM2r, (outs), (ins GR16:$src),
+                 "lldt{w}\t$src", [], IIC_LLDT_REG>, TB;
+ def LLDT16m : I<0x00, MRM2m, (outs), (ins i16mem:$src),
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 082e5d0..bb1aa4a 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -583,6 +583,54 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x67,0x63,0x59,0x06]
+         	arpl	%bx,6(%ecx)
+ 
++// CHECK: lgdtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
++        	lgdtw	4(%eax)
++
++// CHECK: lgdtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
++        	lgdt	4(%eax)
++
++// CHECK: lgdtl	4(%eax)
++// CHECK:  encoding: [0x67,0x66,0x0f,0x01,0x50,0x04]
++        	lgdtl	4(%eax)
++
++// CHECK: lidtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x58,0x04]
++        	lidtw	4(%eax)
++
++// CHECK: lidtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x58,0x04]
++        	lidt	4(%eax)
++
++// CHECK: lidtl	4(%eax)
++// CHECK:  encoding: [0x67,0x66,0x0f,0x01,0x58,0x04]
++        	lidtl	4(%eax)
++
++// CHECK: sgdtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x40,0x04]
++        	sgdtw	4(%eax)
++
++// CHECK: sgdtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x40,0x04]
++        	sgdt	4(%eax)
++
++// CHECK: sgdtl	4(%eax)
++// CHECK:  encoding: [0x67,0x66,0x0f,0x01,0x40,0x04]
++        	sgdtl	4(%eax)
++
++// CHECK: sidtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x48,0x04]
++        	sidtw	4(%eax)
++
++// CHECK: sidtw	4(%eax)
++// CHECK:  encoding: [0x67,0x0f,0x01,0x48,0x04]
++        	sidt	4(%eax)
++
++// CHECK: sidtl	4(%eax)
++// CHECK:  encoding: [0x67,0x66,0x0f,0x01,0x48,0x04]
++        	sidtl	4(%eax)
++
+ // CHECK: fcompi	%st(2)
+ // CHECK:  encoding: [0xdf,0xf2]
+         	fcompi	%st(2), %st
+diff --git a/test/MC/X86/x86-32.s b/test/MC/X86/x86-32.s
+index d224e35..1ce2d49 100644
+--- a/test/MC/X86/x86-32.s
++++ b/test/MC/X86/x86-32.s
+@@ -719,11 +719,11 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x66,0x0f,0x01,0x50,0x04]
+         	lgdtw	4(%eax)
+ 
+-// CHECK: lgdt	4(%eax)
++// CHECK: lgdtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+         	lgdt	4(%eax)
+ 
+-// CHECK: lgdt	4(%eax)
++// CHECK: lgdtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+         	lgdtl	4(%eax)
+ 
+@@ -731,11 +731,11 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x66,0x0f,0x01,0x58,0x04]
+         	lidtw	4(%eax)
+ 
+-// CHECK: lidt	4(%eax)
++// CHECK: lidtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x58,0x04]
+         	lidt	4(%eax)
+ 
+-// CHECK: lidt	4(%eax)
++// CHECK: lidtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x58,0x04]
+         	lidtl	4(%eax)
+ 
+@@ -743,11 +743,11 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x66,0x0f,0x01,0x40,0x04]
+         	sgdtw	4(%eax)
+ 
+-// CHECK: sgdt	4(%eax)
++// CHECK: sgdtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x40,0x04]
+         	sgdt	4(%eax)
+ 
+-// CHECK: sgdt	4(%eax)
++// CHECK: sgdtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x40,0x04]
+         	sgdtl	4(%eax)
+ 
+@@ -755,11 +755,11 @@ pshufw $90, %mm4, %mm0
+ // CHECK:  encoding: [0x66,0x0f,0x01,0x48,0x04]
+         	sidtw	4(%eax)
+ 
+-// CHECK: sidt	4(%eax)
++// CHECK: sidtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x48,0x04]
+         	sidt	4(%eax)
+ 
+-// CHECK: sidt	4(%eax)
++// CHECK: sidtl	4(%eax)
+ // CHECK:  encoding: [0x0f,0x01,0x48,0x04]
+         	sidtl	4(%eax)
+ 
+diff --git a/test/MC/X86/x86-64.s b/test/MC/X86/x86-64.s
+index 6b41f48..28035c0 100644
+--- a/test/MC/X86/x86-64.s
++++ b/test/MC/X86/x86-64.s
+@@ -951,35 +951,35 @@ decw %ax  // CHECK:	decw	%ax # encoding: [0x66,0xff,0xc8]
+ decl %eax // CHECK:	decl	%eax # encoding: [0xff,0xc8]
+ 
+ // rdar://8416805
+-// CHECK: lgdt	4(%rax)
++// CHECK: lgdtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+         	lgdt	4(%rax)
+ 
+-// CHECK: lgdt	4(%rax)
++// CHECK: lgdtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+         	lgdtq	4(%rax)
+ 
+-// CHECK: lidt	4(%rax)
++// CHECK: lidtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x58,0x04]
+         	lidt	4(%rax)
+ 
+-// CHECK: lidt	4(%rax)
++// CHECK: lidtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x58,0x04]
+         	lidtq	4(%rax)
+ 
+-// CHECK: sgdt	4(%rax)
++// CHECK: sgdtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x40,0x04]
+         	sgdt	4(%rax)
+ 
+-// CHECK: sgdt	4(%rax)
++// CHECK: sgdtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x40,0x04]
+         	sgdtq	4(%rax)
+ 
+-// CHECK: sidt	4(%rax)
++// CHECK: sidtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x48,0x04]
+         	sidt	4(%rax)
+ 
+-// CHECK: sidt	4(%rax)
++// CHECK: sidtq	4(%rax)
+ // CHECK:  encoding: [0x0f,0x01,0x48,0x04]
+         	sidtq	4(%rax)
+ 
+-- 
+1.8.4
+

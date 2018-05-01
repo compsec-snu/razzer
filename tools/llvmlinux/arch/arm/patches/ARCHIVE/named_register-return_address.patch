@@ -1,0 +1,43 @@
+From 1d1b1451f38c1723da17dd56ffbc92047c7c616a Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:27 -0400
+Subject: [PATCH] arm: LLVMLinux: Use current_stack_pointer for return_address
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the global current_stack_pointer to get the value of the stack pointer.
+This change supports being able to compile the kernel with both gcc and Clang.
+
+KernelVersion: 3.17.0-rc6
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Acked-by: Will Deacon <will.deacon@arm.com>
+Acked-by: Nicolas Pitre <nico@linaro.org>
+---
+ arch/arm/kernel/return_address.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/kernel/return_address.c b/arch/arm/kernel/return_address.c
+index f6aa84d..b7de88a 100644
+--- a/arch/arm/kernel/return_address.c
++++ b/arch/arm/kernel/return_address.c
+@@ -39,13 +39,12 @@ void *return_address(unsigned int level)
+ {
+ 	struct return_address_data data;
+ 	struct stackframe frame;
+-	register unsigned long current_sp asm ("sp");
+ 
+ 	data.level = level + 2;
+ 	data.addr = NULL;
+ 
+ 	frame.fp = (unsigned long)__builtin_frame_address(0);
+-	frame.sp = current_sp;
++	frame.sp = current_stack_pointer;
+ 	frame.lr = (unsigned long)__builtin_return_address(0);
+ 	frame.pc = (unsigned long)return_address;
+ 
+-- 
+1.9.1
+

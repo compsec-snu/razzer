@@ -1,0 +1,40 @@
+From 5a0a1dbac3923abb06ebe2a6c5a741c6d34c4c93 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 11:37:57 +0100
+Subject: [PATCH 27/39] Kbuild: LLVMLinux: Add no-integrated-as to
+ arch/x86/boot/Makefile for compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The clang integrated assembler (IA) doesn't support .code16, as a result we
+turn it off and use gas instead.
+
+Author:  PaX Team <pageexec@freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+Merge:   Jan-Simon Möller <dl9pf@gmx.de>
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/boot/Makefile | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+--- linux.orig/arch/x86/boot/Makefile
++++ linux/arch/x86/boot/Makefile
+@@ -68,6 +68,15 @@
+ KBUILD_AFLAGS	:= $(KBUILD_CFLAGS) -D__ASSEMBLY__
+ GCOV_PROFILE := n
+ 
++
++# For clang we need to rely on no-integrated-as for .code16 . We use gas.
++ifeq ($(COMPILER),clang)
++KBUILD_CFLAGS  += -Wno-unused-value -Wno-unused-parameter -mno-sse \
++                  $(call cc-option,-no-integrated-as,)
++KBUILD_AFLAGS	:= $(KBUILD_CFLAGS) -D__ASSEMBLY__
++endif
++
++
+ $(obj)/bzImage: asflags-y  := $(SVGA_MODE)
+ 
+ quiet_cmd_image = BUILD   $@

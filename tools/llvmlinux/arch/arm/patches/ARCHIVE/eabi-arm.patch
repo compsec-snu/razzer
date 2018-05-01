@@ -1,0 +1,89 @@
+From 259cf9515c3e3d36699d1da419262731ec78155f Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 3 Sep 2013 22:27:26 -0400
+Subject: [PATCH] DO-NOT-UPSTREAM arm: LLVMLinux: Provide __aeabi_* symbols
+ which are needed for clang
+
+These symbols are required when compiling the Linux kernel for arch ARM with
+clang.
+
+KernelVersion:
+Author: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm/lib/Makefile |  4 ++++
+ arch/arm/lib/eabi.c   | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 50 insertions(+)
+ create mode 100644 arch/arm/lib/eabi.c
+
+diff --git a/arch/arm/lib/Makefile b/arch/arm/lib/Makefile
+index d8a7807..6c7a5b7 100644
+--- a/arch/arm/lib/Makefile
++++ b/arch/arm/lib/Makefile
+@@ -15,6 +15,10 @@ lib-y		:= backtrace.o changebit.o csumipv6.o csumpartial.o   \
+ 		   io-readsb.o io-writesb.o io-readsl.o io-writesl.o  \
+ 		   call_with_stack.o bswapsdi2.o
+ 
++ifeq ($(COMPILER),clang)
++lib-y += eabi.o
++endif
++
+ mmu-y		:= clear_user.o copy_page.o getuser.o putuser.o       \
+ 		   copy_from_user.o copy_to_user.o
+ 
+diff --git a/arch/arm/lib/eabi.c b/arch/arm/lib/eabi.c
+new file mode 100644
+index 0000000..d8281c1
+--- /dev/null
++++ b/arch/arm/lib/eabi.c
+@@ -0,0 +1,46 @@
++/*
++ * EABI routines
++ *
++ *  Copyright (C) 2012  Mark Charlebois
++ */
++
++#include <linux/types.h>
++#include <linux/string.h>
++#include <linux/ctype.h>
++#include <linux/export.h>
++
++void __aeabi_memcpy(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy);
++
++void __aeabi_memcpy4(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy4);
++
++void __aeabi_memcpy8(void *dest, const void *src, size_t n)
++{
++	(void)memcpy(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memcpy8);
++
++void __aeabi_memmove(void *dest, const void *src, size_t n)
++{
++	(void)memmove(dest, src, n);
++}
++EXPORT_SYMBOL(__aeabi_memmove);
++
++void __aeabi_memset(void *s, size_t n, int c)
++{
++	(void)memset(s, c, n);
++}
++EXPORT_SYMBOL(__aeabi_memset);
++
++void __aeabi_memclr8(void *s, size_t n)
++{
++	(void)memset(s, 0, n);
++}
++EXPORT_SYMBOL(__aeabi_memclr8);
+-- 
+1.9.1
+

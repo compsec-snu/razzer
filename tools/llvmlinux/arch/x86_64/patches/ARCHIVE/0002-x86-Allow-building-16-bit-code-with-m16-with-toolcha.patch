@@ -1,0 +1,48 @@
+From a8b6411b1d86794cf1b7e0894a583addb4497b99 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Wed, 8 Jan 2014 11:21:22 +0000
+Subject: [PATCH 02/10] x86: Allow building 16-bit code with -m16 with
+ toolchains that support it
+
+I have this working with LLVM/Clang, and a PR is filed for GCC because
+the current hacks we have to do to *try* to ensure that .code16gcc is
+the first thing in the asm output are horrid.
+
+Signed-off-by: David Woodhouse <David.Woodhouse@intel.com>
+---
+ arch/x86/Makefile | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 83e67d5..eccbead 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -13,14 +13,21 @@ endif
+ 
+ # How to compile the 16-bit code.  Note we always compile for -march=i386;
+ # that way we can complain to the user if the CPU is insufficient.
+-REALMODE_CFLAGS	:= -m32 -g -Os -D__KERNEL__ -DDISABLE_BRANCH_PROFILING \
++#
++# We really want GCC to have a -m16 option like clang, so that we don't
++# have to play these evil and unreliable tricks to ensure that our
++# asm(".code16gcc") is first in the asm output. http://gcc.gnu.org/PR59672
++CODE16GCC_CFLAGS := -m32 -include $(srctree)/arch/x86/boot/code16gcc.h \
++		    $(call cc-option, -fno-toplevel-reorder,\
++		      $(call cc-option, -fno-unit-at-a-time))
++M16_CFLAGS	 := -m16
++
++REALMODE_CFLAGS	:= -g -Os -D__KERNEL__ -DDISABLE_BRANCH_PROFILING \
++		   $(call cc-option, $(M16_CFLAGS), $(CODE16GCC_CFLAGS)) \
+ 		   -Wall -Wstrict-prototypes -march=i686 -mregparm=3 \
+-		   -include $(srctree)/arch/x86/boot/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   -mno-mmx -mno-sse \
+ 		   $(call cc-option, -ffreestanding) \
+-		   $(call cc-option, -fno-toplevel-reorder,\
+-		   $(call cc-option, -fno-unit-at-a-time)) \
+ 		   $(call cc-option, -fno-stack-protector) \
+ 		   $(call cc-option, -mpreferred-stack-boundary=2)
+ export REALMODE_CFLAGS
+-- 
+1.8.1.4
+

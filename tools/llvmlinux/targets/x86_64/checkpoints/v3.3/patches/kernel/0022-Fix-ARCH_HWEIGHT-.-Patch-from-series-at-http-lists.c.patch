@@ -1,0 +1,71 @@
+From 388403804e8f63fd097dfe298f83caac30558302 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:41:27 +0200
+Subject: [PATCH 22/48] Fix  ARCH_HWEIGHT  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/Kconfig                    |    8 ++++----
+ arch/x86/include/asm/arch_hweight.h |   16 ++--------------
+ 2 files changed, 6 insertions(+), 18 deletions(-)
+
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 5bed94e..6067533 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -228,10 +228,10 @@ config X86_32_LAZY_GS
+ 	def_bool y
+ 	depends on X86_32 && !CC_STACKPROTECTOR
+ 
+-config ARCH_HWEIGHT_CFLAGS
+-	string
+-	default "-fcall-saved-ecx -fcall-saved-edx" if X86_32
+-	default "-fcall-saved-rdi -fcall-saved-rsi -fcall-saved-rdx -fcall-saved-rcx -fcall-saved-r8 -fcall-saved-r9 -fcall-saved-r10 -fcall-saved-r11" if X86_64
++#config ARCH_HWEIGHT_CFLAGS
++#	string
++#	default "-fcall-saved-ecx -fcall-saved-edx" if X86_32
++#	default "-fcall-saved-rdi -fcall-saved-rsi -fcall-saved-rdx -fcall-saved-rcx -fcall-saved-r8 -fcall-saved-r9 -fcall-saved-r10 -fcall-saved-r11" if X86_64
+ 
+ config KTIME_SCALAR
+ 	def_bool X86_32
+diff --git a/arch/x86/include/asm/arch_hweight.h b/arch/x86/include/asm/arch_hweight.h
+index 9686c3d..5b85627 100644
+--- a/arch/x86/include/asm/arch_hweight.h
++++ b/arch/x86/include/asm/arch_hweight.h
+@@ -23,13 +23,7 @@
+  */
+ static inline unsigned int __arch_hweight32(unsigned int w)
+ {
+-	unsigned int res = 0;
+-
+-	asm (ALTERNATIVE("call __sw_hweight32", POPCNT32, X86_FEATURE_POPCNT)
+-		     : "="REG_OUT (res)
+-		     : REG_IN (w));
+-
+-	return res;
++	return __sw_hweight32(w);
+ }
+ 
+ static inline unsigned int __arch_hweight16(unsigned int w)
+@@ -44,18 +38,12 @@ static inline unsigned int __arch_hweight8(unsigned int w)
+ 
+ static inline unsigned long __arch_hweight64(__u64 w)
+ {
+-	unsigned long res = 0;
+-
+ #ifdef CONFIG_X86_32
+ 	return  __arch_hweight32((u32)w) +
+ 		__arch_hweight32((u32)(w >> 32));
+ #else
+-	asm (ALTERNATIVE("call __sw_hweight64", POPCNT64, X86_FEATURE_POPCNT)
+-		     : "="REG_OUT (res)
+-		     : REG_IN (w));
++	return __sw_hweight64(w);
+ #endif /* CONFIG_X86_32 */
+-
+-	return res;
+ }
+ 
+ #endif
+-- 
+1.7.3.4
+

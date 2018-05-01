@@ -1,0 +1,25 @@
+Clang is broken upstream for the READ_ONCE macro
+
+This is a hack to allow the kernel to compile so other errors can be fixed
+
+This patch can be removed when the bug has been fixed.
+
+DO NOT UPSTREAM THIS PATCH
+
+diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+index e08a6ae..7f663d5 100644
+--- a/include/linux/compiler.h
++++ b/include/linux/compiler.h
+@@ -248,8 +248,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
+  * required ordering.
+  */
+ 
+-#define READ_ONCE(x) \
+-	({ union { typeof(x) __val; char __c[1]; } __u; __read_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })
++//#define READ_ONCE(x) \
++//	({ union { typeof(x) __val; char __c[1]; } __u; __read_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })
++// FIXME - Clang fails to compile the READ_ONCE macro
++#define READ_ONCE(x) x
+ 
+ #define WRITE_ONCE(x, val) \
+ 	({ union { typeof(x) __val; char __c[1]; } __u = { .__val = (val) }; __write_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })

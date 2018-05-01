@@ -1,0 +1,40 @@
+From 59fa5860204ffc95128d60cba9f54f9740a42c7d Mon Sep 17 00:00:00 2001
+From: Matt Redfearn <matt.redfearn@imgtec.com>
+Date: Tue, 24 May 2016 11:42:30 +0100
+Subject: [PATCH] genirq: Fix missing return value in irq_destroy_ipi()
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Commit 7cec18a3906b changed the return type of irq_destroy_ipi to int, but
+missed adding a value to one return statement. Fix this to silence the
+resulting compiler warning:
+
+kernel/irq/ipi.c In function ‘irq_destroy_ipi’:
+kernel/irq/ipi.c:128:3: warning: ‘return’ with no value, in function returning non-void [-Wreturn-type]
+
+Fixes: 7cec18a3906b "genirq: Add error code reporting to irq_{reserve,destroy}_ipi"
+Signed-off-by: Matt Redfearn <matt.redfearn@imgtec.com>
+Cc: linux-mips@linux-mips.org
+Link: http://lkml.kernel.org/r/1464086550-24734-1-git-send-email-matt.redfearn@imgtec.com
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+---
+ kernel/irq/ipi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/kernel/irq/ipi.c b/kernel/irq/ipi.c
+index c427422..89b49f6 100644
+--- a/kernel/irq/ipi.c
++++ b/kernel/irq/ipi.c
+@@ -125,7 +125,7 @@ int irq_destroy_ipi(unsigned int irq, const struct cpumask *dest)
+ 
+ 	domain = data->domain;
+ 	if (WARN_ON(domain == NULL))
+-		return;
++		return -EINVAL;
+ 
+ 	if (!irq_domain_is_ipi(domain)) {
+ 		pr_warn("Trying to destroy a non IPI domain!\n");
+-- 
+2.1.4
+

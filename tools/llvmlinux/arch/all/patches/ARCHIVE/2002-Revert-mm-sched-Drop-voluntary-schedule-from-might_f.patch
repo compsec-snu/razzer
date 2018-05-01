@@ -1,0 +1,42 @@
+From e205a33689c2ba4a5023278444981a2825915eef Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:38 +0200
+Subject: [PATCH 02/11] Revert "mm, sched: Drop voluntary schedule from
+ might_fault()"
+
+This reverts commit 114276ac0a3beb9c391a410349bd770653e185ce.
+---
+ include/linux/kernel.h | 2 +-
+ mm/memory.c            | 3 +--
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 377a977..cf23b15 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -198,7 +198,7 @@ void might_fault(void);
+ #else
+ static inline void might_fault(void)
+ {
+-	__might_sleep(__FILE__, __LINE__, 0);
++	might_sleep();
+ }
+ #endif
+ 
+diff --git a/mm/memory.c b/mm/memory.c
+index 6e572cc..af74e0c 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -4214,8 +4214,7 @@ void might_fault(void)
+ 	if (segment_eq(get_fs(), KERNEL_DS))
+ 		return;
+ 
+-	__might_sleep(__FILE__, __LINE__, 0);
+-
++	might_sleep();
+ 	/*
+ 	 * it would be nicer only to annotate paths which are not under
+ 	 * pagefault_disable, however that requires a larger audit and
+-- 
+1.8.1.4
+

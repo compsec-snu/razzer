@@ -1,0 +1,66 @@
+From f718e262f97b1944969e6e24d2085c88f141d595 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Fri, 23 Aug 2013 11:57:51 +0200
+Subject: [PATCH 28/39] x86: LLVMLinux: Fix compilation with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fix for edx register on 64-bit X86 as suggested by hpa
+gcc chooses the appropriate register width at the last minute in the compile.
+Clang needs to know the size of the register earlier in the compile.
+
+Author: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ arch/x86/include/asm/asm.h     | 6 +++++-
+ arch/x86/include/asm/uaccess.h | 2 +-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/include/asm/asm.h b/arch/x86/include/asm/asm.h
+index 1c2d247..4582e8e 100644
+--- a/arch/x86/include/asm/asm.h
++++ b/arch/x86/include/asm/asm.h
+@@ -3,21 +3,25 @@
+ 
+ #ifdef __ASSEMBLY__
+ # define __ASM_FORM(x)	x
++# define __ASM_FORM_RAW(x)     x
+ # define __ASM_FORM_COMMA(x) x,
+ #else
+ # define __ASM_FORM(x)	" " #x " "
++# define __ASM_FORM_RAW(x)     #x
+ # define __ASM_FORM_COMMA(x) " " #x ","
+ #endif
+ 
+ #ifdef CONFIG_X86_32
+ # define __ASM_SEL(a,b) __ASM_FORM(a)
++# define __ASM_SEL_RAW(a, b) __ASM_FORM_RAW(a)
+ #else
+ # define __ASM_SEL(a,b) __ASM_FORM(b)
++# define __ASM_SEL_RAW(a, b) __ASM_FORM_RAW(b)
+ #endif
+ 
+ #define __ASM_SIZE(inst, ...)	__ASM_SEL(inst##l##__VA_ARGS__, \
+ 					  inst##q##__VA_ARGS__)
+-#define __ASM_REG(reg)		__ASM_SEL(e##reg, r##reg)
++#define __ASM_REG(reg)         __ASM_SEL_RAW(e##reg, r##reg)
+ 
+ #define _ASM_PTR	__ASM_SEL(.long, .quad)
+ #define _ASM_ALIGN	__ASM_SEL(.balign 4, .balign 8)
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 5ee2687..f715fee 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -162,7 +162,7 @@ __typeof__(__builtin_choose_expr(sizeof(x) > sizeof(0UL), 0ULL, 0UL))
+ #define get_user(x, ptr)						\
+ ({									\
+ 	int __ret_gu;							\
+-	register __inttype(*(ptr)) __val_gu asm("%edx");		\
++	register __inttype(*(ptr)) __val_gu asm("%"_ASM_DX);		\
+ 	__chk_user_ptr(ptr);						\
+ 	might_fault();							\
+ 	asm volatile("call __get_user_%P3"				\
+-- 
+1.8.1.2
+

@@ -1,0 +1,79 @@
+From 35c0cf88b1e8b1b944cc5138621ebf29db5f3b92 Mon Sep 17 00:00:00 2001
+From: Weiming Zhao <weimingz@codeaurora.org>
+Date: Tue, 29 Oct 2013 16:52:07 -0700
+Subject: [PATCH] [AArch64] Allow %w, %z operands be immedates
+
+Fixes PR17728. "Ir" constraint means the corresponding operand can be
+either a register or an immediate. For AArch64, if the operand
+is a reg, it may need extra code to differentiate 32-bit reg and
+ 64-bit reg.  However, AArch64AsmPrint will assume a reg operand if it
+sees an extra code of "w" or "z".
+
+This patch checks if the operand with "w" or "z" modifier is an immediate
+or not. If so, just emits it.
+---
+ lib/Target/AArch64/AArch64AsmPrinter.cpp     |   15 ++++++++++++++-
+ test/CodeGen/AArch64/inline-asm-modifiers.ll |    6 ++++++
+ 2 files changed, 20 insertions(+), 1 deletions(-)
+
+diff --git a/lib/Target/AArch64/AArch64AsmPrinter.cpp b/lib/Target/AArch64/AArch64AsmPrinter.cpp
+index 759809f..2da40cb 100644
+--- a/lib/Target/AArch64/AArch64AsmPrinter.cpp
++++ b/lib/Target/AArch64/AArch64AsmPrinter.cpp
+@@ -146,10 +146,10 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+                                         unsigned AsmVariant,
+                                         const char *ExtraCode, raw_ostream &O) {
+   const TargetRegisterInfo *TRI = MF->getTarget().getRegisterInfo();
++  const MachineOperand &MO = MI->getOperand(OpNum);
+   if (!ExtraCode || !ExtraCode[0]) {
+     // There's actually no operand modifier, which leads to a slightly eclectic
+     // set of behaviour which we have to handle here.
+-    const MachineOperand &MO = MI->getOperand(OpNum);
+     switch (MO.getType()) {
+     default:
+       llvm_unreachable("Unexpected operand for inline assembly");
+@@ -188,11 +188,24 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+     O << MI->getOperand(OpNum).getImm();
+     return false;
+   case 'w':
++    // If MO is a non-zero imm, it can come from "Ir" constraint although the
++    // placehold is "%w".
++    if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm()) {
++       O << '#' << MO.getImm();
++       return false;
++    }
+     // Output 32-bit general register operand, constant zero as wzr, or stack
+     // pointer as wsp. Ignored when used with other operand types.
++
+     return printModifiedGPRAsmOperand(MI->getOperand(OpNum), TRI,
+                                       AArch64::GPR32RegClass, O);
+   case 'x':
++    // If MO is a non-zero imm, it can come from "Ir" constraint although the
++    // placehold is "%z".
++    if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm()) {
++      O << '#' << MO.getImm();
++      return false;
++    }
+     // Output 64-bit general register operand, constant zero as xzr, or stack
+     // pointer as sp. Ignored when used with other operand types.
+     return printModifiedGPRAsmOperand(MI->getOperand(OpNum), TRI,
+diff --git a/test/CodeGen/AArch64/inline-asm-modifiers.ll b/test/CodeGen/AArch64/inline-asm-modifiers.ll
+index d1b21f8..6c6f36c 100644
+--- a/test/CodeGen/AArch64/inline-asm-modifiers.ll
++++ b/test/CodeGen/AArch64/inline-asm-modifiers.ll
+@@ -87,6 +87,12 @@ define void @test_inline_modifier_wx(i32 %small, i64 %big) nounwind {
+   call i32 asm sideeffect "add ${0:x}, ${1:x}, ${1:x}", "=r,r"(i32 0)
+ ; CHECK: add {{w[0-9]+}}, wzr, wzr
+ ; CHECK: add {{x[0-9]+}}, xzr, xzr
++
++  call i32 asm sideeffect "add ${0:w}, ${0:w}, ${1:w}", "=r,Ir,0"(i32 123, i32 %small)
++  call i64 asm sideeffect "add ${0:x}, ${0:x}, ${1:x}", "=r,Ir,0"(i32 456, i64 %big)
++; CHECK: add {{w[0-9]+}}, {{w[0-9]+}}, #123
++; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #456
++
+   ret void
+ }
+ 
+-- 
+1.7.8.3
+

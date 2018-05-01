@@ -1,0 +1,35 @@
+From a8aef1a52391ee0e5365db0ec2b51ed812be0d6a Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:18 -0700
+Subject: [PATCH] net, wimax, i2400, LLVMLinux: Remove VLAIS from wimax i2400m
+ driver
+
+Convert Variable Length Array in Struct (VLAIS) to valid C99 by converting
+local struct definition to use a flexible array. The structure is only
+used to define a cast of a buffer so the size of the struct is not used
+to allocate storage.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Mark Charebois <charlebm@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/net/wimax/i2400m/fw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wimax/i2400m/fw.c b/drivers/net/wimax/i2400m/fw.c
+index c9c711d..a89b568 100644
+--- a/drivers/net/wimax/i2400m/fw.c
++++ b/drivers/net/wimax/i2400m/fw.c
+@@ -652,7 +652,7 @@ static int i2400m_download_chunk(struct i2400m *i2400m, const void *chunk,
+ 	struct device *dev = i2400m_dev(i2400m);
+ 	struct {
+ 		struct i2400m_bootrom_header cmd;
+-		u8 cmd_payload[chunk_len];
++		u8 cmd_payload[];
+ 	} __packed *buf;
+ 	struct i2400m_bootrom_header ack;
+ 
+-- 
+1.9.1
+

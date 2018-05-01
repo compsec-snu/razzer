@@ -1,0 +1,25 @@
+From 063b2f5f77dffa3ecbb77e0d743d7aa2683db026 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:40 +0200
+Subject: [PATCH 47/48] Can't compare arrays in C, you have to take the address explicitly.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ lib/dynamic_debug.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/lib/dynamic_debug.c b/lib/dynamic_debug.c
+index dcdade3..916f72c 100644
+--- a/lib/dynamic_debug.c
++++ b/lib/dynamic_debug.c
+@@ -846,7 +846,7 @@ static int __init dynamic_debug_init(void)
+ 	int ret = 0;
+ 	int n = 0;
+ 
+-	if (__start___verbose != __stop___verbose) {
++	if (&__start___verbose != &__stop___verbose) {
+ 		iter = __start___verbose;
+ 		modname = iter->modname;
+ 		iter_start = iter;
+-- 
+1.7.3.4
+

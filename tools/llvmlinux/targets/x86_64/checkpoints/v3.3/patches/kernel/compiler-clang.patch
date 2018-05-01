@@ -1,0 +1,43 @@
+Add support for clang to compiler.h and new compiler-clang.h
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ compiler-clang.h |   12 ++++++++++++
+ compiler.h       |    7 +++++++
+ 2 files changed, 19 insertions(+)
+
+diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+index 923d093..2cc6b5c 100644
+--- a/include/linux/compiler.h
++++ b/include/linux/compiler.h
+@@ -57,6 +57,13 @@ extern void __chk_io_ptr(const volatile void __iomem *);
+ # include <linux/compiler-intel.h>
+ #endif
+ 
++/* Clang compiler defines __GNUC__. So we will overwrite implementations
++ * coming from above header files here
++ */
++#ifdef __clang__
++#include <linux/compiler-clang.h>
++#endif
++
+ /*
+  * Generic compiler-dependent macros required for kernel
+  * build go below this comment. Actual compiler/compiler version
+diff --git a/include/linux/compiler-clang.h b/include/linux/compiler-clang.h
+index 0
+--- a/include/linux/compiler-clang.h
++++ b/include/linux/compiler-clang.h
+@@ -0,0 +1,12 @@
++#ifndef __LINUX_COMPILER_H
++#error "Please don't include <linux/compiler-clang.h> directly, include <linux/compiler.h> instead."
++#endif
++
++/* Some compiler specific definitions are overwritten here
++ * for Clang compiler
++ */
++
++#ifdef uninitialized_var
++#undef uninitialized_var
++#define uninitialized_var(x) x = *(&x)
++#endif

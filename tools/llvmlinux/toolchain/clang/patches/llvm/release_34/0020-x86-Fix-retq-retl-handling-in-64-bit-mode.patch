@@ -1,0 +1,246 @@
+From 98301eda96bdd9a71d87f76e645d8dba57323e63 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Mon, 13 Jan 2014 14:05:59 +0000
+Subject: [PATCH 20/26] [x86] Fix retq/retl handling in 64-bit mode
+
+This finishes the job started in r198756, and creates separate opcodes for
+64-bit vs. 32-bit versions of the rest of the RET instructions too.
+
+LRETL/LRETQ are interesting... I can't see any justification for their
+existence in the SDM. There should be no 'LRETL' in 64-bit mode, and no
+need for a REX.W prefix for LRETQ. But this is what GAS does, and my
+Sandybridge CPU and an Opteron 6376 concur when tested as follows:
+
+asm __volatile__("pushq $0x1234\nmovq $0x33,%rax\nsalq $32,%rax\norq $1f,%rax\npushq %rax\nlretl $8\n1:");
+asm __volatile__("pushq $1234\npushq $0x33\npushq $1f\nlretq $8\n1:");
+asm __volatile__("pushq $0x33\npushq $1f\nlretq\n1:");
+asm __volatile__("pushq $0x1234\npushq $0x33\npushq $1f\nlretq $8\n1:");
+
+cf. PR8592 and commit r118903, which added LRETQ. I only added LRETIQ to
+match it.
+
+I don't quite understand how the Intel syntax parsing for ret
+instructions is working, despite r154468 allegedly fixing it. Aren't the
+explicitly sized 'retw', 'retd' and 'retq' supposed to work? I have at
+least made the 'lretq' work with (and indeed *require*) the 'q'.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@199106 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit f71254859e1f96944c4f4cedeecc940bce3c1e66)
+---
+ lib/Target/X86/X86FloatingPoint.cpp |  3 +-
+ lib/Target/X86/X86FrameLowering.cpp | 11 +++--
+ lib/Target/X86/X86InstrControl.td   | 17 +++++---
+ lib/Target/X86/X86InstrFormats.td   |  3 ++
+ lib/Target/X86/X86InstrInfo.td      |  2 +-
+ test/MC/X86/ret.s                   | 85 +++++++++++++++++++++++++++++++++++++
+ 6 files changed, 110 insertions(+), 11 deletions(-)
+ create mode 100644 test/MC/X86/ret.s
+
+diff --git a/lib/Target/X86/X86FloatingPoint.cpp b/lib/Target/X86/X86FloatingPoint.cpp
+index d6d0bbc..c7f8514 100644
+--- a/lib/Target/X86/X86FloatingPoint.cpp
++++ b/lib/Target/X86/X86FloatingPoint.cpp
+@@ -1673,7 +1673,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &I) {
+ 
+   case X86::RETQ:
+   case X86::RETL:
+-  case X86::RETI:
++  case X86::RETIL:
++  case X86::RETIQ:
+     // If RET has an FP register use operand, pass the first one in ST(0) and
+     // the second one in ST(1).
+ 
+diff --git a/lib/Target/X86/X86FrameLowering.cpp b/lib/Target/X86/X86FrameLowering.cpp
+index e1a75f4..477f153 100644
+--- a/lib/Target/X86/X86FrameLowering.cpp
++++ b/lib/Target/X86/X86FrameLowering.cpp
+@@ -109,7 +109,8 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
+   default: return 0;
+   case X86::RETL:
+   case X86::RETQ:
+-  case X86::RETI:
++  case X86::RETIL:
++  case X86::RETIQ:
+   case X86::TCRETURNdi:
+   case X86::TCRETURNri:
+   case X86::TCRETURNmi:
+@@ -733,7 +734,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
+     llvm_unreachable("Can only insert epilog into returning blocks");
+   case X86::RETQ:
+   case X86::RETL:
+-  case X86::RETI:
++  case X86::RETIL:
++  case X86::RETIQ:
+   case X86::TCRETURNdi:
+   case X86::TCRETURNri:
+   case X86::TCRETURNmi:
+@@ -890,8 +892,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
+ 
+     // Delete the pseudo instruction TCRETURN.
+     MBB.erase(MBBI);
+-  } else if ((RetOpcode == X86::RETQ || RetOpcode == X86::RETI ||
+-              RetOpcode == X86::RETL) && (X86FI->getTCReturnAddrDelta() < 0)) {
++  } else if ((RetOpcode == X86::RETQ || RetOpcode == X86::RETL ||
++              RetOpcode == X86::RETIQ || RetOpcode == X86::RETIL) &&
++             (X86FI->getTCReturnAddrDelta() < 0)) {
+     // Add the return addr area delta back since we are not tail calling.
+     int delta = -1*X86FI->getTCReturnAddrDelta();
+     MBBI = MBB.getLastNonDebugInstr();
+diff --git a/lib/Target/X86/X86InstrControl.td b/lib/Target/X86/X86InstrControl.td
+index 0ad4f86..f8e5db4 100644
+--- a/lib/Target/X86/X86InstrControl.td
++++ b/lib/Target/X86/X86InstrControl.td
+@@ -30,20 +30,27 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
+   def RETW   : I   <0xC3, RawFrm, (outs), (ins),
+                     "ret{w}",
+                     [], IIC_RET>, OpSize;
+-  def RETI   : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
++  def RETIL  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
+                     "ret{l}\t$amt",
+-                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize16;
++                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize16,
++               Requires<[Not64BitMode]>;
++  def RETIQ  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
++                    "ret{q}\t$amt",
++                    [(X86retflag timm:$amt)], IIC_RET_IMM>,
++               Requires<[In64BitMode]>;
+   def RETIW  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
+                     "ret{w}\t$amt",
+                     [], IIC_RET_IMM>, OpSize;
+   def LRETL  : I   <0xCB, RawFrm, (outs), (ins),
+                     "{l}ret{l|f}", [], IIC_RET>, OpSize16;
++  def LRETQ  : RI  <0xCB, RawFrm, (outs), (ins),
++                    "{l}ret{|f}q", [], IIC_RET>, Requires<[In64BitMode]>;
+   def LRETW  : I   <0xCB, RawFrm, (outs), (ins),
+                     "{l}ret{w|f}", [], IIC_RET>, OpSize;
+-  def LRETQ  : RI  <0xCB, RawFrm, (outs), (ins),
+-                    "{l}ret{q|f}", [], IIC_RET>;
+-  def LRETI  : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
++  def LRETIL : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
+                     "{l}ret{l|f}\t$amt", [], IIC_RET>, OpSize16;
++  def LRETIQ : RIi16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
++                    "{l}ret{|f}q\t$amt", [], IIC_RET>, Requires<[In64BitMode]>;
+   def LRETIW : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
+                     "{l}ret{w|f}\t$amt", [], IIC_RET>, OpSize;
+ }
+diff --git a/lib/Target/X86/X86InstrFormats.td b/lib/Target/X86/X86InstrFormats.td
+index 06f2b8c..d33696f 100644
+--- a/lib/Target/X86/X86InstrFormats.td
++++ b/lib/Target/X86/X86InstrFormats.td
+@@ -734,6 +734,9 @@ class RI<bits<8> o, Format F, dag outs, dag ins, string asm,
+ class RIi8 <bits<8> o, Format F, dag outs, dag ins, string asm,
+             list<dag> pattern, InstrItinClass itin = NoItinerary>
+       : Ii8<o, F, outs, ins, asm, pattern, itin>, REX_W;
++class RIi16 <bits<8> o, Format F, dag outs, dag ins, string asm,
++            list<dag> pattern, InstrItinClass itin = NoItinerary>
++      : Ii16<o, F, outs, ins, asm, pattern, itin>, REX_W;
+ class RIi32 <bits<8> o, Format F, dag outs, dag ins, string asm,
+              list<dag> pattern, InstrItinClass itin = NoItinerary>
+       : Ii32<o, F, outs, ins, asm, pattern, itin>, REX_W;
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index bf28e3c..3ebd101 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -2150,7 +2150,7 @@ def : MnemonicAlias<"cdq",  "cltd", "att">;
+ def : MnemonicAlias<"cdqe", "cltq", "att">;
+ def : MnemonicAlias<"cqo",  "cqto", "att">;
+ 
+-// lret maps to lretl, it is not ambiguous with lretq.
++// In 64-bit mode lret maps to lretl; it is not ambiguous with lretq.
+ def : MnemonicAlias<"lret", "lretw", "att">, Requires<[In16BitMode]>;
+ def : MnemonicAlias<"lret", "lretl", "att">, Requires<[Not16BitMode]>;
+ 
+diff --git a/test/MC/X86/ret.s b/test/MC/X86/ret.s
+new file mode 100644
+index 0000000..fdb8515
+--- /dev/null
++++ b/test/MC/X86/ret.s
+@@ -0,0 +1,85 @@
++// RUN: not llvm-mc -triple x86_64-unknown-unknown --show-encoding %s 2> %t.err | FileCheck --check-prefix=64 %s
++// RUN: FileCheck --check-prefix=ERR64 < %t.err %s
++// RUN: not llvm-mc -triple i386-unknown-unknown --show-encoding %s 2> %t.err | FileCheck --check-prefix=32 %s
++// RUN: FileCheck --check-prefix=ERR32 < %t.err %s
++
++
++	ret
++// 64: retq
++// 64: encoding: [0xc3]
++// 32: retl
++// 32: encoding: [0xc3]
++	retw
++// 64: retw
++// 64: encoding: [0x66,0xc3]
++// 32: retw
++// 32: encoding: [0x66,0xc3]
++	retl
++// ERR64: error: instruction requires: Not 64-bit mode
++// 32: retl
++// 32: encoding: [0xc3]
++	retq
++// 64: retq
++// 64: encoding: [0xc3]
++// ERR32: error: instruction requires: 64-bit mode
++
++	ret $0
++// 64: retq $0
++// 64: encoding: [0xc2,0x00,0x00]
++// 32: retl $0
++// 32: encoding: [0xc2,0x00,0x00]
++	retw $0
++// 64: retw $0
++// 64: encoding: [0x66,0xc2,0x00,0x00]
++// 32: retw $0
++// 32: encoding: [0x66,0xc2,0x00,0x00]
++	retl $0
++// ERR64: error: instruction requires: Not 64-bit mode
++// 32: retl $0
++// 32: encoding: [0xc2,0x00,0x00]
++	retq $0
++// 64: retq $0
++// 64: encoding: [0xc2,0x00,0x00]
++// ERR32: error: instruction requires: 64-bit mode
++
++	lret
++// 64: lretl
++// 64: encoding: [0xcb]
++// 32: lretl
++// 32: encoding: [0xcb]
++	lretw
++// 64: lretw
++// 64: encoding: [0x66,0xcb]
++// 32: lretw
++// 32: encoding: [0x66,0xcb]
++	lretl
++// 64: lretl
++// 64: encoding: [0xcb]
++// 32: lretl
++// 32: encoding: [0xcb]
++	lretq
++// 64: lretq
++// 64: encoding: [0x48,0xcb]
++// ERR32: error: instruction requires: 64-bit mode
++
++	lret $0
++// 64: lretl $0
++// 64: encoding: [0xca,0x00,0x00]
++// 32: lretl $0
++// 32: encoding: [0xca,0x00,0x00]
++	lretw $0
++// 64: lretw $0
++// 64: encoding: [0x66,0xca,0x00,0x00]
++// 32: lretw $0
++// 32: encoding: [0x66,0xca,0x00,0x00]
++	lretl $0
++// 64: lretl $0
++// 64: encoding: [0xca,0x00,0x00]
++// 32: lretl $0
++// 32: encoding: [0xca,0x00,0x00]
++	lretq $0
++// 64: lretq $0
++// 64: encoding: [0x48,0xca,0x00,0x00]
++// ERR32: error: instruction requires: 64-bit mode
++
++
+-- 
+1.8.4
+

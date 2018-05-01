@@ -1,0 +1,24 @@
+From 82b2bd2799a15940b73c391ca7d1b2a27c9e95b3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:53:32 +0200
+Subject: [PATCH 14/48] Fix VLAIS usage in fs/cifs/cifsglob.h  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ fs/cifs/cifsglob.h |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index 76e7d8b..960d744 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -118,7 +118,6 @@ struct session_key {
+ /* crypto security descriptor definition */
+ struct sdesc {
+ 	struct shash_desc shash;
+-	char ctx[];
+ };
+ 
+ /* crypto hashing related structure/fields, not specific to a sec mech */
+-- 
+1.7.3.4
+

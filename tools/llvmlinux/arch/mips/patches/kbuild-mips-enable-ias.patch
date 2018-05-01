@@ -1,0 +1,30 @@
+From fd2176c0d59285450b454e245daae67dff779e0f Mon Sep 17 00:00:00 2001
+From: Toma Tabacu <toma.tabacu@imgtec.com>
+Date: Fri, 27 Mar 2015 10:40:50 +0000
+Subject: DO-NOT-UPSTREAM kbuild: Explicitly enable the IAS for MIPS.
+
+The IAS is not enabled by default for MIPS, so we need to explicitly enable it
+by passing the -integrated-as flag to clang.
+
+Signed-off-by: Toma Tabacu <toma.tabacu@imgtec.com>
+---
+ Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index fbf4403..d2c1bf9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -389,6 +389,9 @@ endif
+ ifneq ($(CLANG_ENABLE_IA),1)
+ CLANG_IA_FLAG	= -no-integrated-as
+ endif
++ifeq ($(CLANG_ENABLE_IA),1)
++CLANG_IA_FLAG	= -integrated-as
++endif
+ CLANG_FLAGS	:= $(CLANG_TARGET) $(CLANG_GCC_TC) $(CLANG_IA_FLAG)
+ endif
+ 
+-- 
+1.9.1
+

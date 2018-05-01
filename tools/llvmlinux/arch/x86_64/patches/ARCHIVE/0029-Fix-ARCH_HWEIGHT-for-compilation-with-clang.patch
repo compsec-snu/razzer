@@ -1,0 +1,61 @@
+From 9ad87a397e4a9f51499265dbd776f77fa6034e41 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:51:51 +0100
+Subject: [PATCH 29/51] Fix ARCH_HWEIGHT for compilation with clang.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/include/asm/arch_hweight.h |   16 ++--------------
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 14 Zeilen entfernt(-)
+
+diff --git a/arch/x86/include/asm/arch_hweight.h b/arch/x86/include/asm/arch_hweight.h
+index 9686c3d..5b85627 100644
+--- a/arch/x86/include/asm/arch_hweight.h
++++ b/arch/x86/include/asm/arch_hweight.h
+@@ -23,13 +23,7 @@
+  */
+ static inline unsigned int __arch_hweight32(unsigned int w)
+ {
+-	unsigned int res = 0;
+-
+-	asm (ALTERNATIVE("call __sw_hweight32", POPCNT32, X86_FEATURE_POPCNT)
+-		     : "="REG_OUT (res)
+-		     : REG_IN (w));
+-
+-	return res;
++	return __sw_hweight32(w);
+ }
+ 
+ static inline unsigned int __arch_hweight16(unsigned int w)
+@@ -44,18 +38,12 @@ static inline unsigned int __arch_hweight8(unsigned int w)
+ 
+ static inline unsigned long __arch_hweight64(__u64 w)
+ {
+-	unsigned long res = 0;
+-
+ #ifdef CONFIG_X86_32
+ 	return  __arch_hweight32((u32)w) +
+ 		__arch_hweight32((u32)(w >> 32));
+ #else
+-	asm (ALTERNATIVE("call __sw_hweight64", POPCNT64, X86_FEATURE_POPCNT)
+-		     : "="REG_OUT (res)
+-		     : REG_IN (w));
++	return __sw_hweight64(w);
+ #endif /* CONFIG_X86_32 */
+-
+-	return res;
+ }
+ 
+ #endif
+-- 
+1.7.10.4
+

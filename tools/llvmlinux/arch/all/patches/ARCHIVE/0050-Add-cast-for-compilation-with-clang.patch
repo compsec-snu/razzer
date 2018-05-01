@@ -1,0 +1,35 @@
+From 76bfa4ab0f76330128b87d7cafcc7a3d50408ca9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:13:52 +0100
+Subject: [PATCH 50/51] Add cast for compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ include/linux/err.h |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/include/linux/err.h b/include/linux/err.h
+index f2edce2..a07ce27 100644
+--- a/include/linux/err.h
++++ b/include/linux/err.h
+@@ -17,7 +17,7 @@
+ 
+ #ifndef __ASSEMBLY__
+ 
+-#define IS_ERR_VALUE(x) unlikely((x) >= (unsigned long)-MAX_ERRNO)
++#define IS_ERR_VALUE(x) unlikely((unsigned long)(x) >= (unsigned long)-MAX_ERRNO)
+ 
+ static inline void * __must_check ERR_PTR(long error)
+ {
+-- 
+1.7.10.4
+

@@ -1,0 +1,16 @@
+disable-clang-integrated-as.patch
+aligned-attribute.patch
+section-mismatch-alias.patch
+cifs.patch
+kbuild-clang.patch
+warnings-clang.patch
+dontdiff.patch
+cc-version.patch
+cmpxchg-local-fix-uninitialized-return-code.patch
+compiler-clang.patch
+vlais-apparmor.patch
+vlais-btrfs.patch
+vlais-netfilter.patch
+dwarf2.patch
+mbcache.patch
+unused-func.patch

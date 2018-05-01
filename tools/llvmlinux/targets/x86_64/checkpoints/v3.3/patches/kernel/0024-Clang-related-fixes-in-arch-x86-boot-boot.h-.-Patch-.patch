@@ -1,0 +1,73 @@
+From f972390360d53a158444935aef10d19d110409bb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:58:19 +0200
+Subject: [PATCH 24/48] Clang related fixes in arch/x86/boot/boot.h  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/boot/boot.h |   35 ++++++++++++++++++++++++++++-------
+ 1 files changed, 28 insertions(+), 7 deletions(-)
+
+diff --git a/arch/x86/boot/boot.h b/arch/x86/boot/boot.h
+index c7093bd..619fe68 100644
+--- a/arch/x86/boot/boot.h
++++ b/arch/x86/boot/boot.h
+@@ -30,6 +30,12 @@
+ #include <asm/processor-flags.h>
+ #include "ctype.h"
+ 
++#ifdef CONFIG_X86_32
++#define asmlinkage __attribute__((regparm(0)))
++#else
++#define asmlinkage
++#endif
++
+ /* Useful macros */
+ #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+ 
+@@ -229,11 +235,26 @@ void copy_to_fs(addr_t dst, void *src, size_t len);
+ void *copy_from_fs(void *dst, addr_t src, size_t len);
+ void copy_to_gs(addr_t dst, void *src, size_t len);
+ void *copy_from_gs(void *dst, addr_t src, size_t len);
+-void *memcpy(void *dst, void *src, size_t len);
+-void *memset(void *dst, int c, size_t len);
+ 
+-#define memcpy(d,s,l) __builtin_memcpy(d,s,l)
+-#define memset(d,c,l) __builtin_memset(d,c,l)
++static inline void *memcpy(void *d, const void *s, size_t l)
++{
++	int d0, d1, d2;
++	asm volatile("rep ; addr32 movsb\n\t"
++		     : "=&c" (d0), "=&D" (d1), "=&S" (d2)
++		     : "0" (l), "1" ((long)d), "2" ((long)s)
++		     : "memory");
++	return d;
++}
++
++static inline void *memset(void *d, char c, size_t l)
++{
++	int d0, d1;
++	asm volatile("rep ; addr32 stosb\n\t"
++		     : "=&c" (d0), "=&D" (d1)
++		     : "0" (l), "1" (d), "a" (c)
++		     : "memory");
++	return d;
++}
+ 
+ /* a20.c */
+ int enable_a20(void);
+@@ -340,9 +361,9 @@ int printf(const char *fmt, ...);
+ void initregs(struct biosregs *regs);
+ 
+ /* string.c */
+-int strcmp(const char *str1, const char *str2);
+-int strncmp(const char *cs, const char *ct, size_t count);
+-size_t strnlen(const char *s, size_t maxlen);
++asmlinkage int strcmp(const char *str1, const char *str2);
++asmlinkage int strncmp(const char *cs, const char *ct, size_t count);
++asmlinkage size_t strnlen(const char *s, size_t maxlen);
+ unsigned int atou(const char *s);
+ unsigned long long simple_strtoull(const char *cp, char **endp, unsigned int base);
+ 
+-- 
+1.7.3.4
+

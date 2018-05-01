@@ -1,0 +1,9 @@
+For some reason specifying an external initrd does not work for cubieboard. 
+
+The initrd has to be built into the kernel and a console device needs to be
+created as it is not created by mdev.
+
+The config_initrd is created with the location of the initramfs and is used
+to build the kernel. The initramfs will be created automatically before the 
+kernel is built.
+

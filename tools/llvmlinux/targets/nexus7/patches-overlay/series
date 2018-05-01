@@ -1,0 +1,7 @@
+0002-Adapt-warnings-for-compilation-with-clang.patch
+9902-Clang-does-not-know-this-flag.-Make-it-conditional.patch
+disable-clang-integrated-as.patch
+kbuild-clang-arm.patch
+kbuild-clang.patch
+named_register-return_address.patch
+vlais-gadget.patch

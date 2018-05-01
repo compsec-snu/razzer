@@ -1,0 +1,6 @@
+*.swp
+*~
+*.cfg
+workdir*
+
+bin/

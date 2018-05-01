@@ -1,0 +1,177 @@
+From b37af22d7b51f0a48e56a3b5c156faa52128f264 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:24 +0000
+Subject: [PATCH 15/26] [x86] Fix MOV8ao8 et al for 16-bit mode, fix up
+ disassembler to understand
+
+It seems there is no separate instruction class for having AdSize *and*
+OpSize bits set, which is required in order to disambiguate between all
+these instructions. So add that to the disassembler.
+
+Hm, perhaps we do need an AdSize16 bit after all?
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198759 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit aab59870a4f57f3d3246c858cb775766e38f0795)
+---
+ .../Disassembler/X86DisassemblerDecoderCommon.h    |  2 ++
+ lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp   | 13 ++++++---
+ lib/Target/X86/X86InstrInfo.td                     | 34 +++++++++++++++++-----
+ test/MC/X86/x86-16.s                               | 11 +++++++
+ utils/TableGen/X86DisassemblerTables.cpp           |  5 +++-
+ utils/TableGen/X86RecognizableInstr.cpp            |  2 ++
+ 6 files changed, 55 insertions(+), 12 deletions(-)
+
+diff --git a/lib/Target/X86/Disassembler/X86DisassemblerDecoderCommon.h b/lib/Target/X86/Disassembler/X86DisassemblerDecoderCommon.h
+index dd1719c..da6e60c 100644
+--- a/lib/Target/X86/Disassembler/X86DisassemblerDecoderCommon.h
++++ b/lib/Target/X86/Disassembler/X86DisassemblerDecoderCommon.h
+@@ -86,6 +86,8 @@ enum attributeBits {
+                                         "operands change width")               \
+   ENUM_ENTRY(IC_ADSIZE,             3,  "requires an ADSIZE prefix, so "       \
+                                         "operands change width")               \
++  ENUM_ENTRY(IC_OPSIZE_ADSIZE,      3,  "requires both OPSIZE and ADSIZE "     \
++                                        "prefixes")                            \
+   ENUM_ENTRY(IC_XD,                 2,  "may say something about the opcode "  \
+                                         "but not the operands")                \
+   ENUM_ENTRY(IC_XS,                 2,  "may say something about the opcode "  \
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+index 5581831..9cf7a6a 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+@@ -1160,11 +1160,16 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
+ 
+   // Emit the address size opcode prefix as needed.
+   bool need_address_override;
+-  // The AdSize prefix is only for 32-bit and 64-bit modes; in 16-bit mode we
+-  // need the address override only for JECXZ instead. Since it's only one
+-  // instruction, we special-case it rather than introducing an AdSize16 bit.
++  // The AdSize prefix is only for 32-bit and 64-bit modes. Hm, perhaps we
++  // should introduce an AdSize16 bit instead of having seven special cases?
+   if ((!is16BitMode() && TSFlags & X86II::AdSize) ||
+-      (is16BitMode() && MI.getOpcode() == X86::JECXZ_32)) {
++      (is16BitMode() && (MI.getOpcode() == X86::JECXZ_32 ||
++                         MI.getOpcode() == X86::MOV8o8a ||
++                         MI.getOpcode() == X86::MOV16o16a ||
++                         MI.getOpcode() == X86::MOV32o32a ||
++                         MI.getOpcode() == X86::MOV8ao8 ||
++                         MI.getOpcode() == X86::MOV16ao16 ||
++                         MI.getOpcode() == X86::MOV32ao32))) {
+     need_address_override = true;
+   } else if (MemOperand == -1) {
+     need_address_override = false;
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index 20e575a..3712849 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -1131,29 +1131,49 @@ def MOV64mi32 : RIi32<0xC7, MRM0m, (outs), (ins i64mem:$dst, i64i32imm:$src),
+ let hasSideEffects = 0 in {
+ 
+ /// moffs8, moffs16 and moffs32 versions of moves.  The immediate is a
+-/// 32-bit offset from the PC.  These are only valid in x86-32 mode.
++/// 32-bit offset from the segment base. These are only valid in x86-32 mode.
+ let SchedRW = [WriteALU] in {
+ let mayLoad = 1 in {
+ def MOV8o8a : Ii32 <0xA0, RawFrm, (outs), (ins offset8:$src),
+                    "mov{b}\t{$src, %al|al, $src}", [], IIC_MOV_MEM>,
+-                   Requires<[Not64BitMode]>;
++                   Requires<[In32BitMode]>;
+ def MOV16o16a : Ii32 <0xA1, RawFrm, (outs), (ins offset16:$src),
+                       "mov{w}\t{$src, %ax|ax, $src}", [], IIC_MOV_MEM>, OpSize,
+-                     Requires<[Not64BitMode]>;
++                     Requires<[In32BitMode]>;
+ def MOV32o32a : Ii32 <0xA1, RawFrm, (outs), (ins offset32:$src),
+                       "mov{l}\t{$src, %eax|eax, $src}", [], IIC_MOV_MEM>,
+-                      OpSize16, Requires<[Not64BitMode]>;
++                      OpSize16, Requires<[In32BitMode]>;
++
++def MOV8o8a_16 : Ii16 <0xA0, RawFrm, (outs), (ins offset8:$src),
++                   "mov{b}\t{$src, %al|al, $src}", [], IIC_MOV_MEM>,
++                   AdSize, Requires<[In16BitMode]>;
++def MOV16o16a_16 : Ii16 <0xA1, RawFrm, (outs), (ins offset16:$src),
++                      "mov{w}\t{$src, %ax|ax, $src}", [], IIC_MOV_MEM>, OpSize,
++                     AdSize, Requires<[In16BitMode]>;
++def MOV32o32a_16 : Ii16 <0xA1, RawFrm, (outs), (ins offset32:$src),
++                      "mov{l}\t{$src, %eax|eax, $src}", [], IIC_MOV_MEM>,
++                      AdSize, OpSize16, Requires<[In16BitMode]>;
+ }
+ let mayStore = 1 in {
+ def MOV8ao8 : Ii32 <0xA2, RawFrm, (outs offset8:$dst), (ins),
+                    "mov{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>,
+-                  Requires<[Not64BitMode]>;
++                  Requires<[In32BitMode]>;
+ def MOV16ao16 : Ii32 <0xA3, RawFrm, (outs offset16:$dst), (ins),
+                       "mov{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>, OpSize,
+-                     Requires<[Not64BitMode]>;
++                     Requires<[In32BitMode]>;
+ def MOV32ao32 : Ii32 <0xA3, RawFrm, (outs offset32:$dst), (ins),
+                       "mov{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
+-                     OpSize16, Requires<[Not64BitMode]>;
++                     OpSize16, Requires<[In32BitMode]>;
++
++def MOV8ao8_16 : Ii16 <0xA2, RawFrm, (outs offset8:$dst), (ins),
++                   "mov{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>,
++                  AdSize, Requires<[In16BitMode]>;
++def MOV16ao16_16 : Ii16 <0xA3, RawFrm, (outs offset16:$dst), (ins),
++                      "mov{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>, OpSize,
++                     AdSize, Requires<[In16BitMode]>;
++def MOV32ao32_16 : Ii16 <0xA3, RawFrm, (outs offset32:$dst), (ins),
++                      "mov{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
++                     OpSize16, AdSize, Requires<[In16BitMode]>;
+ }
+ }
+ 
+diff --git a/test/MC/X86/x86-16.s b/test/MC/X86/x86-16.s
+index 4f2108c..1910f46 100644
+--- a/test/MC/X86/x86-16.s
++++ b/test/MC/X86/x86-16.s
+@@ -49,6 +49,17 @@
+ // CHECK: shll	%eax                    # encoding: [0x66,0xd1,0xe0]
+         sal $1, %eax
+ 
++// moffset forms of moves
++
++// CHECK: movb 0, %al  # encoding: [0xa0,0x00,0x00]
++movb	0, %al
++
++// CHECK: movw 0, %ax  # encoding: [0xa1,0x00,0x00]
++movw	0, %ax
++
++// CHECK: movl 0, %eax  # encoding: [0x66,0xa1,0x00,0x00]
++movl	0, %eax
++
+ into
+ // CHECK: into
+ // CHECK:  encoding: [0xce]
+diff --git a/utils/TableGen/X86DisassemblerTables.cpp b/utils/TableGen/X86DisassemblerTables.cpp
+index bdb4793..609b3af 100644
+--- a/utils/TableGen/X86DisassemblerTables.cpp
++++ b/utils/TableGen/X86DisassemblerTables.cpp
+@@ -51,8 +51,11 @@ static inline bool inheritsFrom(InstructionContext child,
+            inheritsFrom(child, IC_64BIT_XD)     ||
+            inheritsFrom(child, IC_64BIT_XS));
+   case IC_OPSIZE:
+-    return inheritsFrom(child, IC_64BIT_OPSIZE);
++    return (inheritsFrom(child, IC_64BIT_OPSIZE) ||
++            inheritsFrom(child, IC_OPSIZE_ADSIZE));
+   case IC_ADSIZE:
++    return inheritsFrom(child, IC_OPSIZE_ADSIZE);
++  case IC_OPSIZE_ADSIZE:
+   case IC_64BIT_ADSIZE:
+     return false;
+   case IC_XD:
+diff --git a/utils/TableGen/X86RecognizableInstr.cpp b/utils/TableGen/X86RecognizableInstr.cpp
+index 97ed24f..47b23c4 100644
+--- a/utils/TableGen/X86RecognizableInstr.cpp
++++ b/utils/TableGen/X86RecognizableInstr.cpp
+@@ -468,6 +468,8 @@ InstructionContext RecognizableInstr::insnContext() const {
+     else if (HasOpSizePrefix &&
+              (Prefix == X86Local::XS || Prefix == X86Local::T8XS))
+       insnContext = IC_XS_OPSIZE;
++    else if (HasOpSizePrefix && HasAdSizePrefix)
++      insnContext = IC_OPSIZE_ADSIZE;
+     else if (HasOpSizePrefix)
+       insnContext = IC_OPSIZE;
+     else if (HasAdSizePrefix)
+-- 
+1.8.4
+

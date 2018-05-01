@@ -1,0 +1,34 @@
+diff --git a/test/Driver/cc-log-diagnostics.c b/test/Driver/cc-log-diagnostics.c
+index 88c99f5..0e2ebf1 100644
+--- a/test/Driver/cc-log-diagnostics.c
++++ b/test/Driver/cc-log-diagnostics.c
+@@ -2,6 +2,7 @@
+ // RUN: env RC_DEBUG_OPTIONS=1 \
+ // RUN:     CC_LOG_DIAGNOSTICS=1 CC_LOG_DIAGNOSTICS_FILE=%t.log \
+ // RUN: %clang -Wfoobar -no-canonical-prefixes -target x86_64-apple-darwin10 -fsyntax-only %s
++// RUN: %clang -Wno-error=unknown-warning-option -Wfoobar -no-canonical-prefixes -target x86_64-apple-darwin10 -fsyntax-only %s
+ // RUN: FileCheck %s < %t.log
+ 
+ int f0() {}
+diff --git a/include/clang/Basic/DiagnosticFrontendKinds.td b/include/clang/Basic/DiagnosticFrontendKinds.td
+index 6fd7d22..8ecd535 100644
+--- a/include/clang/Basic/DiagnosticFrontendKinds.td
++++ b/include/clang/Basic/DiagnosticFrontendKinds.td
+@@ -89,7 +89,7 @@ def err_relocatable_without_isysroot : Error<
+ 
+ def warn_unknown_warning_option : Warning<
+     "unknown warning option '%0'">,
+-    InGroup<DiagGroup<"unknown-warning-option"> >;
++    InGroup<DiagGroup<"unknown-warning-option"> >, DefaultError;
+ def warn_unknown_negative_warning_option : Warning<
+     "unknown warning option '%0'">,
+     InGroup<DiagGroup<"unknown-warning-option"> >;
+@@ -101,7 +101,7 @@ def warn_unknown_negative_warning_option_suggest : Warning<
+     InGroup<DiagGroup<"unknown-warning-option"> >;
+ def warn_unknown_warning_specifier : Warning<
+     "unknown %0 warning specifier: '%1'">,
+-    InGroup<DiagGroup<"unknown-warning-option"> >;
++    InGroup<DiagGroup<"unknown-warning-option"> >, DefaultError;
+ 
+ def warn_unknown_analyzer_checker : Warning<
+     "no analyzer checkers are associated with '%0'">;

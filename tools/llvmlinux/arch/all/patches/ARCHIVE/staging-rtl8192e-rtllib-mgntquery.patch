@@ -1,0 +1,50 @@
+From 315aefc0ee8815559318a7e0431b5972a6e9f3ec Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:15 -0700
+Subject: [PATCH] staging, rtl8192e, LLVMLinux: Remove unused prototype
+
+MgntQuery_MgntFrameTxRate is only used within rtllib_softmac.c, so it really
+should be static instead of extern.
+
+Since it is currently extern a warning is generated because a different
+function of the same name is defined staticlly in ieee80211_softmac.c
+
+Removing the incorrect extern declaration and defining the rtllib_softmac
+version of this routine static fixes the warning.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/staging/rtl8192e/rtllib.h         | 1 -
+ drivers/staging/rtl8192e/rtllib_softmac.c | 2 +-
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/staging/rtl8192e/rtllib.h b/drivers/staging/rtl8192e/rtllib.h
+index 1322782..cef2dc2 100644
+--- a/drivers/staging/rtl8192e/rtllib.h
++++ b/drivers/staging/rtl8192e/rtllib.h
+@@ -2762,7 +2762,6 @@ extern void rtllib_stop_scan(struct rtllib_device *ieee);
+ extern bool rtllib_act_scanning(struct rtllib_device *ieee, bool sync_scan);
+ extern void rtllib_stop_scan_syncro(struct rtllib_device *ieee);
+ extern void rtllib_start_scan_syncro(struct rtllib_device *ieee, u8 is_mesh);
+-extern u8 MgntQuery_MgntFrameTxRate(struct rtllib_device *ieee);
+ extern void rtllib_sta_ps_send_null_frame(struct rtllib_device *ieee,
+ 					  short pwr);
+ extern void rtllib_sta_wakeup(struct rtllib_device *ieee, short nl);
+diff --git a/drivers/staging/rtl8192e/rtllib_softmac.c b/drivers/staging/rtl8192e/rtllib_softmac.c
+index 067a45a..089a058 100644
+--- a/drivers/staging/rtl8192e/rtllib_softmac.c
++++ b/drivers/staging/rtl8192e/rtllib_softmac.c
+@@ -193,7 +193,7 @@ MgntQuery_TxRateExcludeCCKRates(struct rtllib_device *ieee)
+ 	return QueryRate;
+ }
+ 
+-u8 MgntQuery_MgntFrameTxRate(struct rtllib_device *ieee)
++static u8 MgntQuery_MgntFrameTxRate(struct rtllib_device *ieee)
+ {
+ 	struct rt_hi_throughput *pHTInfo = ieee->pHTInfo;
+ 	u8 rate;
+-- 
+1.9.1
+

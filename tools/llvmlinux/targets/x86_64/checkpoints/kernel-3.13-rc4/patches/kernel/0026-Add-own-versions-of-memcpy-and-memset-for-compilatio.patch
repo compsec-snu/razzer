@@ -1,0 +1,173 @@
+From 81aa8c99b5cb439e97e8896319a29d8d25b916e3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:46:46 +0100
+Subject: [PATCH 22/39] x86: LLVMLinux: Add own versions of memcpy and memset
+ for compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When using clang to compile the kernel, things like memcpy and memset need to
+be provided. With clang these are normally provided by the LLVM compiler-rt
+library which isn't used with the Linux kernel.
+
+Author:  PaX Team <pageexec@freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+Merge:   Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+
+---
+ arch/x86/boot/boot.h            | 36 +++++++++++++++++++++++++++++++++---
+ arch/x86/boot/compressed/misc.c |  8 ++++----
+ arch/x86/boot/memory.c          |  2 +-
+ arch/x86/boot/string.c          |  6 +++---
+ 4 files changed, 41 insertions(+), 11 deletions(-)
+
+diff --git a/arch/x86/boot/boot.h b/arch/x86/boot/boot.h
+index 5b75319..e02f05d 100644
+--- a/arch/x86/boot/boot.h
++++ b/arch/x86/boot/boot.h
+@@ -30,6 +30,12 @@
+ #include <asm/processor-flags.h>
+ #include "ctype.h"
+ 
++#ifdef CONFIG_X86_32
++#define asmlinkage __attribute__((regparm(0)))
++#else
++#define asmlinkage
++#endif
++
+ /* Useful macros */
+ #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+ 
+@@ -229,12 +235,36 @@ void copy_to_fs(addr_t dst, void *src, size_t len);
+ void *copy_from_fs(void *dst, addr_t src, size_t len);
+ void copy_to_gs(addr_t dst, void *src, size_t len);
+ void *copy_from_gs(void *dst, addr_t src, size_t len);
++
++#ifndef __clang__
+ void *memcpy(void *dst, void *src, size_t len);
+ void *memset(void *dst, int c, size_t len);
+ 
+ #define memcpy(d,s,l) __builtin_memcpy(d,s,l)
+ #define memset(d,c,l) __builtin_memset(d,c,l)
+ 
++#else
++static inline void *memcpy(void *d, const void *s, size_t l)
++{
++	int d0, d1, d2;
++	asm volatile("rep ; addr32 movsb\n\t"
++		     : "=&c" (d0), "=&D" (d1), "=&S" (d2)
++		     : "0" (l), "1" ((long)d), "2" ((long)s)
++		     : "memory");
++	return d;
++}
++
++static inline void *memset(void *d, char c, size_t l)
++{
++	int d0, d1;
++	asm volatile("rep ; addr32 stosb\n\t"
++		     : "=&c" (d0), "=&D" (d1)
++		     : "0" (l), "1" (d), "a" (c)
++		     : "memory");
++	return d;
++}
++#endif
++
+ /* a20.c */
+ int enable_a20(void);
+ 
+@@ -350,9 +380,9 @@ int printf(const char *fmt, ...);
+ void initregs(struct biosregs *regs);
+ 
+ /* string.c */
+-int strcmp(const char *str1, const char *str2);
+-int strncmp(const char *cs, const char *ct, size_t count);
+-size_t strnlen(const char *s, size_t maxlen);
++asmlinkage int strcmp(const char *str1, const char *str2);
++asmlinkage int strncmp(const char *cs, const char *ct, size_t count);
++asmlinkage size_t strnlen(const char *s, size_t maxlen);
+ unsigned int atou(const char *s);
+ unsigned long long simple_strtoull(const char *cp, char **endp, unsigned int base);
+ 
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 0319c88..de331e5 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -109,8 +109,8 @@ static void error(char *m);
+  */
+ struct boot_params *real_mode;		/* Pointer to real-mode data */
+ 
+-void *memset(void *s, int c, size_t n);
+-void *memcpy(void *dest, const void *src, size_t n);
++asmlinkage void *memset(void *s, int c, size_t n);
++asmlinkage void *memcpy(void *dest, const void *src, size_t n);
+ 
+ #ifdef CONFIG_X86_64
+ #define memptr long
+@@ -222,7 +222,7 @@ void __putstr(const char *s)
+ 	outb(0xff & (pos >> 1), vidport+1);
+ }
+ 
+-void *memset(void *s, int c, size_t n)
++asmlinkage void *memset(void *s, int c, size_t n)
+ {
+ 	int i;
+ 	char *ss = s;
+@@ -232,7 +232,7 @@ void *memset(void *s, int c, size_t n)
+ 	return s;
+ }
+ #ifdef CONFIG_X86_32
+-void *memcpy(void *dest, const void *src, size_t n)
++asmlinkage void *memcpy(void *dest, const void *src, size_t n)
+ {
+ 	int d0, d1, d2;
+ 	asm volatile(
+diff --git a/arch/x86/boot/memory.c b/arch/x86/boot/memory.c
+index db75d07..65607e5 100644
+--- a/arch/x86/boot/memory.c
++++ b/arch/x86/boot/memory.c
+@@ -64,7 +64,7 @@ static int detect_memory_e820(void)
+ 			break;
+ 		}
+ 
+-		*desc++ = buf;
++		memcpy(desc++, &buf, sizeof(buf));
+ 		count++;
+ 	} while (ireg.ebx && count < ARRAY_SIZE(boot_params.e820_map));
+ 
+diff --git a/arch/x86/boot/string.c b/arch/x86/boot/string.c
+index 574dedf..476ddea 100644
+--- a/arch/x86/boot/string.c
++++ b/arch/x86/boot/string.c
+@@ -14,7 +14,7 @@
+ 
+ #include "boot.h"
+ 
+-int strcmp(const char *str1, const char *str2)
++asmlinkage int strcmp(const char *str1, const char *str2)
+ {
+ 	const unsigned char *s1 = (const unsigned char *)str1;
+ 	const unsigned char *s2 = (const unsigned char *)str2;
+@@ -30,7 +30,7 @@ int strcmp(const char *str1, const char *str2)
+ 	return 0;
+ }
+ 
+-int strncmp(const char *cs, const char *ct, size_t count)
++asmlinkage int strncmp(const char *cs, const char *ct, size_t count)
+ {
+ 	unsigned char c1, c2;
+ 
+@@ -46,7 +46,7 @@ int strncmp(const char *cs, const char *ct, size_t count)
+ 	return 0;
+ }
+ 
+-size_t strnlen(const char *s, size_t maxlen)
++asmlinkage size_t strnlen(const char *s, size_t maxlen)
+ {
+ 	const char *es = s;
+ 	while (*es && maxlen) {
+-- 
+1.8.1.2
+

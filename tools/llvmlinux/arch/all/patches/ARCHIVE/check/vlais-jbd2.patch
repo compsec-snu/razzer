@@ -1,0 +1,43 @@
+From 9049a57868737326f327d88ad92c9ab7f815e15d Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Fri, 28 Sep 2012 15:23:44 -0400
+Subject: [PATCH 5/8] Remove VLAIS usage from JBD2 code
+
+The use of variable length arrays in structs (VLAIS) in the Linux Kernel code
+precludes the use of compilers which don't implement VLAIS (for instance the
+Clang compiler). Since ctx is always a 32-bit CRC, hard coding a size of 4
+bytes accomplishes the same thing without the use of VLAIS. This is the same
+technique already employed in fs/ext4/ext4.h
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+[Used a #define to specify the fixed size of ctx]
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ include/linux/jbd2.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- linux.orig/include/linux/jbd2.h
++++ linux/include/linux/jbd2.h
+@@ -1303,15 +1303,21 @@
+ 
+ extern int jbd_blocks_per_page(struct inode *inode);
+ 
++/* JBD uses a CRC32 checksum */
++#define JBD_MAX_CHECKSUM_SIZE 4
++
+ static inline u32 jbd2_chksum(journal_t *journal, u32 crc,
+ 			      const void *address, unsigned int length)
+ {
+ 	struct {
+ 		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(journal->j_chksum_driver)];
++		char ctx[JBD_MAX_CHECKSUM_SIZE];
+ 	} desc;
+ 	int err;
+ 
++	BUG_ON(crypto_shash_descsize(journal->j_chksum_driver) >
++		JBD_MAX_CHECKSUM_SIZE);
++
+ 	desc.shash.tfm = journal->j_chksum_driver;
+ 	desc.shash.flags = 0;
+ 	*(u32 *)desc.ctx = crc;

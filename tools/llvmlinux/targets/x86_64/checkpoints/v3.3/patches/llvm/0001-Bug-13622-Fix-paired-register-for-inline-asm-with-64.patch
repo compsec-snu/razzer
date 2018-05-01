@@ -1,0 +1,268 @@
+From fbf57e82a728396a310cd31ec63598a4d1e34b34 Mon Sep 17 00:00:00 2001
+From: Weiming Zhao <weimingz@codeaurora.org>
+Date: Tue, 21 Aug 2012 14:04:25 -0700
+Subject: [PATCH] Bug 13622: Fix paired register for inline asm with 64-bit
+ data on ARM
+
+---
+ include/llvm/Target/TargetLowering.h             |   15 +++++++++
+ lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp |   22 +++++++++----
+ lib/Target/ARM/ARMISelLowering.cpp               |   36 ++++++++++++++++++++--
+ lib/Target/ARM/ARMISelLowering.h                 |    4 ++-
+ test/CodeGen/ARM/inlineasm-64bit.ll              |   20 ++++++++++++
+ test/CodeGen/ARM/thumb1-inlineasm-64bit.ll       |   20 ++++++++++++
+ 6 files changed, 106 insertions(+), 11 deletions(-)
+ create mode 100644 test/CodeGen/ARM/inlineasm-64bit.ll
+ create mode 100644 test/CodeGen/ARM/thumb1-inlineasm-64bit.ll
+
+diff --git a/include/llvm/Target/TargetLowering.h b/include/llvm/Target/TargetLowering.h
+index ef63422..cdab850 100644
+--- a/include/llvm/Target/TargetLowering.h
++++ b/include/llvm/Target/TargetLowering.h
+@@ -26,6 +26,7 @@
+ #include "llvm/InlineAsm.h"
+ #include "llvm/Attributes.h"
+ #include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/SmallSet.h"
+ #include "llvm/Support/CallSite.h"
+ #include "llvm/CodeGen/SelectionDAGNodes.h"
+ #include "llvm/CodeGen/RuntimeLibcalls.h"
+@@ -1574,6 +1575,20 @@ public:
+     getRegForInlineAsmConstraint(const std::string &Constraint,
+                                  EVT VT) const;
+ 
++  /// getConstraintType - Given a constraint, return the type of constraint it
++  /// is for this target.
++  /// AssignedPhyRegs is used to keep pre-specified physical regs for the
++  /// inline ASM. This interface can be used to allocate physical registers and
++  /// avoid conflicting with pre-specified physical registers.
++  virtual std::pair<unsigned, const TargetRegisterClass*>
++    getRegForInlineAsmConstraint(const std::string &Constraint,
++                                 EVT VT,
++                                 const SmallSet<unsigned, 32> &AssignedPhyRegs
++                                ) const {
++      // The default implementation simply ignores the AssignedPhyRegs.
++      return getRegForInlineAsmConstraint(Constraint, VT);
++    }
++
+   /// LowerXConstraint - try to replace an X constraint, which matches anything,
+   /// with another that has more specific requirements based on the type of the
+   /// corresponding operand.  This returns null if there is no replacement to
+diff --git a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+index b587884..89587c5 100644
+--- a/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+@@ -5801,7 +5801,8 @@ typedef SmallVector<SDISelAsmOperandInfo,16> SDISelAsmOperandInfoVector;
+ static void GetRegistersForValue(SelectionDAG &DAG,
+                                  const TargetLowering &TLI,
+                                  DebugLoc DL,
+-                                 SDISelAsmOperandInfo &OpInfo) {
++                                 SDISelAsmOperandInfo &OpInfo,
++                                 SmallSet<unsigned, 32> &AssignedPhyRegs) {
+   LLVMContext &Context = *DAG.getContext();
+ 
+   MachineFunction &MF = DAG.getMachineFunction();
+@@ -5811,7 +5812,8 @@ static void GetRegistersForValue(SelectionDAG &DAG,
+   // register class, find it.
+   std::pair<unsigned, const TargetRegisterClass*> PhysReg =
+     TLI.getRegForInlineAsmConstraint(OpInfo.ConstraintCode,
+-                                     OpInfo.ConstraintVT);
++                                     OpInfo.ConstraintVT,
++                                     AssignedPhyRegs);
+ 
+   unsigned NumRegs = 1;
+   if (OpInfo.ConstraintVT != MVT::Other) {
+@@ -5861,6 +5863,7 @@ static void GetRegistersForValue(SelectionDAG &DAG,
+ 
+     // This is a explicit reference to a physical register.
+     Regs.push_back(AssignedReg);
++    AssignedPhyRegs.insert(AssignedReg);
+ 
+     // If this is an expanded reference, add the rest of the regs to Regs.
+     if (NumRegs != 1) {
+@@ -5873,6 +5876,7 @@ static void GetRegistersForValue(SelectionDAG &DAG,
+       for (; NumRegs; --NumRegs, ++I) {
+         assert(I != RC->end() && "Ran out of registers to allocate!");
+         Regs.push_back(*I);
++        AssignedPhyRegs.insert(*I);
+       }
+     }
+ 
+@@ -5903,6 +5907,8 @@ static void GetRegistersForValue(SelectionDAG &DAG,
+ ///
+ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
+   const InlineAsm *IA = cast<InlineAsm>(CS.getCalledValue());
++  /// Physical regs assigned to this inline ASM.
++  SmallSet<unsigned, 32> AssignedPhyRegs;
+ 
+   /// ConstraintOperands - Information about all of the constraints.
+   SDISelAsmOperandInfoVector ConstraintOperands;
+@@ -6001,10 +6007,12 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
+       if (OpInfo.ConstraintVT != Input.ConstraintVT) {
+         std::pair<unsigned, const TargetRegisterClass*> MatchRC =
+           TLI.getRegForInlineAsmConstraint(OpInfo.ConstraintCode,
+-                                           OpInfo.ConstraintVT);
++                                           OpInfo.ConstraintVT,
++                                           AssignedPhyRegs);
+         std::pair<unsigned, const TargetRegisterClass*> InputRC =
+           TLI.getRegForInlineAsmConstraint(Input.ConstraintCode,
+-                                           Input.ConstraintVT);
++                                           Input.ConstraintVT,
++                                           AssignedPhyRegs);
+         if ((OpInfo.ConstraintVT.isInteger() !=
+              Input.ConstraintVT.isInteger()) ||
+             (MatchRC.second != InputRC.second)) {
+@@ -6066,9 +6074,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
+     }
+ 
+     // If this constraint is for a specific register, allocate it before
+-    // anything else.
++    // anything else. AssignedPhyRegs tracks those allocated registers.
+     if (OpInfo.ConstraintType == TargetLowering::C_Register)
+-      GetRegistersForValue(DAG, TLI, getCurDebugLoc(), OpInfo);
++      GetRegistersForValue(DAG, TLI, getCurDebugLoc(), OpInfo, AssignedPhyRegs);
+   }
+ 
+   // Second pass - Loop over all of the operands, assigning virtual or physregs
+@@ -6079,7 +6087,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
+     // C_Register operands have already been allocated, Other/Memory don't need
+     // to be.
+     if (OpInfo.ConstraintType == TargetLowering::C_RegisterClass)
+-      GetRegistersForValue(DAG, TLI, getCurDebugLoc(), OpInfo);
++      GetRegistersForValue(DAG, TLI, getCurDebugLoc(), OpInfo, AssignedPhyRegs);
+   }
+ 
+   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
+diff --git a/lib/Target/ARM/ARMISelLowering.cpp b/lib/Target/ARM/ARMISelLowering.cpp
+index 5f3a9c7..fa994d5 100644
+--- a/lib/Target/ARM/ARMISelLowering.cpp
++++ b/lib/Target/ARM/ARMISelLowering.cpp
+@@ -9592,8 +9592,9 @@ ARMTargetLowering::getSingleConstraintMatchWeight(
+ 
+ typedef std::pair<unsigned, const TargetRegisterClass*> RCPair;
+ RCPair
+-ARMTargetLowering::getRegForInlineAsmConstraint(const std::string &Constraint,
+-                                                EVT VT) const {
++ARMTargetLowering::getRegForInlineAsmConstraint(
++    const std::string &Constraint, EVT VT,
++    const SmallSet<unsigned, 32> &AssignedPhyRegs) const {
+   if (Constraint.size() == 1) {
+     // GCC ARM Constraint Letters
+     switch (Constraint[0]) {
+@@ -9606,6 +9607,34 @@ ARMTargetLowering::getRegForInlineAsmConstraint(const std::string &Constraint,
+         return RCPair(0U, &ARM::hGPRRegClass);
+       break;
+     case 'r':
++      // For 64-bit data passing (e.g. used by ldrexd/strexd), ARM ABI requires
++      // a (even,even+1) register pair. Since LLVM does not support register
++      // pair constraints now, we hard code physical registers here, which is
++      // similar to the implementation of the ldrexd intrinsics (see
++      // ARMTargetLowering::EmitAtomicBinary64).
++      // (Note: although Thumb allows any two GPRs in the register pair, in
++      // order to properly support %H modifier that specifies the odd register
++      // of a pair and is often used together with ldrexd/strexd, we always
++      // enforce a (even, even+1) register pair.)
++      // FIXME: When LLVM supports paired register class for 64-bit data in
++      // future, we should just return that register class here and let register
++      // allocator to assign physical registers.
++      if (VT.getSizeInBits() == 64)  {
++        // The valid registers for ldrexd/strexd is r0-r13 for ARM. But we skip
++        // the pairs using FP(r7 on Darwin, r11 on Linux) and SP(r13) for
++        // safety. So we use ARM::R12 as sentinel value.
++        unsigned AvailRegs[] = {ARM::R0, ARM::R1, ARM::R2, ARM::R3,
++                                ARM::R4, ARM::R5, ARM::R8, ARM::R9, ARM::R12};
++
++        for (unsigned i = 0; AvailRegs[i] != ARM::R12; i += 2) {
++          unsigned RegEven = AvailRegs[i], RegOdd = AvailRegs[i+1];
++          if (RegOdd == (Subtarget->isThumb() ? ARM::R7 : ARM::R11))
++            continue;
++          if (!AssignedPhyRegs.count(RegEven) && !AssignedPhyRegs.count(RegOdd))
++            return RCPair(RegEven, &ARM::GPRRegClass);
++        }
++        return RCPair(0U, NULL);
++      }
+       return RCPair(0U, &ARM::GPRRegClass);
+     case 'w':
+       if (VT == MVT::f32)
+@@ -9632,7 +9661,8 @@ ARMTargetLowering::getRegForInlineAsmConstraint(const std::string &Constraint,
+   if (StringRef("{cc}").equals_lower(Constraint))
+     return std::make_pair(unsigned(ARM::CPSR), &ARM::CCRRegClass);
+ 
+-  return TargetLowering::getRegForInlineAsmConstraint(Constraint, VT);
++  return TargetLowering::getRegForInlineAsmConstraint(Constraint, VT,
++                                                      AssignedPhyRegs);
+ }
+ 
+ /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
+diff --git a/lib/Target/ARM/ARMISelLowering.h b/lib/Target/ARM/ARMISelLowering.h
+index 2b8f382..fd7315d 100644
+--- a/lib/Target/ARM/ARMISelLowering.h
++++ b/lib/Target/ARM/ARMISelLowering.h
+@@ -339,9 +339,11 @@ namespace llvm {
+     ConstraintWeight getSingleConstraintMatchWeight(
+       AsmOperandInfo &info, const char *constraint) const;
+ 
++    using TargetLowering::getRegForInlineAsmConstraint;
+     std::pair<unsigned, const TargetRegisterClass*>
+       getRegForInlineAsmConstraint(const std::string &Constraint,
+-                                   EVT VT) const;
++                           EVT VT,
++                           const SmallSet<unsigned, 32> &AssignedPhyRegs) const;
+ 
+     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
+     /// vector.  If it is invalid, don't add anything to Ops. If hasMemory is
+diff --git a/test/CodeGen/ARM/inlineasm-64bit.ll b/test/CodeGen/ARM/inlineasm-64bit.ll
+new file mode 100644
+index 0000000..72cc211
+--- /dev/null
++++ b/test/CodeGen/ARM/inlineasm-64bit.ll
+@@ -0,0 +1,20 @@
++; RUN: llc < %s -O3 -march=arm | FileCheck %s
++
++define void @i64_write(i64* %p, i64 %val) nounwind {
++; CHECK: i64_write
++; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], {{r[0-9]?[13579]}}, [r{{[0-9]+}}]
++; CHECK: strexd [[REG1]], {{r[0-9]?[02468]}}, {{r[0-9]?[13579]}}
++  %1 = tail call i64 asm sideeffect "1: ldrexd $0, ${0:H}, [$2]\0A strexd $0, $3, ${3:H}, [$2]\0A teq $0, #0\0A bne 1b", "=&r,=*Qo,r,r,~{cc}"(i64* %p, i64* %p, i64 %val) nounwind
++  ret void
++}
++
++; check if callee-saved registers used by inline asm are saved/restored
++define void @foo(i64* %p, i64 %i) nounwind {
++; CHECK: foo
++; CHECK: push {{{r[4-9]|r10|r11}}
++; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], {{r[0-9]?[13579]}}, [r{{[0-9]+}}]
++; CHECK: strexd [[REG1]], {{r[0-9]?[02468]}}, {{r[0-9]?[13579]}}
++; CHECK: pop {{{r[4-9]|r10|r11}}
++  %1 = tail call { i64, i64 } asm sideeffect "@ atomic64_set\0A1:\09ldrexd\09$0, ${0:H}, [$3]\0Aldrexd\09$1, ${1:H}, [$3]\0A\09strexd\09$0, $4, ${4:H}, [$3]\0A\09teq\09$0, #0\0A\09bne\091b", "=&r,=&r,=*Qo,r,r,~{cc}"(i64* %p, i64* %p, i64 %i) nounwind
++  ret void
++}
+diff --git a/test/CodeGen/ARM/thumb1-inlineasm-64bit.ll b/test/CodeGen/ARM/thumb1-inlineasm-64bit.ll
+new file mode 100644
+index 0000000..c9b2660
+--- /dev/null
++++ b/test/CodeGen/ARM/thumb1-inlineasm-64bit.ll
+@@ -0,0 +1,20 @@
++; RUN: llc < %s -O3 -march=thumb | FileCheck %s
++
++define void @i64_write(i64* %p, i64 %val) nounwind {
++; CHECK: i64_write
++; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], {{r[0-9]?[13579]}}, [r{{[0-9]+}}]
++; CHECK: strexd [[REG1]], {{r[0-9]?[02468]}}, {{r[0-9]?[13579]}}
++  %1 = tail call i64 asm sideeffect "1: ldrexd $0, ${0:H}, [$2]\0A strexd $0, $3, ${3:H}, [$2]\0A teq $0, #0\0A bne 1b", "=&r,=*Qo,r,r,~{cc}"(i64* %p, i64* %p, i64 %val) nounwind
++  ret void
++}
++
++; check if callee-saved registers used by inline asm are saved/restored
++define void @foo(i64* %p, i64 %i) nounwind {
++; CHECK: foo
++; CHECK: push {{{r[4-9]|r10|r11}}
++; CHECK: ldrexd [[REG1:(r[0-9]?[02468])]], {{r[0-9]?[13579]}}, [r{{[0-9]+}}]
++; CHECK: strexd [[REG1]], {{r[0-9]?[02468]}}, {{r[0-9]?[13579]}}
++; CHECK: pop {{{r[4-9]|r10|r11}}
++  %1 = tail call { i64, i64 } asm sideeffect "@ atomic64_set\0A1:\09ldrexd\09$0, ${0:H}, [$3]\0Aldrexd\09$1, ${1:H}, [$3]\0A\09strexd\09$0, $4, ${4:H}, [$3]\0A\09teq\09$0, #0\0A\09bne\091b", "=&r,=&r,=*Qo,r,r,~{cc}"(i64* %p, i64* %p, i64 %i) nounwind
++  ret void
++}
+-- 
+1.7.8.3
+

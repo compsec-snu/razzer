@@ -1,0 +1,41 @@
+From f4366b50765f3d0f673191c226e9564fa7f49a9c Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 30 May 2014 11:35:50 -0700
+Subject: [PATCH] arm, vt8500, LLVMLlinux: Use mcr instead of mcr% for
+ mach-vt8500
+
+The ASM below does not compile with clang and is not the way that the mcr
+command is used in other parts of the kernel.
+
+arch/arm/mach-vt8500/vt8500.c:72:11: error: invalid % escape in inline assembly string
+        asm("mcr%? p15, 0, %0, c7, c0, 4" : : "r" (0));
+            ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+There are other forms that are supported on different ARM instruction sets but
+generally the kernel just uses mcr as it is supported in all ARM instruction
+sets.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm/mach-vt8500/vt8500.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-vt8500/vt8500.c b/arch/arm/mach-vt8500/vt8500.c
+index 2da7be3..3bc0dc9 100644
+--- a/arch/arm/mach-vt8500/vt8500.c
++++ b/arch/arm/mach-vt8500/vt8500.c
+@@ -69,7 +69,7 @@ static void vt8500_power_off(void)
+ {
+ 	local_irq_disable();
+ 	writew(5, pmc_base + VT8500_HCR_REG);
+-	asm("mcr%? p15, 0, %0, c7, c0, 4" : : "r" (0));
++	asm("mcr p15, 0, %0, c7, c0, 4" : : "r" (0));
+ }
+ 
+ static void __init vt8500_init(void)
+-- 
+1.9.1
+

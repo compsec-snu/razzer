@@ -1,0 +1,69 @@
+From ecd123915d5c027a8c2f7912aaa394617743601b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 24 Jul 2013 15:23:36 +0200
+Subject: [PATCH 01/11] Revert "mm, sched: Allow uaccess in atomic with
+ pagefault_disable()"
+
+This reverts commit 662bbcb2747c2422cf98d3d97619509379eee466.
+---
+ include/linux/kernel.h |  7 +++++--
+ mm/memory.c            | 11 ++++-------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 3bef14c..377a977 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -193,10 +193,13 @@ extern int _cond_resched(void);
+ 		(__x < 0) ? -__x : __x;		\
+ 	})
+ 
+-#if defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP)
++#ifdef CONFIG_PROVE_LOCKING
+ void might_fault(void);
+ #else
+-static inline void might_fault(void) { }
++static inline void might_fault(void)
++{
++	__might_sleep(__FILE__, __LINE__, 0);
++}
+ #endif
+ 
+ extern struct atomic_notifier_head panic_notifier_list;
+diff --git a/mm/memory.c b/mm/memory.c
+index 1ce2e2a..6e572cc 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -4202,7 +4202,7 @@ void print_vma_addr(char *prefix, unsigned long ip)
+ 	up_read(&mm->mmap_sem);
+ }
+ 
+-#if defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP)
++#ifdef CONFIG_PROVE_LOCKING
+ void might_fault(void)
+ {
+ 	/*
+@@ -4214,17 +4214,14 @@ void might_fault(void)
+ 	if (segment_eq(get_fs(), KERNEL_DS))
+ 		return;
+ 
++	__might_sleep(__FILE__, __LINE__, 0);
++
+ 	/*
+ 	 * it would be nicer only to annotate paths which are not under
+ 	 * pagefault_disable, however that requires a larger audit and
+ 	 * providing helpers like get_user_atomic.
+ 	 */
+-	if (in_atomic())
+-		return;
+-
+-	__might_sleep(__FILE__, __LINE__, 0);
+-
+-	if (current->mm)
++	if (!in_atomic() && current->mm)
+ 		might_lock_read(&current->mm->mmap_sem);
+ }
+ EXPORT_SYMBOL(might_fault);
+-- 
+1.8.1.4
+

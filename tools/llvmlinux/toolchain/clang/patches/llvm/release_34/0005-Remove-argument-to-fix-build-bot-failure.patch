@@ -1,0 +1,27 @@
+From a265ec009d1d591dc5335f76288f3753b2f71842 Mon Sep 17 00:00:00 2001
+From: Craig Topper <craig.topper@gmail.com>
+Date: Mon, 6 Jan 2014 06:09:03 +0000
+Subject: [PATCH 05/26] Remove argument to fix build bot failure.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198587 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 46832216c612ae0c83faa8957af67fbcc32fc3ff)
+---
+ lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+index 65cc34e..ccbdb89 100644
+--- a/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86MCCodeEmitter.cpp
+@@ -1176,7 +1176,7 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
+     EmitByte(0x67, CurByte, OS);
+ 
+   // Emit the operand size opcode prefix as needed.
+-  if (TSFlags & (is16BitMode(Features) ? X86II::OpSize16 : X86II::OpSize))
++  if (TSFlags & (is16BitMode() ? X86II::OpSize16 : X86II::OpSize))
+     EmitByte(0x66, CurByte, OS);
+ 
+   bool Need0FPrefix = false;
+-- 
+1.8.4
+

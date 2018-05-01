@@ -1,0 +1,59 @@
+From 03bd99af3fc30b12b25f8507cee65aacf9cb3870 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Thu, 4 Sep 2014 20:39:24 +0200
+Subject: [PATCH] crypto: LLVMLinux: Remove VLAIS from
+ crypto/ccp/ccp-crypto-sha.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch allocates the appropriate amount of memory
+using a char array using the SHASH_DESC_ON_STACK macro.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/ccp/ccp-crypto-sha.c | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/crypto/ccp/ccp-crypto-sha.c b/drivers/crypto/ccp/ccp-crypto-sha.c
+index 873f234..9653157 100644
+--- a/drivers/crypto/ccp/ccp-crypto-sha.c
++++ b/drivers/crypto/ccp/ccp-crypto-sha.c
+@@ -198,10 +198,9 @@ static int ccp_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
+ {
+ 	struct ccp_ctx *ctx = crypto_tfm_ctx(crypto_ahash_tfm(tfm));
+ 	struct crypto_shash *shash = ctx->u.sha.hmac_tfm;
+-	struct {
+-		struct shash_desc sdesc;
+-		char ctx[crypto_shash_descsize(shash)];
+-	} desc;
++
++	SHASH_DESC_ON_STACK(sdesc, shash);
++
+ 	unsigned int block_size = crypto_shash_blocksize(shash);
+ 	unsigned int digest_size = crypto_shash_digestsize(shash);
+ 	int i, ret;
+@@ -216,11 +215,11 @@ static int ccp_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
+ 
+ 	if (key_len > block_size) {
+ 		/* Must hash the input key */
+-		desc.sdesc.tfm = shash;
+-		desc.sdesc.flags = crypto_ahash_get_flags(tfm) &
++		sdesc->tfm = shash;
++		sdesc->flags = crypto_ahash_get_flags(tfm) &
+ 			CRYPTO_TFM_REQ_MAY_SLEEP;
+ 
+-		ret = crypto_shash_digest(&desc.sdesc, key, key_len,
++		ret = crypto_shash_digest(sdesc, key, key_len,
+ 					  ctx->u.sha.key);
+ 		if (ret) {
+ 			crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+-- 
+1.9.1
+

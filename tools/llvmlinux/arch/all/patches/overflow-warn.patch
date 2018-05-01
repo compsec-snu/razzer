@@ -1,0 +1,31 @@
+From 8133df4b6afd8fab5390f6fa95a7782dfeb85314 Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Sat, 19 Apr 2014 23:00:15 -0700
+Subject: [PATCH] fs, LLVMLinux: Remove warning from COMPATIBLE_IOCTL
+
+cmd in COMPATIBLE_IOCTL is always a u32, so cast it so there isn't a warning
+about an overflow in XFORM.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Acked-by: Arnd Bergmann <arnd@arndb.de>
+---
+ fs/compat_ioctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/compat_ioctl.c b/fs/compat_ioctl.c
+index e822890..c374c73 100644
+--- a/fs/compat_ioctl.c
++++ b/fs/compat_ioctl.c
+@@ -810,7 +810,7 @@ static int compat_ioctl_preallocate(struct file *file,
+  */
+ #define XFORM(i) (((i) ^ ((i) << 27) ^ ((i) << 17)) & 0xffffffff)
+ 
+-#define COMPATIBLE_IOCTL(cmd) XFORM(cmd),
++#define COMPATIBLE_IOCTL(cmd) XFORM((u32)cmd),
+ /* ioctl should not be warned about even if it's not implemented.
+    Valid reasons to use this:
+    - It is implemented with ->compat_ioctl on some device, but programs
+-- 
+1.9.1
+

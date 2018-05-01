@@ -1,0 +1,56 @@
+From 74306f21e204ee9b845869b63448027ecee5f422 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Mon, 8 Sep 2014 00:05:09 -0500
+Subject: [PATCH] crypto: LLVMLinux: Add macro to remove use of VLAIS in crypto
+ code
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add a macro which replaces the use of a Variable Length Array In Struct (VLAIS)
+with a C99 compliant equivalent. This macro instead allocates the appropriate
+amount of memory using an char array.
+
+The new code can be compiled with both gcc and clang.
+
+struct shash_desc contains a flexible array member member ctx declared with
+CRYPTO_MINALIGN_ATTR, so sizeof(struct shash_desc) aligns the beginning
+of the array declared after struct shash_desc with long long.
+
+No trailing padding is required because it is not a struct type that can
+be used in an array.
+
+The CRYPTO_MINALIGN_ATTR is required so that desc is aligned with long long
+as would be the case for a struct containing a member with
+CRYPTO_MINALIGN_ATTR.
+
+If you want to get to the ctx at the end of the shash_desc as before you can do
+so using shash_desc_ctx(shash)
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Michał Mirosław <mirqus@gmail.com>
+---
+ include/crypto/hash.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/crypto/hash.h b/include/crypto/hash.h
+index a391955..74b13ec 100644
+--- a/include/crypto/hash.h
++++ b/include/crypto/hash.h
+@@ -58,6 +58,11 @@ struct shash_desc {
+ 	void *__ctx[] CRYPTO_MINALIGN_ATTR;
+ };
+ 
++#define SHASH_DESC_ON_STACK(shash, ctx)				  \
++	char __##shash##_desc[sizeof(struct shash_desc) +	  \
++		crypto_shash_descsize(ctx)] CRYPTO_MINALIGN_ATTR; \
++	struct shash_desc *shash = (struct shash_desc *)__##shash##_desc
++
+ struct shash_alg {
+ 	int (*init)(struct shash_desc *desc);
+ 	int (*update)(struct shash_desc *desc, const u8 *data,
+-- 
+1.9.1
+

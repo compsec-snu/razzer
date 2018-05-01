@@ -1,0 +1,61 @@
+From 9a31150f754c33dd55da5651274edefe647f3a3c Mon Sep 17 00:00:00 2001
+From: David Woodhouse <David.Woodhouse@intel.com>
+Date: Mon, 13 Jan 2014 12:43:58 +0000
+Subject: [PATCH 26/26] [x86] Fix 16-bit disassembly of JCXZ/JECXZ
+
+(cherry picked from commit 0b608c6f9f297d9b6baa04d84e3cc81ed6a0a81c)
+---
+ lib/Target/X86/Disassembler/X86DisassemblerDecoder.c | 19 +++++++++++++++++++
+ test/MC/Disassembler/X86/x86-16.txt                  |  4 ++--
+ 2 files changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/lib/Target/X86/Disassembler/X86DisassemblerDecoder.c b/lib/Target/X86/Disassembler/X86DisassemblerDecoder.c
+index 66622c4..93508ba 100644
+--- a/lib/Target/X86/Disassembler/X86DisassemblerDecoder.c
++++ b/lib/Target/X86/Disassembler/X86DisassemblerDecoder.c
+@@ -908,6 +908,25 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
+   if (getIDWithAttrMask(&instructionID, insn, attrMask))
+     return -1;
+ 
++  /*
++   * JCXZ/JECXZ need special handling for 16-bit mode because the meaning
++   * of the AdSize prefix is inverted w.r.t. 32-bit mode.
++   */
++  if (insn->mode == MODE_16BIT && insn->opcode == 0xE3) {
++    const struct InstructionSpecifier *spec;
++    spec = specifierForUID(instructionID);
++
++    /*
++     * Check for Ii8PCRel instructions. We could alternatively do a
++     * string-compare on the names, but this is probably cheaper.
++     */
++    if (x86OperandSets[spec->operands][0].type == TYPE_REL8) {
++      attrMask ^= ATTR_ADSIZE;
++      if (getIDWithAttrMask(&instructionID, insn, attrMask))
++        return -1;
++    }
++  }
++
+   /* The following clauses compensate for limitations of the tables. */
+ 
+   if ((insn->mode == MODE_16BIT || insn->prefixPresent[0x66]) &&
+diff --git a/test/MC/Disassembler/X86/x86-16.txt b/test/MC/Disassembler/X86/x86-16.txt
+index 83be869..93974d4 100644
+--- a/test/MC/Disassembler/X86/x86-16.txt
++++ b/test/MC/Disassembler/X86/x86-16.txt
+@@ -297,10 +297,10 @@
+ # CHECK: lcalll $2, $4660
+ 0x66 0x9a 0x34 0x12 0x00 0x00 0x02 0x00
+ 
+-# CHECKX: jcxz
++# CHECK: jcxz
+ 0xe3 0x00
+ 
+-# CHECKX: jecxz
++# CHECK: jecxz
+ 0x67 0xe3 0x00
+ 
+ # CHECK: iretw
+-- 
+1.8.4
+

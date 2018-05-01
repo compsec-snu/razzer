@@ -1,0 +1,52 @@
+From 622dd5f3c4b8726084a6f1e30224f89ce2857540 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Sat, 19 Oct 2013 17:16:58 +0200
+Subject: [PATCH] Clang 3.4 changed to error on unknown options. In the long
+ run this will simplify cc-option again. Right now we need to cope with old
+ and new.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ Makefile               | 2 +-
+ scripts/Kbuild.include | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 73fe69b..7ef6d77 100644
+--- a/Makefile
++++ b/Makefile
+@@ -391,7 +391,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+ 		   -fno-strict-aliasing -fno-common \
+ 		   -Werror-implicit-function-declaration \
+ 		   -Wno-format-security $(call cc-option,-no-integrated-as,)\
+-		   -fno-delete-null-pointer-checks
++		   $(call cc-option,-fno-delete-null-pointer-checks,)
+ KBUILD_AFLAGS_KERNEL :=
+ KBUILD_CFLAGS_KERNEL :=
+ KBUILD_AFLAGS   := -D__ASSEMBLY__ $(call cc-option,-no-integrated-as,)
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index f883b1d..5702ad9 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -113,13 +113,13 @@ ifeq ($(COMPILER),clang)
+ # Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
+ cc-option = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP" 2>&1 \
+-		| egrep -q "warning: .* '$(1)'",$(2),$(1))
++		| egrep -q "warning|error: .* '$(strip $(1))'",$(2),$(1))
+ 
+ # cc-option-yn
+ # Usage: flag := $(call cc-option-yn,-march=winchip-c6)
+ cc-option-yn = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP" 2>&1 \
+-		| egrep -q "warning: .* '$(1)'",n,y)
++		| egrep -q "warning|error: .* '$(strip $(1))'",n,y)
+ 
+ # cc-disable-warning
+ # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
+-- 
+1.8.1.4
+

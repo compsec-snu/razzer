@@ -1,0 +1,13 @@
+diff --git a/utils/unittest/UnitTestMain/TestMain.cpp b/utils/unittest/UnitTestMain/TestMain.cpp
+index f5b09a5..0f97afa 100644
+--- a/utils/unittest/UnitTestMain/TestMain.cpp
++++ b/utils/unittest/UnitTestMain/TestMain.cpp
+@@ -7,7 +7,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-#include "llvm/Config/config.h"
++//#include "llvm/Config/config.h"
+ #include "llvm/Support/CommandLine.h"
+ #include "llvm/Support/Signals.h"
+ #include "gtest/gtest.h"

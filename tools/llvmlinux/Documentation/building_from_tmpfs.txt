@@ -1,0 +1,49 @@
+= Building from a Ram Disk =
+
+By default, every codebase in LLVMLinux builds out-of-tree into its own build
+directory. The idea is to seperate code form build artefacts.
+
+If you are building from a slower disk drive (rotational disk drive or network
+drive) then building from a RAM disk can give you significant speed
+improvements. If you are building from an SSD, and you have RAM to spare, then
+NOT writing to your SSD can extend it's lifetime (not by much, but if you do a
+lot of compiles like I do, then it adds up).
+
+You can force all builds to RAM disk (actually a tmpfs) by doing the following:
+
+ make tmpfs-build-setup
+
+It will ask you for your password (since mount needs to be run with sudo), and
+then create a "build" directory and mount a tmpfs filesystem on top of it.
+Afterwards all builds will use that directory for .o files and such. The make
+rules will do its best to rebuild anything which was lost if you've rebooted
+since your last build, or if you remounted the build directory.
+
+The make rules are setup to automatically look for the existence of a directory
+named "build" upon which a tmpfs has been mounted to use for build output.
+However, you can force it to use your own custom build directory by setting
+BUILDROOT to your custom directory. So for instance to force the use of
+/tmp/build:
+
+ export BUILDROOT=/tmp/build
+ make clean all
+
+or
+
+ make BUILDROOT=/tmp/build clean all
+
+To see which BUILDROOT is being used, you can do a:
+
+ make list-buildroot
+
+To unmount the tmpfs build directory, you can do a:
+
+ make tmpfs-build-teardown
+
+Remounting the tmpfs (effectively clearing it) can be accomplished as follows:
+
+ make tmpfs-build-remount
+
+or
+
+ make tmpfs-clean

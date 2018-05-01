@@ -1,0 +1,41 @@
+Remove variable length arrays in structures (VLAIS) from the netfilter code.
+
+The use of VLAIS in the Linux Kernel code precludes the use of compilers which
+don't implement VLAIS (for instance the Clang compiler). By moving the variable
+length array to the end of the structure as a zero length array and manually
+handling the allocation of memory, you get the same overall effect without the
+use of VLAIS.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Behan Webster <behanw@converseincode.com>
+---
+ include/linux/jbd2.h        |    2 +-
+ lib/libcrc32c.c             |    2 +-
+ net/netfilter/xt_repldata.h |    6 ++++--
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+Index: msm/net/netfilter/xt_repldata.h
+===================================================================
+--- msm.orig/net/netfilter/xt_repldata.h	2012-09-14 11:41:36.000000000 -0400
++++ msm/net/netfilter/xt_repldata.h	2012-09-14 15:25:42.241573809 -0400
+@@ -3,6 +3,8 @@
+  *
+  * 'entries' and 'term' are never anywhere referenced by word in code. In fact,
+  * they serve as the hanging-off data accessed through repl.data[].
++ * The order or the last two elements in the struct can be changed because only
++ * the size matters since the structure members are not referenced. 
+  */
+ 
+ #define xt_alloc_initial_table(type, typ2) ({ \
+@@ -11,9 +13,9 @@
+ 	unsigned int bytes = 0, hooknum = 0, i = 0; \
+ 	struct { \
+ 		struct type##_replace repl; \
+-		struct type##_standard entries[nhooks]; \
+ 		struct type##_error term; \
+-	} *tbl = kzalloc(sizeof(*tbl), GFP_KERNEL); \
++		struct type##_standard entries[0]; \
++	} *tbl = kzalloc(sizeof(*tbl)+nhooks*sizeof(struct type##_standard), GFP_KERNEL); \
+ 	if (tbl == NULL) \
+ 		return NULL; \
+ 	strncpy(tbl->repl.name, info->name, sizeof(tbl->repl.name)); \

@@ -1,0 +1,35 @@
+From 4c4c8488df8868b084242efe1cf624242c7aba72 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:13:01 +0100
+Subject: [PATCH 49/51] Change byte to word.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ drivers/vfio/pci/vfio_pci_config.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/drivers/vfio/pci/vfio_pci_config.c b/drivers/vfio/pci/vfio_pci_config.c
+index 8b8f7d1..f3df07c 100644
+--- a/drivers/vfio/pci/vfio_pci_config.c
++++ b/drivers/vfio/pci/vfio_pci_config.c
+@@ -1078,7 +1078,7 @@ static int vfio_ext_cap_len(struct vfio_pci_device *vdev, u16 ecap, u16 epos)
+ 		if ((dword & PCI_TPH_CAP_LOC_MASK) == PCI_TPH_LOC_CAP) {
+ 			int sts;
+ 
+-			sts = byte & PCI_TPH_CAP_ST_MASK;
++			sts = dword & PCI_TPH_CAP_ST_MASK;
+ 			sts >>= PCI_TPH_CAP_ST_SHIFT;
+ 			return PCI_TPH_BASE_SIZEOF + round_up(sts * 2, 4);
+ 		}
+-- 
+1.7.10.4
+

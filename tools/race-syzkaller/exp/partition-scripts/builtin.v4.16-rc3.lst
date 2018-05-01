@@ -1,0 +1,263 @@
+# find . -name "built-in.bc"|xargs ls -lh|awk '{print $9"\t\t"$5}' > builtin.lst
+
+# ./built-in.bc		673M
+
+./arch/x86/built-in.bc		24M
+# ./arch/x86/entry/built-in.bc		590K
+# ./arch/x86/entry/vdso/built-in.bc		167K
+# ./arch/x86/entry/vsyscall/built-in.bc		244K
+# ./arch/x86/events/amd/built-in.bc		805K
+# ./arch/x86/events/built-in.bc		5.2M
+# ./arch/x86/events/intel/built-in.bc		3.8M
+# ./arch/x86/ia32/built-in.bc		283K
+# ./arch/x86/kernel/acpi/built-in.bc		340K
+# ./arch/x86/kernel/apic/built-in.bc		1.5M
+# ./arch/x86/kernel/built-in.bc		14M
+# ./arch/x86/kernel/cpu/built-in.bc		3.0M
+# ./arch/x86/kernel/cpu/mcheck/built-in.bc		1007K
+# ./arch/x86/kernel/cpu/microcode/built-in.bc		515K
+# ./arch/x86/kernel/cpu/mtrr/built-in.bc		440K
+# ./arch/x86/kernel/fpu/built-in.bc		769K
+# ./arch/x86/kernel/kprobes/built-in.bc		329K
+# ./arch/x86/lib/built-in.bc		242K
+# ./arch/x86/mm/built-in.bc		2.5M
+# ./arch/x86/net/built-in.bc		434K
+# ./arch/x86/pci/built-in.bc		1.1M
+# ./arch/x86/platform/built-in.bc		476K
+# ./arch/x86/platform/efi/built-in.bc		372K
+# ./arch/x86/platform/intel/built-in.bc		150K
+# ./arch/x86/power/built-in.bc		263K
+# ./arch/x86/realmode/built-in.bc		28K
+# ./arch/x86/video/built-in.bc		144K
+
+# ----------------------
+./block/built-in.bc		11M
+# ./block/partitions/built-in.bc		1.1M
+
+# ----------------------
+./certs/built-in.bc		56K
+
+# ----------------------
+./crypto/built-in.bc		8.8M
+
+# ./crypto/asymmetric_keys/built-in.bc		767K
+
+
+# ----------------------
+# ./drivers/built-in.bc		223M
+
+./drivers/acpi/built-in.bc		15M
+# ./drivers/acpi/acpica/built-in.bc		5.7M
+# ./drivers/acpi/dptf/built-in.bc		118K
+./drivers/ata/built-in.bc		5.8M
+./drivers/base/built-in.bc		7.0M
+# ./drivers/base/power/built-in.bc		1.9M
+# ./drivers/base/regmap/built-in.bc		1.6M
+./drivers/block/built-in.bc		2.3M
+./drivers/cdrom/built-in.bc		655K
+./drivers/char/built-in.bc		3.3M
+# ./drivers/char/agp/built-in.bc		1.5M
+# ./drivers/char/hw_random/built-in.bc		221K
+./drivers/clk/built-in.bc		1.6M
+# ./drivers/clk/x86/built-in.bc		80K
+./drivers/clocksource/built-in.bc		155K
+./drivers/connector/built-in.bc		637K
+./drivers/cpufreq/built-in.bc		1.6M
+./drivers/cpuidle/built-in.bc		459K
+# ./drivers/cpuidle/governors/built-in.bc		100K
+./drivers/dax/built-in.bc		218K
+./drivers/dma/built-in.bc		1.3M
+# ./drivers/dma-buf/built-in.bc		935K
+# ./drivers/dma/dw/built-in.bc		500K
+# ./drivers/dma/hsu/built-in.bc		252K
+./drivers/edac/built-in.bc		1.3M
+./drivers/firewire/built-in.bc		34K
+./drivers/firmware/built-in.bc		1.5M
+# ./drivers/firmware/efi/built-in.bc		1.1M
+
+# ./drivers/gpu/built-in.bc		77M
+# ./drivers/gpu/drm/built-in.bc		77M
+# ./drivers/gpu/drm/i915/built-in.bc		55M
+./drivers/gpu/drm/ttm/built-in.bc		2.4M
+./drivers/gpu/drm/virtio/built-in.bc		2.6M
+./drivers/gpu/vga/built-in.bc		290K
+
+./drivers/hid/built-in.bc		5.5M
+# ./drivers/hid/usbhid/built-in.bc		1.2M
+
+./drivers/hwmon/built-in.bc		217K
+./drivers/i2c/built-in.bc		1.5M
+# ./drivers/i2c/algos/built-in.bc		149K
+# ./drivers/i2c/busses/built-in.bc		360K
+
+./drivers/input/built-in.bc		4.1M
+# ./drivers/input/keyboard/built-in.bc		328K
+# ./drivers/input/mouse/built-in.bc		2.2M
+# ./drivers/input/serio/built-in.bc		743K
+# ./drivers/input/touchscreen/built-in.bc		149K
+
+./drivers/iommu/built-in.bc		3.2M
+./drivers/leds/built-in.bc		309K
+# ./drivers/macintosh/built-in.bc		134K
+./drivers/mailbox/built-in.bc		285K
+./drivers/md/built-in.bc		7.1M
+
+./drivers/net/built-in.bc		22M
+# ./drivers/net/can/built-in.bc		611K
+# ./drivers/net/ethernet/broadcom/built-in.bc		3.9M
+# ./drivers/net/ethernet/built-in.bc		18M
+# ./drivers/net/ethernet/cavium/built-in.bc		165K
+# ./drivers/net/ethernet/cavium/common/built-in.bc		165K
+# ./drivers/net/ethernet/intel/built-in.bc		8.9M
+# ./drivers/net/ethernet/intel/e1000/built-in.bc		2.8M
+# ./drivers/net/ethernet/intel/e1000e/built-in.bc		5.4M
+# ./drivers/net/ethernet/marvell/built-in.bc		1.4M
+# ./drivers/net/ethernet/nvidia/built-in.bc		1.4M
+# ./drivers/net/ethernet/realtek/built-in.bc		2.0M
+# ./drivers/net/phy/built-in.bc		1.4M
+./drivers/nvmem/built-in.bc		239K
+./drivers/pci/built-in.bc		6.5M
+# ./drivers/pci/hotplug/built-in.bc		309K
+# ./drivers/pci/pcie/aer/built-in.bc		466K
+# ./drivers/pci/pcie/built-in.bc		1.2M
+./drivers/pcmcia/built-in.bc		2.4M
+./drivers/platform/built-in.bc		434K
+# ./drivers/platform/x86/built-in.bc		435K
+./drivers/pnp/built-in.bc		1.4M
+# ./drivers/pnp/pnpacpi/built-in.bc		404K
+./drivers/power/built-in.bc		349K
+# ./drivers/power/supply/built-in.bc		349K
+./drivers/pps/built-in.bc		308K
+./drivers/ptp/built-in.bc		543K
+./drivers/ras/built-in.bc		325K
+./drivers/rtc/built-in.bc		1.1M
+./drivers/scsi/built-in.bc		6.4M
+./drivers/thermal/built-in.bc		854K
+
+./drivers/tty/built-in.bc		12M
+# ./drivers/tty/hvc/built-in.bc		262K
+# ./drivers/tty/serial/8250/built-in.bc		2.3M
+# ./drivers/tty/serial/built-in.bc		3.0M
+# ./drivers/tty/vt/built-in.bc		1.9M
+
+./drivers/usb/built-in.bc		11M
+# ./drivers/usb/class/built-in.bc		325K
+# ./drivers/usb/common/built-in.bc		118K
+# ./drivers/usb/core/built-in.bc		4.9M
+# ./drivers/usb/early/built-in.bc		196K
+# ./drivers/usb/host/built-in.bc		3.1M
+# ./drivers/usb/mon/built-in.bc		761K
+# ./drivers/usb/storage/built-in.bc		1.4M
+
+./drivers/video/built-in.bc		4.6M
+# ./drivers/video/backlight/built-in.bc		295K
+# ./drivers/video/console/built-in.bc		455K
+# ./drivers/video/fbdev/built-in.bc		3.8M
+# ./drivers/video/fbdev/core/built-in.bc		3.6M
+# ./drivers/video/logo/built-in.bc		40K
+
+./drivers/virtio/built-in.bc		1.2M
+
+./fs/9p/built-in.bc		1.7M
+./fs/autofs4/built-in.bc		1022K
+./fs/btrfs/built-in.bc		26M
+# ./fs/built-in.bc		101M
+./fs/configfs/built-in.bc		887K
+./fs/debugfs/built-in.bc		428K
+./fs/devpts/built-in.bc		216K
+./fs/exportfs/built-in.bc		163K
+./fs/ext4/built-in.bc		14M
+./fs/fat/built-in.bc		2.1M
+./fs/hugetlbfs/built-in.bc		370K
+./fs/isofs/built-in.bc		951K
+./fs/jbd2/built-in.bc		2.4M
+./fs/kernfs/built-in.bc		885K
+./fs/lockd/built-in.bc		3.6M
+
+./fs/nfs/built-in.bc		19M
+# ./fs/nfs_common/built-in.bc		175K
+./fs/nls/built-in.bc		151K
+./fs/notify/built-in.bc		1008K
+# ./fs/notify/dnotify/built-in.bc		156K
+# ./fs/notify/inotify/built-in.bc		311K
+./fs/proc/built-in.bc		3.8M
+./fs/quota/built-in.bc		1.4M
+./fs/ramfs/built-in.bc		222K
+./fs/sysfs/built-in.bc		412K
+./fs/tracefs/built-in.bc		192K
+
+
+./init/built-in.bc		906K
+
+./ipc/built-in.bc		2.1M
+
+./kernel/bpf/built-in.bc		4.9M
+# ./kernel/built-in.bc		53M
+./kernel/cgroup/built-in.bc		2.4M
+./kernel/events/built-in.bc		3.0M
+./kernel/irq/built-in.bc		2.4M
+./kernel/locking/built-in.bc		2.0M
+./kernel/power/built-in.bc		1.8M
+./kernel/printk/built-in.bc		570K
+./kernel/rcu/built-in.bc		1.8M
+./kernel/sched/built-in.bc		5.5M
+./kernel/time/built-in.bc		3.6M
+./kernel/trace/built-in.bc		6.7M
+
+
+# ./lib/built-in.bc		11M
+./lib/fonts/built-in.bc		18K
+./lib/lz4/built-in.bc		231K
+./lib/lzo/built-in.bc		59K
+./lib/mpi/built-in.bc		288K
+./lib/raid6/built-in.bc		349K
+./lib/xz/built-in.bc		479K
+./lib/zlib_deflate/built-in.bc		528K
+./lib/zlib_inflate/built-in.bc		245K
+./lib/zstd/built-in.bc		3.6M
+
+./mm/built-in.bc		19M
+
+# ./net/built-in.bc		168M
+./net/802/built-in.bc		256K
+./net/9p/built-in.bc		1.5M
+./net/bluetooth/built-in.bc		9.5M
+./net/bpf/built-in.bc		270K
+./net/can/built-in.bc		1.7M
+./net/core/built-in.bc		16M
+./net/dns_resolver/built-in.bc		181K
+./net/dsa/built-in.bc		1.9M
+./net/ethernet/built-in.bc		356K
+./net/ipv4/built-in.bc		28M
+# ./net/ipv4/netfilter/built-in.bc		1.9M
+./net/ipv6/built-in.bc		22M
+# ./net/ipv6/netfilter/built-in.bc		2.4M
+./net/mac80211/built-in.bc		22M
+./net/netfilter/built-in.bc		8.1M
+./net/netlabel/built-in.bc		2.0M
+./net/netlink/built-in.bc		1.2M
+./net/packet/built-in.bc		1.2M
+./net/rds/built-in.bc		3.8M
+./net/rfkill/built-in.bc		397K
+./net/sched/built-in.bc		2.8M
+./net/sctp/built-in.bc		12M
+./net/sunrpc/built-in.bc		9.5M
+# ./net/sunrpc/auth_gss/built-in.bc		1.8M
+./net/switchdev/built-in.bc		318K
+./net/unix/built-in.bc		1.2M
+./net/wireless/built-in.bc		13M
+./net/xfrm/built-in.bc		3.8M
+
+
+./security/built-in.bc		7.4M
+# ./security/integrity/built-in.bc		182K
+# ./security/keys/built-in.bc		1.6M
+# ./security/selinux/built-in.bc		4.4M
+
+
+./sound/built-in.bc		11M
+# ./sound/core/built-in.bc		6.2M
+# ./sound/core/seq/built-in.bc		1.6M
+# ./sound/hda/built-in.bc		1.5M
+# ./sound/pci/built-in.bc		2.7M
+# ./sound/pci/hda/built-in.bc		2.7M

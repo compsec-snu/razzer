@@ -1,0 +1,44 @@
+From a0fb324b0e0b72bdb4fa8d3b5c20a86753910f03 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Thu, 24 Jul 2014 00:49:09 +0200
+Subject: [PATCH] mm: Apply the section attribute to the variable, not its type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This fixes a compilation error in clang in that a linker section attribute
+can't be added to a type.
+
+arch/x86/mm/mmap.c:34:8: error: '__section__' attribute only applies to functions and global variables
+struct __read_mostly va_alignment va_align = {
+       ^
+arch/x86/include/asm/cache.h:10:38: note: expanded from macro '__read_mostly'
+#define __read_mostly __attribute__((__section__(".data..read_mostly")))
+                                     ^
+1 error generated.
+
+By moving the section attribute to the variable declaration, the desired effect
+is acheived.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/x86/mm/mmap.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/mm/mmap.c b/arch/x86/mm/mmap.c
+index 25e7e13..919b912 100644
+--- a/arch/x86/mm/mmap.c
++++ b/arch/x86/mm/mmap.c
+@@ -31,7 +31,7 @@
+ #include <linux/sched.h>
+ #include <asm/elf.h>
+ 
+-struct __read_mostly va_alignment va_align = {
++struct va_alignment __read_mostly va_align = {
+ 	.flags = -1,
+ };
+ 
+-- 
+1.8.1.4
+

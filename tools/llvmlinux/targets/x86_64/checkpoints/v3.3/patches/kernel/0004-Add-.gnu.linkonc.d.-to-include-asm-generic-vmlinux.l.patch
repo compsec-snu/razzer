@@ -1,0 +1,42 @@
+From 6be597a023b4c0727819488f916487460784ccd1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 12:21:48 +0200
+Subject: [PATCH 04/48] Add *(.gnu.linkonc.d.*) to include/asm-generic/vmlinux.lds.h . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+If flags contains the G symbol then the type argument must be present along with an additional field like this:
+
+     .section name , "flags"G, @type, GroupName[, linkage]
+
+The GroupName field specifies the name of the section group to which this particular section belongs. The optional linkage field can contain:
+
+comdat
+    indicates that only one copy of this section should be retained
+.gnu.linkonce
+    an alias for comdat
+---
+ include/asm-generic/vmlinux.lds.h |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+index b5e2e4c..2b37b71 100644
+--- a/include/asm-generic/vmlinux.lds.h
++++ b/include/asm-generic/vmlinux.lds.h
+@@ -161,6 +161,7 @@
+ 	*(.data)							\
+ 	*(.ref.data)							\
+ 	*(.data..shared_aligned) /* percpu related */			\
++	*(.gnu.linkonce.d.*)						\
+ 	DEV_KEEP(init.data)						\
+ 	DEV_KEEP(exit.data)						\
+ 	CPU_KEEP(init.data)						\
+@@ -394,6 +395,7 @@
+ 		*(.text.hot)						\
+ 		*(.text)						\
+ 		*(.ref.text)						\
++		*(.gnu.linkonce.t.*)					\
+ 	DEV_KEEP(init.text)						\
+ 	DEV_KEEP(exit.text)						\
+ 	CPU_KEEP(init.text)						\
+-- 
+1.7.3.4
+

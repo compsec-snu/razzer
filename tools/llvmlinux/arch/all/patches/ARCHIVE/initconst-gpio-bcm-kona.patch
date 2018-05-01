@@ -1,0 +1,34 @@
+From 5aa5f07b42d6dd758b6f520f81a4f14f3093f5eb Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 30 May 2014 11:35:54 -0700
+Subject: [PATCH] gpio, bcm-kona, LLVMLinux: Remove use of __initconst
+
+The __initconst is in the wrong place, and when moved to the correct place
+it uncovers an error where the variable is used by non-init data structures.
+
+Instead merely make them const and put the const in the right spot.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Acked-by: Arnd Bergmann <arnd@arndb.de>
+Acked-by: Matt Porter <mporter@linaro.org>
+---
+ drivers/gpio/gpio-bcm-kona.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpio-bcm-kona.c b/drivers/gpio/gpio-bcm-kona.c
+index 3f6b33c..4f5a1e5 100644
+--- a/drivers/gpio/gpio-bcm-kona.c
++++ b/drivers/gpio/gpio-bcm-kona.c
+@@ -496,7 +496,7 @@ static struct irq_chip bcm_gpio_irq_chip = {
+ 	.irq_release_resources = bcm_kona_gpio_irq_relres,
+ };
+ 
+-static struct __initconst of_device_id bcm_kona_gpio_of_match[] = {
++static const struct of_device_id bcm_kona_gpio_of_match[] = {
+ 	{ .compatible = "brcm,kona-gpio" },
+ 	{}
+ };
+-- 
+1.9.1
+

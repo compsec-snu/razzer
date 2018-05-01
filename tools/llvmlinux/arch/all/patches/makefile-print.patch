@@ -1,0 +1,26 @@
+From 7d575bc7172934096879f31adaf811dd66bd03fa Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 28 Jul 2015 00:44:09 -0400
+Subject: [PATCH] makefile-print
+
+---
+ Makefile | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index b4f8352..b865ab6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1612,3 +1612,9 @@ FORCE:
+ # Declare the contents of the .PHONY variable as phony.  We keep that
+ # information in a variable so we can use it in if_changed and friends.
+ .PHONY: $(PHONY)
++
++print-%:
++	@echo '$*=$($*)'
++	@echo '  origin = $(origin $*)'
++	@echo '  flavor = $(flavor $*)'
++	@echo '  value  = $(value $*)'
+-- 
+1.9.1
+

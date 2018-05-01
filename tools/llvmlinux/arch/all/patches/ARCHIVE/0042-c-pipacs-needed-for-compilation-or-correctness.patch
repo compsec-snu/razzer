@@ -1,0 +1,30 @@
+From d69c2ebce9eddc84f2de25273d0cbc5f0bbe7838 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 4 Jun 2013 19:21:31 +0200
+Subject: [PATCH 3/3] =?UTF-8?q?=3F=3F=20=20pipacs=20:=20needed=20for=20com?=
+ =?UTF-8?q?pilation=20or=20correctness=20=20=3F=20Signed-off-by:=20Jan-Sim?=
+ =?UTF-8?q?on=20M=C3=B6ller=20<dl9pf@gmx.de>?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ fs/compat_ioctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/compat_ioctl.c b/fs/compat_ioctl.c
+index 996cdc5..f0acdab 100644
+--- a/fs/compat_ioctl.c
++++ b/fs/compat_ioctl.c
+@@ -808,7 +808,7 @@ static int compat_ioctl_preallocate(struct file *file,
+  * simple reversible transform to make our table more evenly
+  * distributed after sorting.
+  */
+-#define XFORM(i) (((i) ^ ((i) << 27) ^ ((i) << 17)) & 0xffffffff)
++#define XFORM(i) (((i) ^ (((i) & 0x1f) << 27) ^ (((i) & 0x7fff) << 17)) & 0xffffffff)
+ 
+ #define COMPATIBLE_IOCTL(cmd) XFORM(cmd),
+ /* ioctl should not be warned about even if it's not implemented.
+-- 
+1.8.1.4
+

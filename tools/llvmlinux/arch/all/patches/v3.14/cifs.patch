@@ -1,0 +1,32 @@
+From 9f1d0678046c803462f14a6f6bd1e399e8f3e42a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 4 Jun 2013 19:17:28 +0200
+Subject: [PATCH] crypto, cifs: LLVMLinux: Remove used of VLAIS from cifs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clang warns about shash not being the last variable-sized element.
+ctx[] is never used and can be deleted.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ fs/cifs/cifsglob.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index f918a99..f5882c2 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -114,7 +114,6 @@ struct session_key {
+ /* crypto security descriptor definition */
+ struct sdesc {
+ 	struct shash_desc shash;
+-	char ctx[];
+ };
+ 
+ /* crypto hashing related structure/fields, not specific to a sec mech */
+-- 
+1.8.3.2
+

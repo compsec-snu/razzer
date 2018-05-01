@@ -1,0 +1,36 @@
+From 6afc257b7b83547519711d7181a9626382f27274 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Sun, 20 Oct 2013 00:36:47 +0200
+Subject: [PATCH] x86 kbuild: LLVMLinux: More cc-options added for clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Protect more options for x86 with cc-option so that we don't get errors when
+using clang instead of gcc.  Add more or different options when using clang as
+well. Also need to enforce that SSE is off for clang and the stack is 8-byte
+aligned.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ arch/x86/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index eeda43a..d5a5a91 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -108,7 +108,7 @@ else
+ 
+         # this works around some issues with generating unwind tables in older gccs
+         # newer gccs do it by default
+-        KBUILD_CFLAGS += -maccumulate-outgoing-args
++        KBUILD_CFLAGS += $(call cc-option,-maccumulate-outgoing-args)
+ endif
+ 
+ # Make sure compiler does not have buggy stack-protector support.
+-- 
+1.8.3.2
+

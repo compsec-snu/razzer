@@ -1,0 +1,25 @@
+From 2c78cb3987de16b66bebc36007745722a90044b5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:07:27 +0200
+Subject: [PATCH 31/48] Reimplement current_stack_pointer for clang ('register' not supported)  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/include/asm/thread_info.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index cfd8144..37b80b2 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -181,7 +181,7 @@ struct thread_info {
+ 
+ 
+ /* how to get the current stack pointer from C */
+-register unsigned long current_stack_pointer asm("esp") __used;
++#define current_stack_pointer ({ unsigned long esp; asm("mov %%esp, %0" : "=r"(esp)); esp; })
+ 
+ /* how to get the thread information struct from C */
+ static inline struct thread_info *current_thread_info(void)
+-- 
+1.7.3.4
+

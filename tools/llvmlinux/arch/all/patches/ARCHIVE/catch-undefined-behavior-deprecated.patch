@@ -1,0 +1,29 @@
+From 70d56a1322b9d27c63a2b3fbbdb8faa5a506cf85 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Thu, 4 Sep 2014 17:32:17 -0700
+Subject: [PATCH] kbuild, LLVMLinux: Remove -fcatch-undefined-behavior-deprecated for
+ clang
+
+Remove clang flag -fcatch-undefined-behaviour which has been deprecated in clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 02825ec..dd30900 100644
+--- a/Makefile
++++ b/Makefile
+@@ -700,7 +700,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
+ # source of a reference will be _MergedGlobals and not on of the whitelisted names.
+ # See modpost pattern 2
+ KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
+-KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
++
+ else
+ 
+ # This warning generated too much noise in a regular build.
+-- 
+1.9.1
+

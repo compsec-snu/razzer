@@ -1,0 +1,31 @@
+From 6bb8587c9d856cc7beed4c5227cbe42c0b9ac147 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 13:20:02 +0200
+Subject: [PATCH 06/48] Add noinline_for_stack to sound/pci/ac97/ac97_codec.c  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+/*
++ * Rather then using noinline to prevent stack consumption, use
++ * noinline_for_stack instead.  For documentaiton reasons.
++ */
++#define noinline_for_stack noinline
++
+---
+ sound/pci/ac97/ac97_codec.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/sound/pci/ac97/ac97_codec.c b/sound/pci/ac97/ac97_codec.c
+index 9473fca..7e29b58 100644
+--- a/sound/pci/ac97/ac97_codec.c
++++ b/sound/pci/ac97/ac97_codec.c
+@@ -1170,7 +1170,7 @@ static inline int printable(unsigned int x)
+ 	return x;
+ }
+ 
+-static struct snd_kcontrol *snd_ac97_cnew(const struct snd_kcontrol_new *_template,
++static noinline_for_stack struct snd_kcontrol *snd_ac97_cnew(const struct snd_kcontrol_new *_template,
+ 					  struct snd_ac97 * ac97)
+ {
+ 	struct snd_kcontrol_new template;
+-- 
+1.7.3.4
+

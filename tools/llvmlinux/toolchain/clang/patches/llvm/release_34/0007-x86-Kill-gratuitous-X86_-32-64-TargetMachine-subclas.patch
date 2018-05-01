@@ -1,0 +1,253 @@
+From 9a69088289eca073364b352e5e91e35f2303ee1e Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 00:08:50 +0000
+Subject: [PATCH 07/26] [x86] Kill gratuitous X86_{32,64}TargetMachine
+ subclasses, use X86TargetMachine
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198720 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 476136e951595540917a6bc6f05817540986b8fb)
+---
+ lib/Target/X86/X86Subtarget.cpp     |  6 +--
+ lib/Target/X86/X86Subtarget.h       |  2 +-
+ lib/Target/X86/X86TargetMachine.cpp | 51 +++++++------------------
+ lib/Target/X86/X86TargetMachine.h   | 76 ++++++-------------------------------
+ 4 files changed, 29 insertions(+), 106 deletions(-)
+
+diff --git a/lib/Target/X86/X86Subtarget.cpp b/lib/Target/X86/X86Subtarget.cpp
+index 0a5b23c..69c9ffe 100644
+--- a/lib/Target/X86/X86Subtarget.cpp
++++ b/lib/Target/X86/X86Subtarget.cpp
+@@ -541,14 +541,14 @@ void X86Subtarget::initializeEnvironment() {
+ 
+ X86Subtarget::X86Subtarget(const std::string &TT, const std::string &CPU,
+                            const std::string &FS,
+-                           unsigned StackAlignOverride, bool is64Bit)
++                           unsigned StackAlignOverride)
+   : X86GenSubtargetInfo(TT, CPU, FS)
+   , X86ProcFamily(Others)
+   , PICStyle(PICStyles::None)
+   , TargetTriple(TT)
+   , StackAlignOverride(StackAlignOverride)
+-  , In64BitMode(is64Bit)
+-  , In32BitMode(!is64Bit)
++  , In64BitMode(TargetTriple.getArch() == Triple::x86_64)
++  , In32BitMode(TargetTriple.getArch() == Triple::x86)
+   , In16BitMode(false) {
+   initializeEnvironment();
+   resetSubtargetFeatures(CPU, FS);
+diff --git a/lib/Target/X86/X86Subtarget.h b/lib/Target/X86/X86Subtarget.h
+index 2dc37ff..ed00286 100644
+--- a/lib/Target/X86/X86Subtarget.h
++++ b/lib/Target/X86/X86Subtarget.h
+@@ -217,7 +217,7 @@ public:
+   ///
+   X86Subtarget(const std::string &TT, const std::string &CPU,
+                const std::string &FS,
+-               unsigned StackAlignOverride, bool is64Bit);
++               unsigned StackAlignOverride);
+ 
+   /// getStackAlignment - Returns the minimum alignment known to hold of the
+   /// stack frame on entry to the function and which must be maintained by every
+diff --git a/lib/Target/X86/X86TargetMachine.cpp b/lib/Target/X86/X86TargetMachine.cpp
+index 4d55b21..c0b8c5b 100644
+--- a/lib/Target/X86/X86TargetMachine.cpp
++++ b/lib/Target/X86/X86TargetMachine.cpp
+@@ -24,11 +24,11 @@ using namespace llvm;
+ 
+ extern "C" void LLVMInitializeX86Target() {
+   // Register the target.
+-  RegisterTargetMachine<X86_32TargetMachine> X(TheX86_32Target);
+-  RegisterTargetMachine<X86_64TargetMachine> Y(TheX86_64Target);
++  RegisterTargetMachine<X86TargetMachine> X(TheX86_32Target);
++  RegisterTargetMachine<X86TargetMachine> Y(TheX86_64Target);
+ }
+ 
+-void X86_32TargetMachine::anchor() { }
++void X86TargetMachine::anchor() { }
+ 
+ static std::string computeDataLayout(const X86Subtarget &ST) {
+   // X86 is little endian
+@@ -75,49 +75,22 @@ static std::string computeDataLayout(const X86Subtarget &ST) {
+   return Ret;
+ }
+ 
+-X86_32TargetMachine::X86_32TargetMachine(const Target &T, StringRef TT,
+-                                         StringRef CPU, StringRef FS,
+-                                         const TargetOptions &Options,
+-                                         Reloc::Model RM, CodeModel::Model CM,
+-                                         CodeGenOpt::Level OL)
+-  : X86TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false),
+-    DL(computeDataLayout(*getSubtargetImpl())),
+-    InstrInfo(*this),
+-    TLInfo(*this),
+-    TSInfo(*this),
+-    JITInfo(*this) {
+-  initAsmInfo();
+-}
+-
+-void X86_64TargetMachine::anchor() { }
+-
+-X86_64TargetMachine::X86_64TargetMachine(const Target &T, StringRef TT,
+-                                         StringRef CPU, StringRef FS,
+-                                         const TargetOptions &Options,
+-                                         Reloc::Model RM, CodeModel::Model CM,
+-                                         CodeGenOpt::Level OL)
+-  : X86TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true),
+-    // The x32 ABI dictates the ILP32 programming model for x64.
+-    DL(computeDataLayout(*getSubtargetImpl())),
+-    InstrInfo(*this),
+-    TLInfo(*this),
+-    TSInfo(*this),
+-    JITInfo(*this) {
+-  initAsmInfo();
+-}
+-
+ /// X86TargetMachine ctor - Create an X86 target.
+ ///
+ X86TargetMachine::X86TargetMachine(const Target &T, StringRef TT,
+                                    StringRef CPU, StringRef FS,
+                                    const TargetOptions &Options,
+                                    Reloc::Model RM, CodeModel::Model CM,
+-                                   CodeGenOpt::Level OL,
+-                                   bool is64Bit)
++                                   CodeGenOpt::Level OL)
+   : LLVMTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL),
+-    Subtarget(TT, CPU, FS, Options.StackAlignmentOverride, is64Bit),
++    Subtarget(TT, CPU, FS, Options.StackAlignmentOverride),
+     FrameLowering(*this, Subtarget),
+-    InstrItins(Subtarget.getInstrItineraryData()){
++    InstrItins(Subtarget.getInstrItineraryData()),
++    DL(computeDataLayout(*getSubtargetImpl())),
++    InstrInfo(*this),
++    TLInfo(*this),
++    TSInfo(*this),
++    JITInfo(*this) {
+   // Determine the PICStyle based on the target selected.
+   if (getRelocationModel() == Reloc::Static) {
+     // Unless we're in PIC or DynamicNoPIC mode, set the PIC style to None.
+@@ -141,6 +114,8 @@ X86TargetMachine::X86TargetMachine(const Target &T, StringRef TT,
+   // default to hard float ABI
+   if (Options.FloatABIType == FloatABI::Default)
+     this->Options.FloatABIType = FloatABI::Hard;
++
++  initAsmInfo();
+ }
+ 
+ //===----------------------------------------------------------------------===//
+diff --git a/lib/Target/X86/X86TargetMachine.h b/lib/Target/X86/X86TargetMachine.h
+index 174d391..03c366e 100644
+--- a/lib/Target/X86/X86TargetMachine.h
++++ b/lib/Target/X86/X86TargetMachine.h
+@@ -30,32 +30,38 @@ namespace llvm {
+ class StringRef;
+ 
+ class X86TargetMachine : public LLVMTargetMachine {
++  virtual void anchor();
+   X86Subtarget       Subtarget;
+   X86FrameLowering   FrameLowering;
+   InstrItineraryData InstrItins;
++  const DataLayout   DL; // Calculates type size & alignment
++  X86InstrInfo       InstrInfo;
++  X86TargetLowering  TLInfo;
++  X86SelectionDAGInfo TSInfo;
++  X86JITInfo         JITInfo;
+ 
+ public:
+   X86TargetMachine(const Target &T, StringRef TT,
+                    StringRef CPU, StringRef FS, const TargetOptions &Options,
+                    Reloc::Model RM, CodeModel::Model CM,
+-                   CodeGenOpt::Level OL,
+-                   bool is64Bit);
++                   CodeGenOpt::Level OL);
+ 
++  virtual const DataLayout *getDataLayout() const { return &DL; }
+   virtual const X86InstrInfo     *getInstrInfo() const {
+-    llvm_unreachable("getInstrInfo not implemented");
++    return &InstrInfo;
+   }
+   virtual const TargetFrameLowering  *getFrameLowering() const {
+     return &FrameLowering;
+   }
+   virtual       X86JITInfo       *getJITInfo()         {
+-    llvm_unreachable("getJITInfo not implemented");
++    return &JITInfo;
+   }
+   virtual const X86Subtarget     *getSubtargetImpl() const{ return &Subtarget; }
+   virtual const X86TargetLowering *getTargetLowering() const {
+-    llvm_unreachable("getTargetLowering not implemented");
++    return &TLInfo;
+   }
+   virtual const X86SelectionDAGInfo *getSelectionDAGInfo() const {
+-    llvm_unreachable("getSelectionDAGInfo not implemented");
++    return &TSInfo;
+   }
+   virtual const X86RegisterInfo  *getRegisterInfo() const {
+     return &getInstrInfo()->getRegisterInfo();
+@@ -74,64 +80,6 @@ public:
+                               JITCodeEmitter &JCE);
+ };
+ 
+-/// X86_32TargetMachine - X86 32-bit target machine.
+-///
+-class X86_32TargetMachine : public X86TargetMachine {
+-  virtual void anchor();
+-  const DataLayout  DL; // Calculates type size & alignment
+-  X86InstrInfo      InstrInfo;
+-  X86TargetLowering TLInfo;
+-  X86SelectionDAGInfo TSInfo;
+-  X86JITInfo        JITInfo;
+-public:
+-  X86_32TargetMachine(const Target &T, StringRef TT,
+-                      StringRef CPU, StringRef FS, const TargetOptions &Options,
+-                      Reloc::Model RM, CodeModel::Model CM,
+-                      CodeGenOpt::Level OL);
+-  virtual const DataLayout *getDataLayout() const { return &DL; }
+-  virtual const X86TargetLowering *getTargetLowering() const {
+-    return &TLInfo;
+-  }
+-  virtual const X86SelectionDAGInfo *getSelectionDAGInfo() const {
+-    return &TSInfo;
+-  }
+-  virtual const X86InstrInfo     *getInstrInfo() const {
+-    return &InstrInfo;
+-  }
+-  virtual       X86JITInfo       *getJITInfo()         {
+-    return &JITInfo;
+-  }
+-};
+-
+-/// X86_64TargetMachine - X86 64-bit target machine.
+-///
+-class X86_64TargetMachine : public X86TargetMachine {
+-  virtual void anchor();
+-  const DataLayout  DL; // Calculates type size & alignment
+-  X86InstrInfo      InstrInfo;
+-  X86TargetLowering TLInfo;
+-  X86SelectionDAGInfo TSInfo;
+-  X86JITInfo        JITInfo;
+-public:
+-  X86_64TargetMachine(const Target &T, StringRef TT,
+-                      StringRef CPU, StringRef FS, const TargetOptions &Options,
+-                      Reloc::Model RM, CodeModel::Model CM,
+-                      CodeGenOpt::Level OL);
+-  virtual const DataLayout *getDataLayout() const { return &DL; }
+-  virtual const X86TargetLowering *getTargetLowering() const {
+-    return &TLInfo;
+-  }
+-  virtual const X86SelectionDAGInfo *getSelectionDAGInfo() const {
+-    return &TSInfo;
+-  }
+-  virtual const X86InstrInfo     *getInstrInfo() const {
+-    return &InstrInfo;
+-  }
+-  virtual       X86JITInfo       *getJITInfo()         {
+-    return &JITInfo;
+-  }
+-};
+-
+ } // End llvm namespace
+ 
+ #endif
+-- 
+1.8.4
+

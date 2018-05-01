@@ -1,0 +1,38 @@
+From 8c1b861254e8d02d6a0a4ba769b8162f9add01c9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 14:22:57 +0200
+Subject: [PATCH 17/48] ACPI realmode code needs -no-integrated-as  . Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ arch/x86/kernel/acpi/realmode/Makefile |    2 +-
+ arch/x86/kernel/acpi/wakeup_32.S       |    1 -
+ 2 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/kernel/acpi/realmode/Makefile b/arch/x86/kernel/acpi/realmode/Makefile
+index 6a564ac..9251512 100644
+--- a/arch/x86/kernel/acpi/realmode/Makefile
++++ b/arch/x86/kernel/acpi/realmode/Makefile
+@@ -32,7 +32,7 @@ KBUILD_CFLAGS	:= $(LINUXINCLUDE) -g -Os -D_SETUP -D_WAKEUP -D__KERNEL__ \
+ 		   -I$(srctree)/$(bootsrc) \
+ 		   $(cflags-y) \
+ 		   -Wall -Wstrict-prototypes \
+-		   -march=i386 -mregparm=3 \
++		   -march=i586 -mregparm=3 -no-integrated-as \
+ 		   -include $(srctree)/$(bootsrc)/code16gcc.h \
+ 		   -fno-strict-aliasing -fomit-frame-pointer \
+ 		   $(call cc-option, -ffreestanding) \
+diff --git a/arch/x86/kernel/acpi/wakeup_32.S b/arch/x86/kernel/acpi/wakeup_32.S
+index 13ab720..4a20695 100644
+--- a/arch/x86/kernel/acpi/wakeup_32.S
++++ b/arch/x86/kernel/acpi/wakeup_32.S
+@@ -9,7 +9,6 @@
+ 	ALIGN
+ 
+ ENTRY(wakeup_pmode_return)
+-wakeup_pmode_return:
+ 	movw	$__KERNEL_DS, %ax
+ 	movw	%ax, %ss
+ 	movw	%ax, %ds
+-- 
+1.7.3.4
+

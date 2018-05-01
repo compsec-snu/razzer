@@ -1,0 +1,26 @@
+Remove variable length arrays in structures (VLAIS) from the libcrc32c code.
+
+The use of VLAIS in the Linux Kernel code precludes the use of compilers which
+don't implement VLAIS (for instance the Clang compiler). Since ctx is always
+32-bit, hard coding a size of 4 accomplishes the same thing without the use of
+VLAIS.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Behan Webster <behanw@converseincode.com>
+---
+ libcrc32c.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Index: linux/lib/libcrc32c.c
+===================================================================
+--- linux.orig/lib/libcrc32c.c	2012-09-06 17:53:50.000000000 -0400
++++ linux/lib/libcrc32c.c	2012-09-13 23:04:09.395890364 -0400
+@@ -43,7 +43,7 @@
+ {
+ 	struct {
+ 		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(tfm)];
++		char ctx[4];
+ 	} desc;
+ 	int err;
+ 

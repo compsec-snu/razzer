@@ -1,0 +1,57 @@
+From f6d2c664b8e501da028cf06e5b903c154d906098 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Thu, 16 Oct 2014 14:49:21 +0200
+Subject: [PATCH] staging, rtl8192e, LLVMLinux: Make static local in inline
+ function const
+
+rtllib_association_req is a (large) inline function which defines 2 constant
+static arrays which aren't labelled as const. As a result clang complains with:
+
+non-constant static local variable in inline function may be different in
+different files
+[-Wstatic-local-in-inline]
+  static u8       AironetIeOui[] = {0x00, 0x01, 0x66};
+  ^
+The solution is making them "static const".
+
+However doing so requires dropping const when being used with struct
+octet_string. However the value is used in a const fashion thereafter, so no
+harm done.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/staging/rtl8192e/rtllib_softmac.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/staging/rtl8192e/rtllib_softmac.c b/drivers/staging/rtl8192e/rtllib_softmac.c
+index 089a058..e970db4 100644
+--- a/drivers/staging/rtl8192e/rtllib_softmac.c
++++ b/drivers/staging/rtl8192e/rtllib_softmac.c
+@@ -1311,7 +1311,7 @@ inline struct sk_buff *rtllib_association_req(struct rtllib_network *beacon,
+ 	}
+ 
+ 	if (beacon->bCkipSupported) {
+-		static u8	AironetIeOui[] = {0x00, 0x01, 0x66};
++		static const u8 AironetIeOui[] = {0x00, 0x01, 0x66};
+ 		u8	CcxAironetBuf[30];
+ 		struct octet_string osCcxAironetIE;
+ 
+@@ -1331,10 +1331,11 @@ inline struct sk_buff *rtllib_association_req(struct rtllib_network *beacon,
+ 	}
+ 
+ 	if (beacon->bCcxRmEnable) {
+-		static u8 CcxRmCapBuf[] = {0x00, 0x40, 0x96, 0x01, 0x01, 0x00};
++		static const u8 CcxRmCapBuf[] = {0x00, 0x40, 0x96, 0x01, 0x01,
++			0x00};
+ 		struct octet_string osCcxRmCap;
+ 
+-		osCcxRmCap.Octet = CcxRmCapBuf;
++		osCcxRmCap.Octet = (u8 *) CcxRmCapBuf;
+ 		osCcxRmCap.Length = sizeof(CcxRmCapBuf);
+ 		tag = skb_put(skb, ccxrm_ie_len);
+ 		*tag++ = MFIE_TYPE_GENERIC;
+-- 
+1.9.1
+

@@ -1,0 +1,47 @@
+From ebe376169ae3c70a9fb5b4eff46b2d7abd5c92dd Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Fri, 30 May 2014 11:35:50 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM arm, firmware, LLVMLinux: replace naked
+ function with hard coded parameters
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+As documented in GCC naked functions should only use Basic asm syntax. The
+Extended asm or mixture of Basic asm and "C" code is not guarantee. Currently
+this works because it was hard coded to follow and check GCC behavior for
+arguments and register placement.
+
+By replacing the naked function with an inline one it is possible to have the
+same result in a more portable and reliable way. Register placement checks
+are not needed since there is no hard code.
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+Not-signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+---
+ arch/arm/firmware/trusted_foundations.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/arch/arm/firmware/trusted_foundations.c b/arch/arm/firmware/trusted_foundations.c
+index 3fb1b5a..f319c3f 100644
+--- a/arch/arm/firmware/trusted_foundations.c
++++ b/arch/arm/firmware/trusted_foundations.c
+@@ -31,14 +31,11 @@
+ 
+ static unsigned long cpu_boot_addr;
+ 
+-static void __naked tf_generic_smc(u32 type, u32 arg1, u32 arg2)
++static inline void tf_generic_smc(u32 type, u32 arg1, u32 arg2)
+ {
+ 	asm volatile(
+ 		".arch_extension	sec\n\t"
+ 		"stmfd	sp!, {r4 - r11, lr}\n\t"
+-		__asmeq("%0", "r0")
+-		__asmeq("%1", "r1")
+-		__asmeq("%2", "r2")
+ 		"mov	r3, #0\n\t"
+ 		"mov	r4, #0\n\t"
+ 		"smc	#0\n\t"
+-- 
+1.9.1
+

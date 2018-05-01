@@ -1,0 +1,58 @@
+From a6ebc8b490a84d107c05b612bcaa3c0085e2f82e Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:18 -0700
+Subject: [PATCH] fs, nfs, LLVMLinux: Remove VLAIS from nfs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch instead makes a zero size array at the
+end of helper struct and delegates the allocation of the variable length
+items to kzalloc.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ fs/nfs/Kconfig               | 2 +-
+ fs/nfs/objlayout/objio_osd.c | 5 +++--
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/fs/nfs/Kconfig b/fs/nfs/Kconfig
+index f31fd0d..e6ef7b3 100644
+--- a/fs/nfs/Kconfig
++++ b/fs/nfs/Kconfig
+@@ -125,7 +125,7 @@ config PNFS_BLOCK
+ 
+ config PNFS_OBJLAYOUT
+ 	tristate
+-	depends on NFS_V4_1 && SCSI_OSD_ULD
++	depends on NFS_V4_1 && SCSI_OSD_ULD && BROKEN
+ 	default NFS_V4
+ 
+ config PNFS_FLEXFILE_LAYOUT
+diff --git a/fs/nfs/objlayout/objio_osd.c b/fs/nfs/objlayout/objio_osd.c
+index 5aaed36..9259037 100644
+--- a/fs/nfs/objlayout/objio_osd.c
++++ b/fs/nfs/objlayout/objio_osd.c
+@@ -301,10 +301,11 @@ objio_alloc_io_state(struct pnfs_layout_hdr *pnfs_layout_type, bool is_reading,
+ 	int ret;
+ 	struct __alloc_objio_state {
+ 		struct objio_state objios;
+-		struct pnfs_osd_ioerr ioerrs[objio_seg->oc.numdevs];
++		struct pnfs_osd_ioerr ioerrs[];
+ 	} *aos;
+ 
+-	aos = kzalloc(sizeof(*aos), gfp_flags);
++	aos = kzalloc(sizeof(*aos) + objio_seg->oc.numdevs *
++		      sizeof(struct pnfs_osd_ioerr), gfp_flags);
+ 	if (unlikely(!aos))
+ 		return -ENOMEM;
+ 
+-- 
+1.9.1
+

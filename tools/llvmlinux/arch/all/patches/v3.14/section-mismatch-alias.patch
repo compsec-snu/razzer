@@ -1,0 +1,44 @@
+From fc7883f6aa7744001d5735e0cc9b81174f6f70ed Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:07:02 +0100
+Subject: [PATCH] module: LLVMLinux: Fix section mismatch issues on alias usage
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Attribute aliases don't inherit the link section name when compiled with clang.
+As a result, the linking section needs to be explicitly specified when building
+a module. This behavior is undefined in the standard which is why it differs from
+compiler to compiler.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Cc: PaX Team <pageexec@freemail.hu>
+---
+ include/linux/init.h | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/init.h b/include/linux/init.h
+index e168880..384ec5e 100644
+--- a/include/linux/init.h
++++ b/include/linux/init.h
+@@ -297,13 +297,14 @@ void __init parse_early_options(char *cmdline);
+ #define module_init(initfn)					\
+ 	static inline initcall_t __inittest(void)		\
+ 	{ return initfn; }					\
+-	int init_module(void) __attribute__((alias(#initfn)));
++	int init_module(void) __section(.init) __attribute__((alias(#initfn)));
+ 
+ /* This is only required if you want to be unloadable. */
+ #define module_exit(exitfn)					\
+ 	static inline exitcall_t __exittest(void)		\
+ 	{ return exitfn; }					\
+-	void cleanup_module(void) __attribute__((alias(#exitfn)));
++	void cleanup_module(void) __section(.exit)              \
++		__attribute__((alias(#exitfn)));
+ 
+ #define __setup_param(str, unique_id, fn)	/* nothing */
+ #define __setup(str, func) 			/* nothing */
+-- 
+1.8.3.2
+

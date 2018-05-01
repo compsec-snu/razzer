@@ -1,0 +1,44 @@
+==============================================================================
+SVF Release License
+==============================================================================
+/* SVF — Static Value-Flow Analysis Framework */
+Copyright (C) <2013-2017>  <Yulei Sui>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+For a full list of contributors, refer to
+        https://github.com/unsw-corg/SVF/blob/gh-pages/Contributors.txt
+
+==============================================================================
+Copyrights and Licenses for Third Party Software Distributed with SVF:
+==============================================================================
+
+The SVF software contains code written by third parties.  Such software
+will have its own individual LICENSE.TXT file in the directory in which it
+appears.  This file will describe the copyrights, license, and restrictions
+which apply to that code.
+
+The disclaimer of warranty in the University of Illinois Open Source License
+applies to all code in the SVF Distribution, and nothing in any of the
+other licenses gives permission to use the names of the CORG Team or the
+University of New South Wales to endorse or promote products derived from this
+Software.
+
+The following pieces of software have additional or alternate copyrights,
+licenses, and/or restrictions:
+
+Program             Directory
+-------             ---------
+CUDD-2.5.0          include/CUDD/
+	            lib/CUDD/

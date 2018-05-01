@@ -1,0 +1,38 @@
+From fe4434656732ce75b65496f587b0c8590319b8fb Mon Sep 17 00:00:00 2001
+From: Mark Charlebois <charlebm@gmail.com>
+Date: Tue, 11 Feb 2014 19:26:08 -0800
+Subject: [PATCH] arm, unwind, LLVMLinux: Enable clang to be used for unwinding
+ the stack
+
+Patch to prevent warning of a buggy compiler when using clang and
+the ARM_UNWIND option.
+
+Clang defines (at least on the current trunk) GNUC, GNUC_MINOR, and
+GNUC_PATCHLEVEL to 4, 2, and 1 respectively.
+
+This version of GCC gets flagged as buggy, but it isn't actually an
+issue with clang so the patch will do what it did before unless clang
+is defined and then it will not report the GCC version as an issue.
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ arch/arm/kernel/unwind.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/kernel/unwind.c b/arch/arm/kernel/unwind.c
+index accc442..bc3db0b 100644
+--- a/arch/arm/kernel/unwind.c
++++ b/arch/arm/kernel/unwind.c
+@@ -31,7 +31,7 @@
+ #warning Your compiler does not have EABI support.
+ #warning    ARM unwind is known to compile only with EABI compilers.
+ #warning    Change compiler or disable ARM_UNWIND option.
+-#elif (__GNUC__ == 4 && __GNUC_MINOR__ <= 2)
++#elif (__GNUC__ == 4 && __GNUC_MINOR__ <= 2) && !defined(__clang__)
+ #warning Your compiler is too buggy; it is known to not compile ARM unwind support.
+ #warning    Change compiler or disable ARM_UNWIND option.
+ #endif
+-- 
+1.9.1
+

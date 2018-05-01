@@ -1,0 +1,35 @@
+From 28243788ae590a4a092db7de2ab74ad44cf7e751 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:41:32 +0100
+Subject: [PATCH 23/51] Remove unneeded braces.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/kernel/cpu/vmware.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/kernel/cpu/vmware.c b/arch/x86/kernel/cpu/vmware.c
+index d22d0c4..952669f 100644
+--- a/arch/x86/kernel/cpu/vmware.c
++++ b/arch/x86/kernel/cpu/vmware.c
+@@ -35,7 +35,7 @@
+ #define VMWARE_PORT_CMD_GETHZ		45
+ 
+ #define VMWARE_PORT(cmd, eax, ebx, ecx, edx)				\
+-	__asm__("inl (%%dx)" :						\
++	__asm__("inl %%dx" :						\
+ 			"=a"(eax), "=c"(ecx), "=d"(edx), "=b"(ebx) :	\
+ 			"0"(VMWARE_HYPERVISOR_MAGIC),			\
+ 			"1"(VMWARE_PORT_CMD_##cmd),			\
+-- 
+1.7.10.4
+

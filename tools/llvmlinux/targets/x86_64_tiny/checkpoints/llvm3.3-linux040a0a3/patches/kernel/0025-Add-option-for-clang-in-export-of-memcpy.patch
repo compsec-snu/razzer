@@ -1,0 +1,35 @@
+From f609cccdbb682dad819f25fa0637a689e91eae7d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 12:45:08 +0100
+Subject: [PATCH 25/51] Add option for clang in export of memcpy.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ arch/x86/um/ksyms.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/arch/x86/um/ksyms.c b/arch/x86/um/ksyms.c
+index 2e8f43e..04aedce 100644
+--- a/arch/x86/um/ksyms.c
++++ b/arch/x86/um/ksyms.c
+@@ -4,7 +4,7 @@
+ 
+ #ifndef CONFIG_X86_32
+ /*XXX: we need them because they would be exported by x86_64 */
+-#if (__GNUC__ == 4 && __GNUC_MINOR__ >= 3) || __GNUC__ > 4
++#if (__GNUC__ == 4 && __GNUC_MINOR__ >= 3) || __GNUC__ > 4 || defined(__clang__)
+ EXPORT_SYMBOL(memcpy);
+ #else
+ EXPORT_SYMBOL(__memcpy);
+-- 
+1.7.10.4
+

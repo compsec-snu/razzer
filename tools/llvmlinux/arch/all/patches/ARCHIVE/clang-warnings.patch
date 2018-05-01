@@ -1,0 +1,35 @@
+From 0e8a68d5cf4f845ca374871f49cefceba60419d1 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Mon, 30 Jun 2014 17:38:09 -0700
+Subject: [PATCH] kbuild, LLVMLinux: Supress warnings unless W=1-3
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+clang has more warnings enabled by default. Turn them off unless W is set.
+This patch fixes a logic bug where warnings in clang were disabled when W was set.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+Cc: mmarek@suse.cz
+Cc: bp@alien8.de
+---
+ Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile b/Makefile
+index 0485ec6..1ba3496 100644
+--- a/Makefile
++++ b/Makefile
+@@ -697,6 +697,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
+ # source of a reference will be _MergedGlobals and not on of the whitelisted names.
+ # See modpost pattern 2
+ KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
++KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
+ else
+ 
+ # This warning generated too much noise in a regular build.
+-- 
+1.9.1
+

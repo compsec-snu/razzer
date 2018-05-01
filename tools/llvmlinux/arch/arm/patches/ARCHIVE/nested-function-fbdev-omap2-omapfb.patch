@@ -1,0 +1,53 @@
+From a7a36f8673917e4366f2105ef030f3d1b50f333b Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:29 -0700
+Subject: [PATCH] arm, fbdev, omap2, LLVMLinux: Remove nested function from
+ omapfb
+
+Replace the use of nested functions where a normal function will suffice.
+
+Nested functions are not liked by upstream kernel developers in general. Their
+use breaks the use of clang as a compiler, and doesn't make the code any
+better.
+
+This code now works for both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+Reviewed-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/video/fbdev/omap2/omapfb/omapfb-main.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/video/fbdev/omap2/omapfb/omapfb-main.c b/drivers/video/fbdev/omap2/omapfb/omapfb-main.c
+index ec2d132..1587243 100644
+--- a/drivers/video/fbdev/omap2/omapfb/omapfb-main.c
++++ b/drivers/video/fbdev/omap2/omapfb/omapfb-main.c
+@@ -273,16 +273,16 @@ static struct omapfb_colormode omapfb_colormodes[] = {
+ 	},
+ };
+ 
++static bool cmp_component(struct fb_bitfield *f1, struct fb_bitfield *f2)
++{
++	return f1->length == f2->length &&
++		f1->offset == f2->offset &&
++		f1->msb_right == f2->msb_right;
++}
++
+ static bool cmp_var_to_colormode(struct fb_var_screeninfo *var,
+ 		struct omapfb_colormode *color)
+ {
+-	bool cmp_component(struct fb_bitfield *f1, struct fb_bitfield *f2)
+-	{
+-		return f1->length == f2->length &&
+-			f1->offset == f2->offset &&
+-			f1->msb_right == f2->msb_right;
+-	}
+-
+ 	if (var->bits_per_pixel == 0 ||
+ 			var->red.length == 0 ||
+ 			var->blue.length == 0 ||
+-- 
+1.9.1
+

@@ -1,0 +1,83 @@
+#!/usr/bin/python
+##############################################################################
+# Copyright (c) 2013 Behan Webster
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+##############################################################################
+
+import ConfigParser
+from optparse import OptionParser
+import re, os
+
+import gdata.docs
+import gdata.docs.service
+import gdata.spreadsheet.service
+
+#-------------------------------------------------------------------------------
+parser = OptionParser()
+parser.add_option("-f", "--file", dest="filename",
+                  help="write report to FILE", metavar="FILE")
+parser.add_option("-q", "--quiet",
+                  action="store_false", dest="verbose", default=True,
+                  help="don't print status messages to stdout")
+
+(options, args) = parser.parse_args()
+
+#-------------------------------------------------------------------------------
+config = ConfigParser.RawConfigParser()
+config.read(['patchstatus.conf', os.path.expanduser('~/.patchstatus.conf'), os.path.expanduser('~/.config/patchstatus/patchstatus.conf')])
+
+#-------------------------------------------------------------------------------
+# Connect to Google Drive
+gd_client = gdata.spreadsheet.service.SpreadsheetsService()
+gd_client.email = config.get('spreadsheet', 'userid')
+gd_client.password = config.get('spreadsheet', 'password')
+gd_client.source = 'LLVMLinux patch script'
+gd_client.ProgrammaticLogin()
+
+#-------------------------------------------------------------------------------
+# Query spreadsheet by name
+q = gdata.spreadsheet.service.DocumentQuery()
+q['title'] = config.get('spreadsheet', 'filename')
+q['title-exact'] = 'true'
+feed = gd_client.GetSpreadsheetsFeed(query=q)
+spreadsheet_id = feed.entry[0].id.text.rsplit('/',1)[1]
+feed = gd_client.GetWorksheetsFeed(spreadsheet_id)
+worksheet_id = feed.entry[0].id.text.rsplit('/',1)[1]
+
+#-------------------------------------------------------------------------------
+# Get row iterator for spreadsheet
+rows = gd_client.GetListFeed(spreadsheet_id, worksheet_id).entry
+
+#-------------------------------------------------------------------------------
+# Extract argument list
+column = args[0]
+colre = re.compile(args[1])
+args = args[2:]
+
+#-------------------------------------------------------------------------------
+# Print out the rows and build the pretty table
+for row in rows:
+    patchname = row.custom['patchname'].text
+    if patchname in args:
+	#print "---"+patchname
+	#print dir(row.custom[column])
+	#print "+++"+patchname+" "+row.custom[column].text
+        if row.custom[column].text and colre.match(row.custom[column].text):
+            print patchname

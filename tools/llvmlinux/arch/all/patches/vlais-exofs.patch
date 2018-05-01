@@ -1,0 +1,81 @@
+From 2269befde1ba22d829b3715ae086435e18130abe Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:16 -0700
+Subject: [PATCH] exofs, LLVMLinux: Remove VLAIS from exofs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This patch instead makes a zero size array at the
+end of helper struct and delegates the allocation of the variable length
+items to kzalloc.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ fs/exofs/Kconfig |  2 +-
+ fs/exofs/super.c | 22 ++++++++++------------
+ 2 files changed, 11 insertions(+), 13 deletions(-)
+
+diff --git a/fs/exofs/Kconfig b/fs/exofs/Kconfig
+index 86194b2..492746f 100644
+--- a/fs/exofs/Kconfig
++++ b/fs/exofs/Kconfig
+@@ -1,6 +1,6 @@
+ config EXOFS_FS
+ 	tristate "exofs: OSD based file system support"
+-	depends on SCSI_OSD_ULD
++	depends on SCSI_OSD_ULD && BROKEN
+ 	help
+ 	  EXOFS is a file system that uses an OSD storage device,
+ 	  as its backing storage.
+diff --git a/fs/exofs/super.c b/fs/exofs/super.c
+index b795c56..2357dc5 100644
+--- a/fs/exofs/super.c
++++ b/fs/exofs/super.c
+@@ -546,27 +546,25 @@ static int exofs_devs_2_odi(struct exofs_dt_device_info *dt_dev,
+ static int __alloc_dev_table(struct exofs_sb_info *sbi, unsigned numdevs,
+ 		      struct exofs_dev **peds)
+ {
+-	struct __alloc_ore_devs_and_exofs_devs {
+-		/* Twice bigger table: See exofs_init_comps() and comment at
+-		 * exofs_read_lookup_dev_table()
+-		 */
+-		struct ore_dev *oreds[numdevs * 2 - 1];
+-		struct exofs_dev eds[numdevs];
+-	} *aoded;
++	size_t numoreds = numdevs * 2 - 1;
+ 	struct exofs_dev *eds;
+ 	unsigned i;
+ 
+-	aoded = kzalloc(sizeof(*aoded), GFP_KERNEL);
+-	if (unlikely(!aoded)) {
++	/* Twice bigger table: See exofs_init_comps() and comment at
++	 * exofs_read_lookup_dev_table()
++	 * XXX: why -1?
++	 */
++	sbi->oc.ods = kzalloc(numoreds * sizeof(struct ore_dev) +
++			      numdevs * sizeof(struct exofs_dev), GFP_KERNEL);
++	if (unlikely(!sbi->oc.ods)) {
+ 		EXOFS_ERR("ERROR: failed allocating Device array[%d]\n",
+ 			  numdevs);
+ 		return -ENOMEM;
+ 	}
+ 
+-	sbi->oc.ods = aoded->oreds;
+-	*peds = eds = aoded->eds;
++	*peds = eds = (void *)sbi->oc.ods[numoreds];
+ 	for (i = 0; i < numdevs; ++i)
+-		aoded->oreds[i] = &eds[i].ored;
++		sbi->oc.ods[i] = &eds[i].ored;
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

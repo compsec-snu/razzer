@@ -1,0 +1,32 @@
+From 9279f52a697dc5bcdf0f192ba4c5075570d3fff1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:36 +0200
+Subject: [PATCH 42/48] Unused variable.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ drivers/staging/quickstart/quickstart.c |    2 --
+ 1 files changed, 0 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/staging/quickstart/quickstart.c b/drivers/staging/quickstart/quickstart.c
+index c60911c..9f54cfd 100644
+--- a/drivers/staging/quickstart/quickstart.c
++++ b/drivers/staging/quickstart/quickstart.c
+@@ -374,7 +374,6 @@ static void quickstart_exit(void)
+ static int __init quickstart_init_input(void)
+ {
+ 	struct quickstart_btn **ptr = &quickstart_data.btn_lst;
+-	int count;
+ 	int ret;
+ 
+ 	quickstart_input = input_allocate_device();
+@@ -386,7 +385,6 @@ static int __init quickstart_init_input(void)
+ 	quickstart_input->id.bustype = BUS_HOST;
+ 
+ 	while (*ptr) {
+-		count++;
+ 		set_bit(EV_KEY, quickstart_input->evbit);
+ 		set_bit((*ptr)->id, quickstart_input->keybit);
+ 		ptr = &((*ptr)->next);
+-- 
+1.7.3.4
+

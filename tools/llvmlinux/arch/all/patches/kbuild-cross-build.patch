@@ -1,0 +1,69 @@
+From 64b2e7db218245c50c51ce9d3bf154443fb14892 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Wed, 21 May 2014 12:02:30 -0700
+Subject: [PATCH] kbuild, LLVMLinux: Add better clang cross build support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add cross target to CC if using clang. Also add custom gcc toolchain path for
+fallback gcc tools.
+
+COMPILER is previously set to "clang" if CC=clang was set from the make command
+line.  So -target and -gcc-toolchain can be added to CC, since we already know
+that it is set.
+
+Clang will fallback to using things like ld, as, and libgcc if (respectively)
+one of the llvm linkers isn't available, the integrated assembler is turned
+off, or an appropriately cross-compiled version of compiler-rt isn't available.
+To this end, you can specify the path to this fallback gcc toolchain with
+GCC_TOOLCHAIN.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+---
+ Makefile | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+--- linux.orig/Makefile
++++ linux/Makefile
+@@ -367,6 +367,17 @@
+ CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+ 
+ 
++ifeq ($(cc-name),clang)
++ifneq ($(CROSS_COMPILE),)
++CLANG_TARGET	:= -target $(notdir $(CROSS_COMPILE:%-=%))
++GCC_TOOLCHAIN	:= $(dir $(CROSS_COMPILE))
++endif
++ifneq ($(GCC_TOOLCHAIN),)
++CLANG_GCC_TC	:= -gcc-toolchain $(GCC_TOOLCHAIN)
++endif
++CLANG_FLAGS	:= $(CLANG_TARGET) $(CLANG_GCC_TC)
++endif
++
+ # Use USERINCLUDE when you must reference the UAPI directories only.
+ USERINCLUDE    := \
+ 		-I$(srctree)/arch/$(hdr-arch)/include/uapi \
+@@ -385,17 +396,17 @@
+ 		-Iinclude \
+ 		$(USERINCLUDE)
+ 
+-KBUILD_CPPFLAGS := -D__KERNEL__
++KBUILD_CPPFLAGS := -D__KERNEL__ $(CLANG_FLAGS)
+ 
+ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+ 		   -fno-strict-aliasing -fno-common \
+ 		   -Werror-implicit-function-declaration \
+ 		   -Wno-format-security \
+-		   -std=gnu89
++		   -std=gnu89 $(CLANG_FLAGS)
+ 
+ KBUILD_AFLAGS_KERNEL :=
+ KBUILD_CFLAGS_KERNEL :=
+-KBUILD_AFLAGS   := -D__ASSEMBLY__
++KBUILD_AFLAGS   := -D__ASSEMBLY__ $(CLANG_FLAGS)
+ KBUILD_AFLAGS_MODULE  := -DMODULE
+ KBUILD_CFLAGS_MODULE  := -DMODULE
+ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds

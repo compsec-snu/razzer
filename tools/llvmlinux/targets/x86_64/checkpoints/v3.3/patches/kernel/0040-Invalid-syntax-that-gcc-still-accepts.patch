@@ -1,0 +1,26 @@
+From 9c51bed154e0a5bd7f6ca4ed691b55881b67bbb7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:35 +0200
+Subject: [PATCH 40/48] Invalid syntax that gcc still accepts.
+
+Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+---
+ drivers/misc/vmw_balloon.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/misc/vmw_balloon.c b/drivers/misc/vmw_balloon.c
+index cb56e27..2421835 100644
+--- a/drivers/misc/vmw_balloon.c
++++ b/drivers/misc/vmw_balloon.c
+@@ -133,7 +133,7 @@ MODULE_LICENSE("GPL");
+ #define VMWARE_BALLOON_CMD(cmd, data, result)		\
+ ({							\
+ 	unsigned long __stat, __dummy1, __dummy2;	\
+-	__asm__ __volatile__ ("inl (%%dx)" :		\
++	__asm__ __volatile__ ("inl %%dx" :		\
+ 		"=a"(__stat),				\
+ 		"=c"(__dummy1),				\
+ 		"=d"(__dummy2),				\
+-- 
+1.7.3.4
+

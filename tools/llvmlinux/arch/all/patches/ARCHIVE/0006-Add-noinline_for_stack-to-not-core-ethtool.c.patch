@@ -1,0 +1,45 @@
+From 866a39f062de1279734a5e93ca1a5049a3f94d1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 10:51:13 +0100
+Subject: [PATCH 06/51] Add noinline_for_stack to not/core/ethtool.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+Add noinline_for_stack to not/core/ethtool.c
+---
+ net/core/ethtool.c |    4 ++--
+ 1 Datei geändert, 2 Zeilen hinzugefügt(+), 2 Zeilen entfernt(-)
+
+diff --git a/net/core/ethtool.c b/net/core/ethtool.c
+index 4d64cc2..d64bba5 100644
+--- a/net/core/ethtool.c
++++ b/net/core/ethtool.c
+@@ -320,7 +320,7 @@ int __ethtool_get_settings(struct net_device *dev, struct ethtool_cmd *cmd)
+ }
+ EXPORT_SYMBOL(__ethtool_get_settings);
+ 
+-static int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
++static noinline_for_stack int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
+ {
+ 	int err;
+ 	struct ethtool_cmd cmd;
+@@ -334,7 +334,7 @@ static int ethtool_get_settings(struct net_device *dev, void __user *useraddr)
+ 	return 0;
+ }
+ 
+-static int ethtool_set_settings(struct net_device *dev, void __user *useraddr)
++static noinline_for_stack int ethtool_set_settings(struct net_device *dev, void __user *useraddr)
+ {
+ 	struct ethtool_cmd cmd;
+ 
+-- 
+1.7.10.4
+

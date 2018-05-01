@@ -1,0 +1,21 @@
+commit 2ebd5ee47d6480570e3e7e48f16a58f79d2914eb
+Author: Jan-Simon Möller <dl9pf@gmx.de>
+Date:   Tue Apr 30 10:53:19 2013 +0200
+
+    Fix section to __init. Align with usage in acpixf.h . Fixes warning during compilation with clang.
+    
+    Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+
+diff --git a/include/acpi/acpiosxf.h b/include/acpi/acpiosxf.h
+index 5b3d2bd..64b8c76 100644
+--- a/include/acpi/acpiosxf.h
++++ b/include/acpi/acpiosxf.h
+@@ -77,7 +77,7 @@ struct acpi_signal_fatal_info {
+ /*
+  * OSL Initialization and shutdown primitives
+  */
+-acpi_status __initdata acpi_os_initialize(void);
++acpi_status __init acpi_os_initialize(void);
+ 
+ acpi_status acpi_os_terminate(void);
+ 

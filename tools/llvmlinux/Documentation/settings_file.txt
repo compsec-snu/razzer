@@ -1,0 +1,83 @@
+= External configuration files =
+
+External configuration files provide a simple way to freeze all components
+versions.
+
+== How do I enable a configuration file? ==
+
+Include the following in your target Makefile after all other includes.
+
+ include ${CONFIG}
+
+== How do I create an external configuration file? ==
+
+You can dump the current configuration file like this:
+
+ cd targets/vexpress
+ make config > config.mk
+
+Then you can edit config.mk however you wish. You only need to include lines in
+the file which differ from the defaults.
+
+You can include any Make variable you want in the configuration file. You can
+actually include make targets the same file if you found a need to.
+
+== How do I use an external configuration file? ==
+
+You can use a configuration file by specifying the configuration file do use on
+the command line with a CONFIG= option.
+
+ make CONFIG=config.mk kernel-build
+
+= Checkpoints =
+
+A checkpoint is simply an external configuration with a different name. They
+are useful to freeze working states.
+
+By using checkpoints, the build system will not sync components unless the
+current LLVMLinux HEAD matches with the specified LLVMLINUX_COMMIT at the
+settings file.
+
+== How do I create a checkpoint? ==
+
+Dump the current configuration to a file.
+
+ cd targets/vexpress
+ make config > checkpoint/ckp2.mk
+
+It is high recommended to add the FORCE_LLVMLINUX_COMMIT=1 option directly in
+the configuration files that shall be used as checkpoints.
+
+== How do I use a checkpoint? ==
+
+In the same way as configuration files but it is needed to activate it by using
+the FORCE_LLVMLINUX_COMMIT=1 option. It is not mandatory if the configuration
+file already have FORCE_LLVMLINUX_COMMIT=1 set.
+
+ cd targets/vexpress
+ make CONFIG=config.mk sync-all
+
+== Why do I always need to do a git checkout? ==
+
+Once a checkpoint is created it is related to a commit hash X. When this
+checkpoint is commited, the repository goes to Y (which can't be know in before
+commiting). Hence the checkpoint will always point at least to one commit before
+it.
+
+== Limitations ==
+
+Checkpoint feature will work partially with configuration files before it. It
+will request the checkout for the correct LLVMLINUX_COMMIT. However after
+checking out the commit the checkpoint feature will be gone. Hence no more
+enforcements at this point.
+
+== Why not naming it a release? ==
+
+Checkpoints can be seen as releases but that is not exactly their purpose.
+
+The LLVMLinux project works from the HEAD of LLVM and Linux project. Since the
+goal is to upstream patches to both projects, we really have to work from HEAD.
+Unfortunately it also means that is common to get broken states.
+
+A checkpoint marks a known state. Hence, it allows others developers to build
+and test the project and avoid unknown or broken states.

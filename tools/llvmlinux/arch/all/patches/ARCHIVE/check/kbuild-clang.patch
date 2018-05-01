@@ -1,0 +1,66 @@
+Add Clang support to Kbuild
+
+Do not upstream this patch. Clang behavior is likely to change
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ Makefile.build |    1 +
+ 2 files changed, 18 insertions(+), 5 deletions(-)
+
+--- linux.orig/scripts/Makefile.build
++++ linux/scripts/Makefile.build
+@@ -69,6 +69,7 @@
+ warning-1 += -Wold-style-definition
+ warning-1 += $(call cc-option, -Wmissing-include-dirs)
+ warning-1 += $(call cc-option, -Wunused-but-set-variable)
++warning-1 += $(call cc-option, -Wunused-value)
+ warning-1 += $(call cc-disable-warning, missing-field-initializers)
+ 
+ warning-2 := -Waggregate-return
+--- linux.orig/scripts/Kbuild.include
++++ linux/scripts/Kbuild.include
+@@ -122,11 +122,23 @@
+ cc-option-align = $(subst -functions=0,,\
+ 	$(call cc-option,-falign-functions=0,-malign-functions=0))
+ 
++# Test for clang
++ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
++# cc-disable-warning
++# Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
++cc-disable-warning = $(call try-run,\
++	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -xc /dev/null -o "$$TMP" 2>&1 | grep -q "unknown warning option",,-Wno-$(strip $(1)))
++
++# Otherwise assume GCC or something compatible
++else
++
+ # cc-disable-warning
+ # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
+ cc-disable-warning = $(call try-run,\
+ 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
+ 
++endif
++
+ # cc-version
+ # Usage gcc-ver := $(call cc-version)
+ cc-version = $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-version.sh $(CC))
+--- linux.orig/Makefile
++++ linux/Makefile
+@@ -376,7 +376,7 @@
+ 		   -fno-delete-null-pointer-checks
+ KBUILD_AFLAGS_KERNEL :=
+ KBUILD_CFLAGS_KERNEL :=
+-KBUILD_AFLAGS   := -D__ASSEMBLY__
++KBUILD_AFLAGS   := -D__ASSEMBLY__ $(call as-option,-no-integrated-as,)
+ KBUILD_AFLAGS_MODULE  := -DMODULE
+ KBUILD_CFLAGS_MODULE  := -DMODULE
+ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
+@@ -657,6 +657,9 @@
+ # conserve stack if available
+ KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
+ 
++# Quiet unused arguments warning from clang
++KBUILD_CFLAGS   += $(call cc-option,-Qunused-arguments)
++
+ # use the deterministic mode of AR if available
+ KBUILD_ARFLAGS := $(call ar-option,D)
+ 

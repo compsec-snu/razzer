@@ -1,0 +1,4 @@
+rcupdate-builtin_contant_p.patch
+fix-unsupported-processor-feature-smc.patch
+remove-return-value-on-void-in-tps6591x.patch
+1005-slab-builtin_contant_p.patch

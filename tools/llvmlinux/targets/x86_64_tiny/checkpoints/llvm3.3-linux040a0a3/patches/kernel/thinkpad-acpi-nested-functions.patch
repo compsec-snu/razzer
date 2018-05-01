@@ -1,0 +1,155 @@
+From 6f4c2f41bf320ff2350b62e1285a5755cf9f4a17 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 12 Feb 2013 22:25:57 -0500
+Subject: [PATCH] Remove nested functions from Thinkpad ACPI
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The only real change is passing in event_mask to the formerly nested functions.
+Otherwise it's just moving around function and macro code.
+
+This is the only place in the Linux kernel where nested functions are still in
+use. Nested functions aren't part of the C standards, and complicate the
+generated code. Although the Linux Kernel has never set out to be entirely C
+standard compliant, it is increasingly compliant to the standard which is
+supported by other compilers such as Clang. The LLVMLinux project is working on
+being able to compile the Linux kernel with Clang. The use of nested functions
+blocks this effort.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+---
+ drivers/platform/x86/thinkpad_acpi.c | 86 +++++++++++++++++++-----------------
+ 1 file changed, 45 insertions(+), 41 deletions(-)
+
+diff --git a/drivers/platform/x86/thinkpad_acpi.c b/drivers/platform/x86/thinkpad_acpi.c
+index 54d31c0..eba2359 100644
+--- a/drivers/platform/x86/thinkpad_acpi.c
++++ b/drivers/platform/x86/thinkpad_acpi.c
+@@ -2324,53 +2324,55 @@ static void hotkey_read_nvram(struct tp_nvram_state *n, const u32 m)
+ 	}
+ }
+ 
+-static void hotkey_compare_and_issue_event(struct tp_nvram_state *oldn,
+-					   struct tp_nvram_state *newn,
+-					   const u32 event_mask)
+-{
+-
+ #define TPACPI_COMPARE_KEY(__scancode, __member) \
+-	do { \
+-		if ((event_mask & (1 << __scancode)) && \
+-		    oldn->__member != newn->__member) \
+-			tpacpi_hotkey_send_key(__scancode); \
+-	} while (0)
++do { \
++	if ((event_mask & (1 << __scancode)) && \
++	    oldn->__member != newn->__member) \
++		tpacpi_hotkey_send_key(__scancode); \
++} while (0)
+ 
+ #define TPACPI_MAY_SEND_KEY(__scancode) \
+-	do { \
+-		if (event_mask & (1 << __scancode)) \
+-			tpacpi_hotkey_send_key(__scancode); \
+-	} while (0)
++do { \
++	if (event_mask & (1 << __scancode)) \
++		tpacpi_hotkey_send_key(__scancode); \
++} while (0)
+ 
+-	void issue_volchange(const unsigned int oldvol,
+-			     const unsigned int newvol)
+-	{
+-		unsigned int i = oldvol;
++static void issue_volchange(const unsigned int oldvol,
++			    const unsigned int newvol,
++			    const u32 event_mask)
++{
++	unsigned int i = oldvol;
+ 
+-		while (i > newvol) {
+-			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_VOLUMEDOWN);
+-			i--;
+-		}
+-		while (i < newvol) {
+-			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_VOLUMEUP);
+-			i++;
+-		}
++	while (i > newvol) {
++		TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_VOLUMEDOWN);
++		i--;
++	}
++	while (i < newvol) {
++		TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_VOLUMEUP);
++		i++;
+ 	}
++}
+ 
+-	void issue_brightnesschange(const unsigned int oldbrt,
+-				    const unsigned int newbrt)
+-	{
+-		unsigned int i = oldbrt;
++static void issue_brightnesschange(const unsigned int oldbrt,
++				   const unsigned int newbrt,
++				   const u32 event_mask)
++{
++	unsigned int i = oldbrt;
+ 
+-		while (i > newbrt) {
+-			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_FNEND);
+-			i--;
+-		}
+-		while (i < newbrt) {
+-			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_FNHOME);
+-			i++;
+-		}
++	while (i > newbrt) {
++		TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_FNEND);
++		i--;
+ 	}
++	while (i < newbrt) {
++		TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_FNHOME);
++		i++;
++	}
++}
++
++static void hotkey_compare_and_issue_event(struct tp_nvram_state *oldn,
++					   struct tp_nvram_state *newn,
++					   const u32 event_mask)
++{
+ 
+ 	TPACPI_COMPARE_KEY(TP_ACPI_HOTKEYSCAN_THINKPAD, thinkpad_toggle);
+ 	TPACPI_COMPARE_KEY(TP_ACPI_HOTKEYSCAN_FNSPACE, zoom_toggle);
+@@ -2405,7 +2407,8 @@ static void hotkey_compare_and_issue_event(struct tp_nvram_state *oldn,
+ 		    oldn->volume_level != newn->volume_level) {
+ 			/* recently muted, or repeated mute keypress, or
+ 			 * multiple presses ending in mute */
+-			issue_volchange(oldn->volume_level, newn->volume_level);
++			issue_volchange(oldn->volume_level, newn->volume_level,
++				event_mask);
+ 			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_MUTE);
+ 		}
+ 	} else {
+@@ -2415,7 +2418,8 @@ static void hotkey_compare_and_issue_event(struct tp_nvram_state *oldn,
+ 			TPACPI_MAY_SEND_KEY(TP_ACPI_HOTKEYSCAN_VOLUMEUP);
+ 		}
+ 		if (oldn->volume_level != newn->volume_level) {
+-			issue_volchange(oldn->volume_level, newn->volume_level);
++			issue_volchange(oldn->volume_level, newn->volume_level,
++				event_mask);
+ 		} else if (oldn->volume_toggle != newn->volume_toggle) {
+ 			/* repeated vol up/down keypress at end of scale ? */
+ 			if (newn->volume_level == 0)
+@@ -2428,7 +2432,7 @@ static void hotkey_compare_and_issue_event(struct tp_nvram_state *oldn,
+ 	/* handle brightness */
+ 	if (oldn->brightness_level != newn->brightness_level) {
+ 		issue_brightnesschange(oldn->brightness_level,
+-				       newn->brightness_level);
++				       newn->brightness_level, event_mask);
+ 	} else if (oldn->brightness_toggle != newn->brightness_toggle) {
+ 		/* repeated key presses that didn't change state */
+ 		if (newn->brightness_level == 0)
+-- 
+1.8.1.2
+

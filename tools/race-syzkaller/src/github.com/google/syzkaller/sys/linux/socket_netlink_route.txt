@@ -1,0 +1,408 @@
+# Copyright 2018 syzkaller project authors. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+
+# AF_NETLINK/NETLINK_ROUTE support.
+
+include <linux/net.h>
+include <linux/netdevice.h>
+include <uapi/linux/if.h>
+include <uapi/linux/if_link.h>
+include <uapi/linux/if_addr.h>
+include <uapi/linux/netlink.h>
+include <uapi/linux/netconf.h>
+include <uapi/linux/rtnetlink.h>
+include <uapi/linux/lwtunnel.h>
+include <uapi/linux/neighbour.h>
+include <uapi/linux/fib_rules.h>
+
+resource sock_nl_route[sock_netlink]
+
+socket$nl_route(domain const[AF_NETLINK], type const[SOCK_RAW], proto const[NETLINK_ROUTE]) sock_nl_route
+
+sendmsg$nl_route(fd sock_nl_route, msg ptr[in, msghdr_netlink[netlink_msg_route]], f flags[send_flags])
+
+netlink_msg_route [
+	newlink			netlink_msg[RTM_NEWLINK, ifinfomsg[AF_UNSPEC], ifla_policy]
+	getlink			netlink_msg[RTM_GETLINK, ifinfomsg[AF_UNSPEC], ifla_policy]
+	setlink			netlink_msg[RTM_SETLINK, ifinfomsg[AF_UNSPEC], ifla_policy]
+	dellink			netlink_msg[RTM_DELLINK, ifinfomsg[AF_UNSPEC], ifla_policy]
+	getaddr			netlink_msg[RTM_GETADDR, rtgenmsg[AF_UNSPEC], void]
+	getroute		netlink_msg[RTM_GETROUTE, rtgenmsg[AF_UNSPEC], void]
+	getrule			netlink_msg[RTM_GETRULE, rtgenmsg[AF_UNSPEC], void]
+	getnetconf		netlink_msg[RTM_GETNETCONF, rtgenmsg[AF_UNSPEC], void]
+	getstats		netlink_msg[RTM_GETSTATS, if_stats_msg[AF_UNSPEC], void]
+	newneigh		netlink_msg[RTM_NEWNEIGH, ndmsg, nd_policy]
+	delneigh		netlink_msg[RTM_DELNEIGH, ndmsg, nd_policy]
+	getneigh		netlink_msg[RTM_GETNEIGH, rtgenmsg[AF_UNSPEC], void]
+	getneightbl		netlink_msg[RTM_GETNEIGHTBL, rtgenmsg[AF_UNSPEC], void]
+	setneightbl		netlink_msg[RTM_SETNEIGHTBL, ndtmsg, nl_neightbl_policy]
+
+	ipv4_newaddr		netlink_msg[RTM_NEWADDR, ifaddrmsg[AF_INET], ifa_ipv4_policy]
+	ipv4_deladdr		netlink_msg[RTM_DELADDR, ifaddrmsg[AF_INET], ifa_ipv4_policy]
+	ipv4_getaddr		netlink_msg[RTM_GETADDR, ifaddrmsg[AF_INET], ifa_ipv4_policy]
+	ipv4_newroute		netlink_msg[RTM_NEWROUTE, rtmsg[AF_INET], rtm_ipv4_policy]
+	ipv4_delroute		netlink_msg[RTM_DELROUTE, rtmsg[AF_INET], rtm_ipv4_policy]
+	ipv4_getroute		netlink_msg[RTM_GETROUTE, rtmsg[AF_INET], void]
+	ipv4_getnetconf		netlink_msg[RTM_GETNETCONF, netconfmsg[AF_INET], devconf_ip_policy]
+	ipv4_newrule		netlink_msg[RTM_NEWRULE, fib_rule_hdr[AF_INET], fib4_rule_policy]
+	ipv4_delrule		netlink_msg[RTM_DELRULE, fib_rule_hdr[AF_INET], fib4_rule_policy]
+	ipv4_getrule		netlink_msg[RTM_GETRULE, fib_rule_hdr[AF_INET], void]
+
+	ipv6_newaddr		netlink_msg[RTM_NEWADDR, ifaddrmsg[AF_INET6], ifa_ipv6_policy]
+	ipv6_deladdr		netlink_msg[RTM_DELADDR, ifaddrmsg[AF_INET6], ifa_ipv6_policy]
+	ipv6_getaddr		netlink_msg[RTM_GETADDR, ifaddrmsg[AF_INET6], ifa_ipv6_policy]
+	ipv6_newroute		netlink_msg[RTM_NEWROUTE, rtmsg[AF_INET6], rtm_ipv6_policy]
+	ipv6_delroute		netlink_msg[RTM_DELROUTE, rtmsg[AF_INET6], rtm_ipv6_policy]
+	ipv6_getroute		netlink_msg[RTM_GETROUTE, rtmsg[AF_INET6], rtm_ipv6_policy]
+	ipv6_getmulticast	netlink_msg[RTM_GETMULTICAST, rtgenmsg[AF_INET6], void]
+	ipv6_getanyicast	netlink_msg[RTM_GETANYCAST, rtgenmsg[AF_INET6], void]
+	ipv6_getnetconf		netlink_msg[RTM_GETNETCONF, netconfmsg[AF_INET6], devconf_ip_policy]
+	ipv6_newrule		netlink_msg[RTM_NEWRULE, fib_rule_hdr[AF_INET6], fib6_rule_policy]
+	ipv6_delrule		netlink_msg[RTM_DELRULE, fib_rule_hdr[AF_INET6], fib6_rule_policy]
+	ipv6_getrule		netlink_msg[RTM_GETRULE, fib_rule_hdr[AF_INET6], void]
+
+	ipmr_newroute		netlink_msg[RTM_NEWROUTE, rtmsg[RTNL_FAMILY_IPMR], rtm_ipv4_policy]
+	ipmr_delroute		netlink_msg[RTM_DELROUTE, rtmsg[RTNL_FAMILY_IPMR], rtm_ipv4_policy]
+	ipmr_getroute		netlink_msg[RTM_GETROUTE, rtmsg[RTNL_FAMILY_IPMR], void]
+
+	mpls_newroute		netlink_msg[RTM_NEWROUTE, rtmsg[AF_MPLS], rtm_mpls_policy]
+	mpls_delroute		netlink_msg[RTM_DELROUTE, rtmsg[AF_MPLS], rtm_mpls_policy]
+	mpls_getroute		netlink_msg[RTM_GETROUTE, rtmsg[AF_MPLS], rtm_mpls_policy]
+	mpls_getnetconf		netlink_msg[RTM_GETNETCONF, netconfmsg[AF_MPLS], devconf_mpls_policy]
+
+	bridge_newneigh		netlink_msg[RTM_NEWNEIGH, ndmsg, nd_policy]
+	bridge_delneigh		netlink_msg[RTM_DELNEIGH, ndmsg, nd_policy]
+	bridge_getneigh		netlink_msg[RTM_GETNEIGH, ifinfomsg[AF_BRIDGE], ifla_policy]
+	bridge_getlink		netlink_msg[RTM_GETLINK, ifinfomsg[AF_BRIDGE], ifla_policy]
+	bridge_setlink		netlink_msg[RTM_SETLINK, ifinfomsg[AF_BRIDGE], ifla_policy]
+	bridge_dellink		netlink_msg[RTM_DELLINK, ifinfomsg[AF_BRIDGE], ifla_policy]
+] [varlen]
+
+type rtgenmsg[FAMILY] {
+	rtgen_family	const[FAMILY, int8]
+}
+
+type netconfmsg[FAMILY] {
+	ncm_family	const[FAMILY, int8]
+}
+
+type ifinfomsg[FAMILY] {
+	ifi_family	const[FAMILY, int8]
+	__ifi_pad	const[0, int8]
+	ifi_type	const[0, int16]
+	ifi_index	ifindex[opt]
+	ifi_flags	flags[net_device_flags, int32]
+	ifi_change	flags[net_device_flags, int32]
+}
+
+type ifaddrmsg[FAMILY] {
+	ifa_family	const[FAMILY, int8]
+	ifa_prefixlen	flags[ifa_prefixlen, int8]
+	ifa_flags	flags[ifa_flags, int8]
+	ifa_scope	flags[rt_scope_t, int8]
+	ifa_index	ifindex
+}
+
+type rtmsg[FAMILY] {
+	rtm_family	const[FAMILY, int8]
+	rtm_dst_len	flags[rtm_addr_len, int8]
+	rtmsrcdst_len	flags[rtm_addr_len, int8]
+	rtm_tos		int8
+	rtm_table	flags[rt_table_types, int8]
+	rtm_protocol	flags[rtm_protocol, int8]
+	rtm_scope	flags[rt_scope_t, int8]
+	rtm_type	flags[rtm_type, int8]
+	rtm_flags	flags[rtm_flags, int32]
+}
+
+ndmsg {
+	ndm_family	flags[rtnl_af, int8]
+	ndm_pad1	const[0, int8]
+	ndm_pad2	const[0, int16]
+	ndm_ifindex	ifindex
+	ndm_state	flags[ndm_state, int16]
+	ndm_flags	flags[ndm_flags, int8]
+	ndm_type	flags[rtm_type, int8]
+}
+
+ndtmsg {
+	ndm_family	flags[rtnl_af, int8]
+	ndm_pad1	const[0, int8]
+	ndm_pad2	const[0, int16]
+}
+
+type if_stats_msg[FAMILY] {
+	family		const[FAMILY, int8]
+	pad1		const[0, int8]
+	pad2		const[0, int16]
+	ifindex		ifindex
+	filter_mask	flags[filter_mask, int32]
+}
+
+ifla_policy [
+	IFLA_IFNAME		nlattr[IFLA_IFNAME, devname]
+	IFLA_ADDRESS		nlattr[IFLA_ADDRESS, mac_addr]
+	IFLA_BROADCAST		nlattr[IFLA_BROADCAST, mac_addr]
+	IFLA_MAP		nlattr[IFLA_MAP, rtnl_link_ifmap]
+	IFLA_MTU		nlattr[IFLA_MAP, int32]
+	IFLA_LINK		nlattr[IFLA_LINK, int32]
+	IFLA_MASTER		nlattr[IFLA_MASTER, int32]
+	IFLA_CARRIER		nlattr[IFLA_CARRIER, int8]
+	IFLA_TXQLEN		nlattr[IFLA_TXQLEN, int32]
+	IFLA_WEIGHT		nlattr[IFLA_WEIGHT, int32]
+	IFLA_OPERSTATE		nlattr[IFLA_OPERSTATE, int8]
+	IFLA_LINKMODE		nlattr[IFLA_LINKMODE, int8]
+	IFLA_LINKINFO		nlattr[IFLA_LINKINFO, array[ifla_info_policy]]
+	IFLA_NET_NS_PID		nlattr[IFLA_NET_NS_PID, pid]
+# TODO: this must be some 'nsfd' fd.
+	IFLA_NET_NS_FD		nlattr[IFLA_NET_NS_FD, fd]
+	IFLA_IFALIAS		nlattr[IFLA_IFALIAS, devname]
+	IFLA_IFALIASn		nlattr[IFLA_IFALIAS, void]
+	IFLA_VFINFO_LIST	nlattr[IFLA_VFINFO_LIST, array[nlattr[IFLA_VF_INFO, array[ifla_vf_policy]]]]
+	IFLA_VF_PORTS		nlattr[IFLA_VF_PORTS, array[nlattr[IFLA_VF_PORT, array[ifla_port_policy]]]]
+	IFLA_PORT_SELF		nlattr[IFLA_PORT_SELF, array[ifla_port_policy]]
+	IFLA_AF_SPEC		nlattr[IFLA_AF_SPEC, array[nlattr_t[flags[rtnl_af, int16], void]]]
+	IFLA_EXT_MASK		nlattr[IFLA_EXT_MASK, int32]
+	IFLA_PROMISCUITY	nlattr[IFLA_PROMISCUITY, int32]
+	IFLA_NUM_TX_QUEUES	nlattr[IFLA_NUM_TX_QUEUES, int32]
+	IFLA_NUM_RX_QUEUES	nlattr[IFLA_NUM_RX_QUEUES, int32]
+	IFLA_PHYS_PORT_ID	nlattr[IFLA_PHYS_PORT_ID, array[int8, 0:MAX_PHYS_ITEM_ID_LEN]]
+	IFLA_CARRIER_CHANGES	nlattr[IFLA_CARRIER_CHANGES, int32]
+	IFLA_PHYS_SWITCH_ID	nlattr[IFLA_PHYS_SWITCH_ID, array[int8, 0:MAX_PHYS_ITEM_ID_LEN]]
+# TODO: this is some net namespace id.
+	IFLA_LINK_NETNSID	nlattr[IFLA_LINK_NETNSID, int32]
+	IFLA_PROTO_DOWN		nlattr[IFLA_PROTO_DOWN, int8]
+	IFLA_XDP		nlattr[IFLA_XDP, array[ifla_xdp_policy]]
+	IFLA_EVENT		nlattr[IFLA_EVENT, int32]
+	IFLA_GROUP		nlattr[IFLA_GROUP, int32]
+# TODO: probably also some net namespace id.
+	IFLA_IF_NETNSID		nlattr[IFLA_IF_NETNSID, int32]
+] [varlen]
+
+ifla_info_policy [
+	IFLA_INFO_KIND		nlattr[IFLA_INFO_KIND, string]
+# TODO: strictly saying this and IFLA_INFO_SLAVE_DATA is yet another NLA_NESTED.
+	IFLA_INFO_DATA		nlattr[IFLA_INFO_DATA, array[int8]]
+	IFLA_INFO_SLAVE_KIND	nlattr[IFLA_INFO_SLAVE_KIND, string]
+	IFLA_INFO_SLAVE_DATA	nlattr[IFLA_INFO_SLAVE_DATA, array[int8]]
+] [varlen]
+
+ifa_ipv4_policy [
+	IFA_LOCAL	nlattr[IFA_LOCAL, ipv4_addr]
+	IFA_ADDRESS	nlattr[IFA_ADDRESS, ipv4_addr]
+	IFA_BROADCAST	nlattr[IFA_BROADCAST, ipv4_addr]
+	IFA_LABEL	nlattr[IFA_LABEL, devname]
+	IFA_CACHEINFO	nlattr[IFA_CACHEINFO, ifa_cacheinfo]
+	IFA_FLAGS	nlattr[IFA_FLAGS, flags[ifa_flags, int32]]
+] [varlen]
+
+ifa_ipv6_policy [
+	IFA_ADDRESS	nlattr[IFA_ADDRESS, ipv6_addr]
+	IFA_LOCAL	nlattr[IFA_LOCAL, ipv6_addr]
+	IFA_CACHEINFO	nlattr[IFA_CACHEINFO, ifa_cacheinfo]
+	IFA_FLAGS	nlattr[IFA_FLAGS, flags[ifa_flags, int32]]
+] [varlen]
+
+rtm_ipv4_policy [
+	RTA_DST		nlattr[RTA_DST, ipv4_addr]
+	RTA_SRC		nlattr[RTA_SRC, ipv4_addr]
+	RTA_IIF		nlattr[RTA_DST, ifindex]
+	RTA_OIF		nlattr[RTA_OIF, ifindex]
+	RTA_GATEWAY	nlattr[RTA_GATEWAY, ipv4_addr]
+	RTA_PRIORITY	nlattr[RTA_PRIORITY, int32]
+	RTA_PREFSRC	nlattr[RTA_PREFSRC, ipv4_addr]
+# TODO: what's this? is this interesting?
+	RTA_METRICS	nlattr[RTA_METRICS, array[int8]]
+	RTA_MULTIPATH	nlattr[RTA_MULTIPATH, rtnexthop]
+	RTA_FLOW	nlattr[RTA_FLOW, int32]
+	RTA_ENCAP_TYPE	nlattr[RTA_ENCAP_TYPE, flags[lwtunnel_encap_types, int16]]
+# TODO: describe RTA_ENCAP
+	RTA_ENCAP	nlattr[RTA_ENCAP, nl_generic_attr]
+	RTA_UID		nlattr[RTA_UID, uid]
+	RTA_MARK	nlattr[RTA_MARK, int32]
+] [varlen]
+
+rtm_ipv6_policy [
+	RTA_GATEWAY	nlattr[RTA_GATEWAY, ipv6_addr]
+	RTA_IIF		nlattr[RTA_DST, ifindex]
+	RTA_OIF		nlattr[RTA_OIF, ifindex]
+	RTA_PRIORITY	nlattr[RTA_PRIORITY, int32]
+# TODO: what's this? is this interesting?
+	RTA_METRICS	nlattr[RTA_METRICS, array[int8]]
+	RTA_MULTIPATH	nlattr[RTA_MULTIPATH, rtnexthop]
+	RTA_PREF	nlattr[RTA_PREF, int8]
+	RTA_ENCAP_TYPE	nlattr[RTA_ENCAP_TYPE, flags[lwtunnel_encap_types, int16]]
+# TODO: describe RTA_ENCAP
+	RTA_ENCAP	nlattr[RTA_ENCAP, nl_generic_attr]
+	RTA_EXPIRES	nlattr[RTA_MARK, int32]
+	RTA_UID		nlattr[RTA_UID, uid]
+	RTA_MARK	nlattr[RTA_MARK, int32]
+] [varlen]
+
+rtm_mpls_policy [
+	RTA_DST			nlattr[RTA_DST, array[mpls_label]]
+	RTA_OIF			nlattr[RTA_OIF, ifindex]
+	RTA_TTL_PROPAGATE	nlattr[RTA_TTL_PROPAGATE, int8]
+] [varlen]
+
+type fib_rule_hdr[FAMILY] {
+	family		const[FAMILY, int8]
+	dst_len		flags[rtm_addr_len, int8]
+	rcdst_len	flags[rtm_addr_len, int8]
+	tos		int8
+	table		int8
+	res1		const[0, int8]
+	res2		const[0, int8]
+	action		flags[fr_actions, int32]
+	flags		flags[fr_flags, int32]
+}
+
+fib_rule_uid_range {
+	start	uid
+	end	uid
+}
+
+fib_rule_port_range {
+	start	sock_port
+	end	sock_port
+}
+
+fra_generic_policy [
+	FRA_IIFNAME		nlattr[FRA_IIFNAME, devname]
+	FRA_OIFNAME		nlattr[FRA_OIFNAME, devname]
+	FRA_PRIORITY		nlattr[FRA_PRIORITY, int32]
+	FRA_FWMARK		nlattr[FRA_FWMARK, int32]
+	FRA_FWMASK		nlattr[FRA_FWMASK, int32]
+	FRA_TABLE		nlattr[FRA_TABLE, int32]
+	FRA_SUPPRESS_PREFIXLEN	nlattr[FRA_SUPPRESS_PREFIXLEN, int32]
+	FRA_SUPPRESS_IFGROUP	nlattr[FRA_SUPPRESS_IFGROUP, int32]
+	FRA_GOTO		nlattr[FRA_GOTO, int32]
+	FRA_L3MDEV		nlattr[FRA_L3MDEV, int8]
+	FRA_UID_RANGE		nlattr[FRA_UID_RANGE, fib_rule_uid_range]
+	FRA_PROTOCOL		nlattr[FRA_PROTOCOL, flags[rtm_protocol, int8]]
+	FRA_IP_PROTO		nlattr[FRA_IP_PROTO, flags[ipv6_types, int8]]
+	FRA_SPORT_RANGE		nlattr[FRA_SPORT_RANGE, fib_rule_port_range]
+	FRA_DPORT_RANGE		nlattr[FRA_DPORT_RANGE, fib_rule_port_range]
+] [varlen]
+
+# FRA_DST/SRC are not in fib4/6_rule_policy. But fib4/6 still need them.
+# So I add them here.
+fib4_rule_policy [
+	FRA_DST			nlattr[RTA_DST, ipv4_addr]
+	FRA_SRC			nlattr[RTA_SRC, ipv4_addr]
+	FRA_GENERIC_POLICY	fra_generic_policy
+	FRA_FLOW		nlattr[FRA_FLOW, int32]
+] [varlen]
+
+fib6_rule_policy [
+	FRA_DST		nlattr[RTA_DST, ipv6_addr]
+	FRA_SRC		nlattr[RTA_SRC, ipv6_addr]
+	FIB_RULE_POLICY	fra_generic_policy
+] [varlen]
+
+nl_neightbl_policy [
+	NDTA_NAME		nlattr[NDTA_NAME, string]
+	NDTA_THRESH1		nlattr[NDTA_THRESH1, int32]
+	NDTA_THRESH2		nlattr[NDTA_THRESH2, int32]
+	NDTA_THRESH3		nlattr[NDTA_THRESH3, int32]
+	NDTA_GC_INTERVAL	nlattr[NDTA_GC_INTERVAL, int64]
+	NDTA_PARMS		nlattr[NDTA_PARMS, array[nl_ntbl_parm_policy]]
+] [varlen]
+
+nl_ntbl_parm_policy [
+	NDTPA_IFINDEX			nlattr[NDTPA_IFINDEX, ifindex]
+	NDTPA_QUEUE_LEN			nlattr[NDTPA_QUEUE_LEN, int32]
+	NDTPA_PROXY_QLEN		nlattr[NDTPA_PROXY_QLEN, int32]
+	NDTPA_APP_PROBES		nlattr[NDTPA_APP_PROBES, int32]
+	NDTPA_UCAST_PROBES		nlattr[NDTPA_UCAST_PROBES, int32]
+	NDTPA_MCAST_PROBES		nlattr[NDTPA_MCAST_PROBES, int32]
+	NDTPA_MCAST_REPROBES		nlattr[NDTPA_MCAST_REPROBES, int32]
+	NDTPA_BASE_REACHABLE_TIME	nlattr[NDTPA_BASE_REACHABLE_TIME, int64]
+	NDTPA_GC_STALETIME		nlattr[NDTPA_GC_STALETIME, int64]
+	NDTPA_DELAY_PROBE_TIME		nlattr[NDTPA_DELAY_PROBE_TIME, int64]
+	NDTPA_RETRANS_TIME		nlattr[NDTPA_RETRANS_TIME, int64]
+	NDTPA_ANYCAST_DELAY		nlattr[NDTPA_ANYCAST_DELAY, int64]
+	NDTPA_PROXY_DELAY		nlattr[NDTPA_PROXY_DELAY, int64]
+	NDTPA_LOCKTIME			nlattr[NDTPA_LOCKTIME, int64]
+] [varlen]
+
+nd_policy [
+	NDA_DST_IPV4		nlattr[NDA_DST, ipv4_addr]
+	NDA_DST_IPV6		nlattr[NDA_DST, ipv6_addr]
+	NDA_DST_MAC		nlattr[NDA_DST, mac_addr]
+	NDA_LLADDR		nlattr[NDA_LLADDR, mac_addr]
+	NDA_CACHEINFO		nlattr[NDA_CACHEINFO, nda_cacheinfo]
+	NDA_PROBES		nlattr[NDA_PROBES, int32]
+	NDA_VLAN		nlattr[NDA_VLAN, int16[0:4]]
+	NDA_PORT		nlattr[NDA_PORT, sock_port]
+	NDA_VNI			nlattr[NDA_VNI, int32]
+	NDA_IFINDEX		nlattr[NDA_IFINDEX, ifindex]
+	NDA_MASTER		nlattr[NDA_MASTER, int32]
+	NDA_LINK_NETNSID	nlattr[NDA_LINK_NETNSID, int32]
+	NDA_SRC_VNI		nlattr[NDA_SRC_VNI, int32]
+] [varlen]
+
+nda_cacheinfo {
+	ndm_confirmed	int32
+	ndm_used	int32
+	ndm_updated	int32
+	ndm_refcnt	int32
+}
+
+rtnexthop {
+	rtnh_len	int16
+	rtnh_flags	int8
+	rtnh_hops	int8
+	rtnh_ifindex	ifindex
+}
+
+ifa_cacheinfo {
+	ifa_prefered	int32
+	ifa_valid	int32
+	cstamp		int32
+	tstamp		int32
+}
+
+devconf_ip_policy [
+	NETCONFA_IFINDEX		nlattr[NETCONFA_IFINDEX, ifindex]
+	NETCONFA_FORWARDING		nlattr[NETCONFA_FORWARDING, int32]
+	NETCONFA_RP_FILTER		nlattr[NETCONFA_RP_FILTER, int32]
+	NETCONFA_PROXY_NEIGH		nlattr[NETCONFA_PROXY_NEIGH, int32]
+	IGNORE_ROUTES_WITH_LINKDOWN	nlattr[NETCONFA_IGNORE_ROUTES_WITH_LINKDOWN, int32]
+] [varlen]
+
+devconf_mpls_policy [
+	NETCONFA_IFINDEX		nlattr[NETCONFA_IFINDEX, ifindex]
+	IGNORE_ROUTES_WITH_LINKDOWN	nlattr[NETCONFA_IGNORE_ROUTES_WITH_LINKDOWN, int32]
+] [varlen]
+
+# TODO: implement these
+type ifla_vf_policy nl_generic_attr
+type ifla_port_policy nl_generic_attr
+type ifla_xdp_policy nl_generic_attr
+
+rtnl_link_ifmap {
+	mem_start	int64
+	mem_end		int64
+	base_addr	int64
+	irq		int16
+	dma		int8
+	port		int8
+}
+
+rtnl_af = AF_INET, AF_INET6, AF_BRIDGE, AF_MPLS
+net_device_flags = IFF_UP, IFF_BROADCAST, IFF_DEBUG, IFF_LOOPBACK, IFF_POINTOPOINT, IFF_NOTRAILERS, IFF_RUNNING, IFF_NOARP, IFF_PROMISC, IFF_ALLMULTI, IFF_MASTER, IFF_SLAVE, IFF_MULTICAST, IFF_PORTSEL, IFF_AUTOMEDIA, IFF_DYNAMIC, IFF_LOWER_UP, IFF_DORMANT, IFF_ECHO
+ifa_flags = IFA_F_SECONDARY, IFA_F_NODAD, IFA_F_OPTIMISTIC, IFA_F_DADFAILED, IFA_F_HOMEADDRESS, IFA_F_DEPRECATED, IFA_F_TENTATIVE, IFA_F_PERMANENT, IFA_F_MANAGETEMPADDR, IFA_F_NOPREFIXROUTE, IFA_F_MCAUTOJOIN
+rt_scope_t = RT_SCOPE_UNIVERSE, RT_SCOPE_SITE, RT_SCOPE_LINK, RT_SCOPE_HOST, RT_SCOPE_NOWHERE
+rtm_protocol = RTPROT_UNSPEC, RTPROT_REDIRECT, RTPROT_KERNEL, RTPROT_BOOT, RTPROT_STATIC
+rtm_type = RTN_UNSPEC, RTN_UNICAST, RTN_LOCAL, RTN_BROADCAST, RTN_ANYCAST, RTN_MULTICAST, RTN_BLACKHOLE, RTN_UNREACHABLE, RTN_PROHIBIT, RTN_THROW, RTN_NAT, RTN_XRESOLVE
+rtm_flags = RTM_F_NOTIFY, RTM_F_CLONED, RTM_F_EQUALIZE, RTM_F_PREFIX, RTM_F_LOOKUP_TABLE, RTM_F_FIB_MATCH
+fr_actions = FR_ACT_UNSPEC, FR_ACT_TO_TBL, FR_ACT_GOTO, FR_ACT_NOP, FR_ACT_RES3, FR_ACT_RES4, FR_ACT_BLACKHOLE, FR_ACT_UNREACHABLE, FR_ACT_PROHIBIT
+fr_flags = FIB_RULE_PERMANENT, FIB_RULE_INVERT, FIB_RULE_UNRESOLVED, FIB_RULE_IIF_DETACHED, FIB_RULE_OIF_DETACHED, FIB_RULE_FIND_SADDR
+lwtunnel_encap_types = LWTUNNEL_ENCAP_NONE, LWTUNNEL_ENCAP_MPLS, LWTUNNEL_ENCAP_IP, LWTUNNEL_ENCAP_ILA, LWTUNNEL_ENCAP_IP6, LWTUNNEL_ENCAP_SEG6, LWTUNNEL_ENCAP_BPF, LWTUNNEL_ENCAP_SEG6_LOCAL
+rt_table_types = RT_TABLE_UNSPEC, RT_TABLE_COMPAT, RT_TABLE_DEFAULT, RT_TABLE_MAIN, RT_TABLE_LOCAL
+ndm_state = NUD_INCOMPLETE, NUD_REACHABLE, NUD_STALE, NUD_DELAY, NUD_PROBE, NUD_FAILED, NUD_NOARP, NUD_PERMANENT, NUD_NONE
+ndm_flags = NTF_USE, NTF_SELF, NTF_MASTER, NTF_PROXY, NTF_EXT_LEARNED, NTF_OFFLOADED, NTF_ROUTER
+ifa_prefixlen = 0, 1, 8, 16, 24, 31, 32, 56, 63, 64, 128
+rtm_addr_len = 0, 16, 20, 32, 128
+filter_mask = IFLA_STATS_UNSPEC, IFLA_STATS_LINK_64, IFLA_STATS_LINK_XSTATS, IFLA_STATS_LINK_XSTATS_SLAVE, IFLA_STATS_LINK_OFFLOAD_XSTATS, IFLA_STATS_AF_SPEC

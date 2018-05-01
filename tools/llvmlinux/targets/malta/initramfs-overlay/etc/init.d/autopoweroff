@@ -1,0 +1,5 @@
+#! /bin/sh
+if /bin/grep POWEROFF /proc/cmdline; then
+  echo '/etc/init.d/autopoweroff: POWEROFF found in kernel command line. Power off.'
+  /sbin/poweroff
+fi

@@ -1,0 +1,58 @@
+From 7b1f235999aa1f1c45602826696e613b1eab315b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:09:07 +0100
+Subject: [PATCH 44/51] Fix bitoperation for compilation with clang
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+
+Fix for warning:
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/crypto/fcrypt.c:143:47: warning: signed shift result (0x598000000) requires 36 bits to
+      represent, but 'int' only has 32 bits [-Wshift-overflow]
+        Z(0xef), Z(0x70), Z(0xcf), Z(0xc2), Z(0x2a), Z(0xb3), Z(0x61), Z(0xad),
+                                                     ^~~~~~~
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/crypto/fcrypt.c:113:29: note: expanded from macro 'Z'
+#define Z(x) cpu_to_be32((x << 27 ) | (x >> 5))
+                            ^  ~~
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/include/uapi/linux/byteorder/little_endian.h:38:53: note: expanded from macro
+      '__cpu_to_be32'
+#define __cpu_to_be32(x) ((__force __be32)__swab32((x)))
+                                                    ^
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/include/uapi/linux/swab.h:116:21: note: expanded from macro '__swab32'
+        ___constant_swab32(x) :                 \
+                           ^
+/home/dl9pf/llvmlinux/targets/x86_64/src/linux/include/uapi/linux/swab.h:18:12: note: expanded from macro '___constant_swab32'
+        (((__u32)(x) & (__u32)0x0000ff00UL) <<  8) |            \
+                  ^
+
+Solution - make sure we don't exceed the 32 bit range by adding (x & ~(1U << 27))  
+=  & (0xF7FFFFFF)_16 or & (1111 0111 1111 1111 1111 1111 1111 1111)_2
+
+---
+ crypto/fcrypt.c |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/crypto/fcrypt.c b/crypto/fcrypt.c
+index 3b2cf56..8ad29b7 100644
+--- a/crypto/fcrypt.c
++++ b/crypto/fcrypt.c
+@@ -110,7 +110,7 @@ static const __be32 sbox0[256] = {
+ };
+ 
+ #undef Z
+-#define Z(x) cpu_to_be32((x << 27) | (x >> 5))
++#define Z(x) cpu_to_be32(((x & ~(1U << 27)) << 27) | (x >> 5))
+ static const __be32 sbox1[256] = {
+ 	Z(0x77), Z(0x14), Z(0xa6), Z(0xfe), Z(0xb2), Z(0x5e), Z(0x8c), Z(0x3e),
+ 	Z(0x67), Z(0x6c), Z(0xa1), Z(0x0d), Z(0xc2), Z(0xa2), Z(0xc1), Z(0x85),
+-- 
+1.7.10.4
+

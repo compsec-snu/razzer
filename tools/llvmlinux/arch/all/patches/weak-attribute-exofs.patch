@@ -1,0 +1,25 @@
+From 597d1735e2679256998f767676443daa643db558 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:13 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM fs, exofs, LLVMLinux: Remove __weak attribute
+
+FIXME
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+diff --git a/fs/exofs/common.h b/fs/exofs/common.h
+index 7d88ef5..9fdf023 100644
+--- a/fs/exofs/common.h
++++ b/fs/exofs/common.h
+@@ -183,7 +183,7 @@ struct exofs_fcb {
+ #define EXOFS_INO_ATTR_SIZE	sizeof(struct exofs_fcb)
+ 
+ /* This is the Attribute the fcb is stored in */
+-static const struct __weak osd_attr g_attr_inode_data = ATTR_DEF(
++static const struct osd_attr g_attr_inode_data __maybe_unused = ATTR_DEF(
+ 	EXOFS_APAGE_FS_DATA,
+ 	EXOFS_ATTR_INODE_DATA,
+ 	EXOFS_INO_ATTR_SIZE);

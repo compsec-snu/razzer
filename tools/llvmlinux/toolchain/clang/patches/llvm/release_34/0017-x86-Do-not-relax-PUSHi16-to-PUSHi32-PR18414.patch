@@ -1,0 +1,69 @@
+From 1b5f5e10835694bbfa9ad8dd9d6a237a4c077275 Mon Sep 17 00:00:00 2001
+From: David Woodhouse <dwmw2@infradead.org>
+Date: Wed, 8 Jan 2014 12:58:32 +0000
+Subject: [PATCH 17/26] [x86] Do not relax PUSHi16 to PUSHi32 (PR18414)
+
+They do *different* things to %esp, so they are not equivalent.
+
+Rename PUSHi8 to PUSH32i8 and add the missing PUSH16i8.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@198761 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 2634d1f6da25827035b2c71fb8b5c744da5b3872)
+
+Conflicts:
+	lib/Target/X86/X86InstrInfo.td
+---
+ lib/Target/X86/MCTargetDesc/X86AsmBackend.cpp | 6 +++---
+ lib/Target/X86/X86InstrInfo.td                | 6 ++++--
+ test/MC/X86/relax-insn.s                      | 5 +++++
+ 3 files changed, 12 insertions(+), 5 deletions(-)
+ create mode 100644 test/MC/X86/relax-insn.s
+
+diff --git a/lib/Target/X86/MCTargetDesc/X86AsmBackend.cpp b/lib/Target/X86/MCTargetDesc/X86AsmBackend.cpp
+index f8e359b..475c76f 100644
+--- a/lib/Target/X86/MCTargetDesc/X86AsmBackend.cpp
++++ b/lib/Target/X86/MCTargetDesc/X86AsmBackend.cpp
+@@ -217,9 +217,9 @@ static unsigned getRelaxedOpcodeArith(unsigned Op) {
+   case X86::CMP64mi8: return X86::CMP64mi32;
+ 
+     // PUSH
+-  case X86::PUSHi8: return X86::PUSHi32;
+-  case X86::PUSHi16: return X86::PUSHi32;
+-  case X86::PUSH64i8: return X86::PUSH64i32;
++  case X86::PUSH32i8:  return X86::PUSHi32;
++  case X86::PUSH16i8:  return X86::PUSHi16;
++  case X86::PUSH64i8:  return X86::PUSH64i32;
+   case X86::PUSH64i16: return X86::PUSH64i32;
+   }
+ }
+diff --git a/lib/Target/X86/X86InstrInfo.td b/lib/Target/X86/X86InstrInfo.td
+index 3712849..bf28e3c 100644
+--- a/lib/Target/X86/X86InstrInfo.td
++++ b/lib/Target/X86/X86InstrInfo.td
+@@ -912,8 +912,10 @@ def PUSH32rmr: I<0xFF, MRM6r, (outs), (ins GR32:$reg), "push{l}\t$reg",[],
+ def PUSH32rmm: I<0xFF, MRM6m, (outs), (ins i32mem:$src), "push{l}\t$src",[],
+                  IIC_PUSH_MEM>, OpSize16;
+ 
+-def PUSHi8   : Ii8<0x6a, RawFrm, (outs), (ins i32i8imm:$imm),
+-                      "push{l}\t$imm", [], IIC_PUSH_IMM>;
++def PUSH16i8 : Ii8<0x6a, RawFrm, (outs), (ins i16i8imm:$imm),
++                   "push{w}\t$imm", [], IIC_PUSH_IMM>, OpSize;
++def PUSH32i8 : Ii8<0x6a, RawFrm, (outs), (ins i32i8imm:$imm),
++                   "push{l}\t$imm", [], IIC_PUSH_IMM>, OpSize16;
+ def PUSHi16  : Ii16<0x68, RawFrm, (outs), (ins i16imm:$imm),
+                       "push{w}\t$imm", [], IIC_PUSH_IMM>, OpSize;
+ def PUSHi32  : Ii32<0x68, RawFrm, (outs), (ins i32imm:$imm),
+diff --git a/test/MC/X86/relax-insn.s b/test/MC/X86/relax-insn.s
+new file mode 100644
+index 0000000..510766c
+--- /dev/null
++++ b/test/MC/X86/relax-insn.s
+@@ -0,0 +1,5 @@
++// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o %t
++// RUN: llvm-objdump -d %t | FileCheck %s
++
++.global foo	
++pushw $foo // CHECK: pushw
+-- 
+1.8.4
+

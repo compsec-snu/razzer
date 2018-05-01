@@ -1,0 +1,65 @@
+From a3a64f3a1561b8039fb34f49fe0b3c5eafcc0f4a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Vin=C3=ADcius=20Tinti?= <viniciustinti@gmail.com>
+Date: Fri, 4 Apr 2014 18:21:24 -0300
+Subject: [PATCH 2/2] btrfs: LLVMLinux: Remove VLAIS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaced the use of a Variable Length Array In Struct (VLAIS) with a C99
+compliant equivalent. This is the original VLAIS struct.
+
+struct {
+	struct shash_desc shash;
+	char ctx[crypto_shash_descsize(tfm)];
+} desc;
+
+This patch instead allocates the appropriate amount of memory using an char
+array.
+
+The new code can be compiled with both gcc and clang.
+
+Signed-off-by: Jan-Simon Möller <dl9pf@gmx.de>
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Signed-off-by: Vinícius Tinti <viniciustinti@gmail.com>
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+---
+ fs/btrfs/hash.c | 19 ++++++++++---------
+ 1 file changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/fs/btrfs/hash.c b/fs/btrfs/hash.c
+index 85889aa..275cca1 100644
+--- a/fs/btrfs/hash.c
++++ b/fs/btrfs/hash.c
+@@ -33,18 +33,19 @@ void btrfs_hash_exit(void)
+ 
+ u32 btrfs_crc32c(u32 crc, const void *address, unsigned int length)
+ {
+-	struct {
+-		struct shash_desc shash;
+-		char ctx[crypto_shash_descsize(tfm)];
+-	} desc;
++	char desc[sizeof(struct shash_desc)
++		+ crypto_shash_descsize(tfm)
++		+ CRYPTO_MINALIGN] CRYPTO_MINALIGN_ATTR;
++	struct shash_desc *shash = (struct shash_desc *)desc;
++	u32 *ctx = (u32 *)shash_desc_ctx(shash);
+ 	int err;
+ 
+-	desc.shash.tfm = tfm;
+-	desc.shash.flags = 0;
+-	*(u32 *)desc.ctx = crc;
++	shash->tfm = tfm;
++	shash->flags = 0;
++	*ctx = crc;
+ 
+-	err = crypto_shash_update(&desc.shash, address, length);
++	err = crypto_shash_update(shash, address, length);
+ 	BUG_ON(err);
+ 
+-	return *(u32 *)desc.ctx;
++	return *ctx;
+ }
+-- 
+1.8.3.2
+

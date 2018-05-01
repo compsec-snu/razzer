@@ -1,0 +1,25 @@
+From 78bec0a8ebbd95c81fb07ff9cef978709e0e4a54 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:39 +0200
+Subject: [PATCH 46/48] clang can't parse the construct used in that macro.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ include/linux/rcupdate.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/rcupdate.h b/include/linux/rcupdate.h
+index 81c04f4..377ee31 100644
+--- a/include/linux/rcupdate.h
++++ b/include/linux/rcupdate.h
+@@ -836,7 +836,7 @@ void __kfree_rcu(struct rcu_head *head, unsigned long offset)
+ {
+ 	typedef void (*rcu_callback)(struct rcu_head *);
+ 
+-	BUILD_BUG_ON(!__builtin_constant_p(offset));
++//	BUILD_BUG_ON(!__builtin_constant_p(offset));
+ 
+ 	/* See the kfree_rcu() header comment. */
+ 	BUILD_BUG_ON(!__is_kfree_rcu_offset(offset));
+-- 
+1.7.3.4
+

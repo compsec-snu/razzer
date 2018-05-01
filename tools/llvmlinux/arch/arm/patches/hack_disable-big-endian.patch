@@ -1,0 +1,28 @@
+From f78623bb7c9c25f7106630dce2546cbb839e076a Mon Sep 17 00:00:00 2001
+From: "behanw@converseincode.comBehan" <behanw@converseincode.comBehan>
+Date: Tue, 23 Sep 2014 22:43:22 -0700
+Subject: [PATCH] DO-NOT-UPSTREAM arm, LLVMLinus: ASM workaround
+
+Not-signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ arch/arm/mm/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index ae69809..6960a0f 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -697,7 +697,7 @@ config SWP_EMULATE
+ 
+ config CPU_BIG_ENDIAN
+ 	bool "Build big-endian kernel"
+-	depends on ARCH_SUPPORTS_BIG_ENDIAN
++	depends on ARCH_SUPPORTS_BIG_ENDIAN && BROKEN
+ 	help
+ 	  Say Y if you plan on running a kernel in big-endian mode.
+ 	  Note that your board must be properly built and your board
+-- 
+1.9.1
+

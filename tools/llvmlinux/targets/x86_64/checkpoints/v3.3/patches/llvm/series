@@ -1,0 +1,6 @@
+#0001-Bug-13622-Fix-paired-register-for-inline-asm-with-64.patch
+0001-pax-linux-llvm-x86_elf-emit-R_X86_64_32S.patch
+0002-pax-linux-llvm-x86_handle-empty-archive.patch
+0003-pax-linux-llvm-x86_integrated-as-octa.patch
+0004-pax-linux-llvm-x86_integrated-as-single-quoted-strin.patch
+0005-pax-linux-llvm-x86_kernel-riprel.patch

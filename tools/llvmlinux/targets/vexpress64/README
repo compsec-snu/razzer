@@ -1,0 +1,10 @@
+There are no prebuilt downloads of busybox from busybox.org for aarch64. 
+RPM static builds of busybox for aarch64 only have some options enabled 
+and do not support --install.
+
+Current versions of busybox cannot be build both full featured and as a 
+static binary.
+
+Linaro has prebuilt minimal rootfs in tar.gz. That can be converted to 
+a initramfs.
+

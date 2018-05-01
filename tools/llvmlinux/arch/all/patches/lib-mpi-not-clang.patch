@@ -1,0 +1,31 @@
+From 1c63248f658437dd46a9add70632ca222015d562 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Mon, 27 Oct 2014 11:40:50 -0700
+Subject: [PATCH] mpi, LLVMLinux: Don't use __attribute__ ((mode(QI))) for
+ lib/mpi
+
+FIXME
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ lib/mpi/mpi-internal.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/mpi/mpi-internal.h b/lib/mpi/mpi-internal.h
+index 60cf765..ccf6614 100644
+--- a/lib/mpi/mpi-internal.h
++++ b/lib/mpi/mpi-internal.h
+@@ -238,7 +238,7 @@ mpi_limb_t mpihelp_rshift(mpi_ptr_t wp, mpi_ptr_t up, mpi_size_t usize,
+ #define W_TYPE_SIZE BITS_PER_MPI_LIMB
+ typedef mpi_limb_t UWtype;
+ typedef unsigned int UHWtype;
+-#if defined(__GNUC__)
++#if defined(__GNUC__) && !defined(__clang__)
+ typedef unsigned int UQItype __attribute__ ((mode(QI)));
+ typedef int SItype __attribute__ ((mode(SI)));
+ typedef unsigned int USItype __attribute__ ((mode(SI)));
+-- 
+1.9.1
+

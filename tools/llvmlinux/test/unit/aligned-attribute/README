@@ -1,0 +1,7 @@
+This test checks the behavior of GCC vs clang for  
+__attribute__ ((aligned))
+
+All previously unsupported gcc syntax options are now supported
+by clang.
+
+

@@ -1,0 +1,31 @@
+From c4c87f99dfc6fb6fceb4fab00c58d9fcd86fd3c9 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Tue, 23 Sep 2014 22:43:08 -0700
+Subject: [PATCH] be2net: Remove duplicated MODULE_DEVICE_TABLE definition
+
+MODULE_DEVICE_TABLE(pci, be_dev_ids) is defined twice at the same file. Remove
+one of them.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Vinícius Tinti <viniciustinti@gmail.com>
+Suggested-by: Arnd Bergmann <arnd@arndb.de>
+Cc: Arnd Bergmann <arnd@arndb.de>
+---
+ drivers/net/ethernet/emulex/benet/be_main.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/emulex/benet/be_main.c b/drivers/net/ethernet/emulex/benet/be_main.c
+index d48806b..709400a 100644
+--- a/drivers/net/ethernet/emulex/benet/be_main.c
++++ b/drivers/net/ethernet/emulex/benet/be_main.c
+@@ -26,7 +26,6 @@
+ #include <net/vxlan.h>
+ 
+ MODULE_VERSION(DRV_VER);
+-MODULE_DEVICE_TABLE(pci, be_dev_ids);
+ MODULE_DESCRIPTION(DRV_DESC " " DRV_VER);
+ MODULE_AUTHOR("Emulex Corporation");
+ MODULE_LICENSE("GPL");
+-- 
+1.9.1
+

@@ -1,0 +1,29 @@
+From 3b88e304f96c8aeed40bc2b7e819a5232e82d421 Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Thu, 16 Oct 2014 14:28:54 +0200
+Subject: [PATCH] LLVMLinux: use -Oz instead of -Os when using clang
+
+This generates smaller resulting object code when compiled with clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+---
+ Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index a5954f29..b4f8352 100644
+--- a/Makefile
++++ b/Makefile
+@@ -620,7 +620,8 @@ all: vmlinux
+ include arch/$(SRCARCH)/Makefile
+ 
+ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
+-KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
++KBUILD_CFLAGS	+= $(call cc-option,-Oz,-Os)
++KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
+ else
+ KBUILD_CFLAGS	+= -O2
+ endif
+-- 
+1.9.1
+

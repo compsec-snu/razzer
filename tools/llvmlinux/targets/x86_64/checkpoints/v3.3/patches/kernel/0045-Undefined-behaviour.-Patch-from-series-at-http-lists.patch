@@ -1,0 +1,25 @@
+From 79939a916564988a6de7ff8e1ce947ab2e0804fd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Mon, 2 Jul 2012 15:17:38 +0200
+Subject: [PATCH 45/48] Undefined behaviour.  Patch from series at http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html by PaX Team.
+
+---
+ fs/compat_ioctl.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/fs/compat_ioctl.c b/fs/compat_ioctl.c
+index a26bea1..b9653ea 100644
+--- a/fs/compat_ioctl.c
++++ b/fs/compat_ioctl.c
+@@ -808,7 +808,7 @@ static int compat_ioctl_preallocate(struct file *file,
+  * simple reversible transform to make our table more evenly
+  * distributed after sorting.
+  */
+-#define XFORM(i) (((i) ^ ((i) << 27) ^ ((i) << 17)) & 0xffffffff)
++#define XFORM(i) (((i) ^ (((i) & 0x1f) << 27) ^ (((i) & 0x7fff) << 17)) & 0xffffffff)
+ 
+ #define COMPATIBLE_IOCTL(cmd) XFORM(cmd),
+ /* ioctl should not be warned about even if it's not implemented.
+-- 
+1.7.3.4
+

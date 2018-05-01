@@ -1,0 +1,36 @@
+From 40017ce5d503fc84d42a7b0a9cf4c2090a6ca28e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Wed, 14 Nov 2012 13:14:39 +0100
+Subject: [PATCH 51/51] Change from DECLARE_PER_CPU to
+ DECLARE_PER_CPU_SHARED_ALIGNED in scheduler.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Author:  PaX Team <pageexec at freemail.hu>
+ML-Post: http://lists.cs.uiuc.edu/pipermail/llvm-commits/Week-of-Mon-20120507/142707.html
+URL:     http://llvm.linuxfoundation.org
+
+Merge:   Jan-Simon Möller <dl9pf at gmx.de>
+
+Description:
+---
+ kernel/sched/sched.h |    2 +-
+ 1 Datei geändert, 1 Zeile hinzugefügt(+), 1 Zeile entfernt(-)
+
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 7a7db09..fc58773 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -478,7 +478,7 @@ static inline int cpu_of(struct rq *rq)
+ #endif
+ }
+ 
+-DECLARE_PER_CPU(struct rq, runqueues);
++DECLARE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
+ 
+ #define cpu_rq(cpu)		(&per_cpu(runqueues, (cpu)))
+ #define this_rq()		(&__get_cpu_var(runqueues))
+-- 
+1.7.10.4
+

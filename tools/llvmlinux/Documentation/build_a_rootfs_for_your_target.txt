@@ -1,0 +1,87 @@
+= Building a rootfs for your target =
+
+If you're testing your target kernel in QEMU (or on real HW) you will likely
+need to build a rootfs. A quick and easy way to do so is to build it with
+buildroot when you build the target kernel.
+
+In order to build your very own rootfs with buildroot, you only need to provide
+a few build variables and add depend on the buildroot-build make rule.
+
+== Buildroot variables ==
+
+You need to provide the full BUILDROOT_ARCH and/or a config file for buildroot.
+The config file is used to configure the buildroot appropriately. If you don't
+provide one, the BUILDROOT_ARCH is used to find a config file in the buildroot
+configs directory: ${BUILDROOT_SRCDIR}/configs/${BUILDROOT_ARCH}_defconfig.
+The BUILDROOT_ARCH is also used to determine the build directory which as
+.../test/buildroot/build/${BUILDROOT_ARCH}
+
+An example config in the target Makefile might look like this:
+
+ BUILDROOT_ARCH 	= qemu_arm_vexpress
+ BUILDROOT_CONFIG	= config_vexpress_buildroot
+
+You can also override the default GIT repo, BRANCH, TAG and COMMIT for
+buildroot.
+
+ BUILDROOT_GIT           = "http://git.buildroot.net/git/buildroot.git"
+ BUILDROOT_BRANCH        = "master"
+ BUILDROOT_TAG           =
+ BUILDROOT_COMMIT        =
+
+== Configuring buildroot ==
+
+You can make changes to the buildroot .config file as follows:
+
+ $ make buildroot-configure    # Install config_target_buildroot as .config
+ $ make buildroot-menuconfig   # Run menuconfig for buildroot
+ $ make buildroot-cmpconfig    # Compare .config with config_target_buildroot
+ $ make buildroot-cpconfig     # Copy .config to config_target_buildroot
+
+It is suggested that you make the following changes in your config file:
+
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+ BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y
+ BR2_TOOLCHAIN_EXTERNAL_PATH="$(TOOLCHAINDIR)"
+ BR2_TOOLCHAIN_EXTERNAL_GLIBC=y
+ BR2_TARGET_ROOTFS_CPIO=y
+ BR2_TARGET_ROOTFS_TAR=y
+
+You can do so in menuconfig instead:
+
+ Toolchain -> Toolchain type = External toolchain
+ Toolchain -> Toolchain = Custom toolchain
+ Toolchain -> Toolchain origin = Pre-installed toolchain
+ Toolchain -> Toolchain path = $(TOOLCHAINDIR)
+ Toolchain -> External toolchain C library = glibc/eglibc
+ Filesystem images -> cpio the root filesystem
+ Filesystem images -> tar the root filesystem
+
+I also suggest you set these:
+
+ BR2_PACKAGE_GDB=y
+ BR2_TARGET_ROOTFS_SQUASHFS=y
+ BR2_TARGET_ROOTFS_SQUASHFS4=y
+ BR2_TARGET_ROOTFS_SQUASHFS4_GZIP=y
+
+or
+
+ Toolchain -> Build gdb debugger for the Target = Y
+ Filesystem images -> squashfs root filesystem
+
+== Building Buildroot ==
+
+After configuring buildbot, you need to add the "buildroot-build" make rule to
+your target Makefile in the appropriate place. Something like this:
+
+ test: kernel-build buildroot-build
+ 	$(call qemu_arm,${BOARD},${KERNELDTB_IMG},256,/dev/ram0,ramdisk_size=64M rw POWEROFF,-initrd ${BUILDROOT_CPIO}) ${NET}
+
+Once the build of the buildroot rootfs is complete, you can find the results in
+the following Make variables:
+
+ BUILDROOT_CPIO          = ${BUILDROOT_BUILDDIR}/images/rootfs.cpio
+ BUILDROOT_SQUASHFS      = ${BUILDROOT_BUILDDIR}/images/rootfs.squashfs
+ BUILDROOT_TAR           = ${BUILDROOT_BUILDDIR}/images/rootfs.tar
+ BUILDROOT_TAR_BZ2       = ${BUILDROOT_BUILDDIR}/images/rootfs.tar.bz2

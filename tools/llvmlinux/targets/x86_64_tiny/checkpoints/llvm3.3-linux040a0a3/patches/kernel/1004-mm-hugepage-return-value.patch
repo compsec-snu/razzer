@@ -1,0 +1,39 @@
+From 0db3e5f50f02dd71a24a725eeb7401bf9c7e47e1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan-Simon=20M=C3=B6ller?= <dl9pf@gmx.de>
+Date: Tue, 20 Nov 2012 21:21:40 +0100
+Subject: [PATCH 1004/1005] mm-hugepage-return-value.patch
+
+Return 0 for compound_lock_irqsave unless CONFIG_TRANSPARENT_HUGEPAGE
+
+This patch fixes errors when compiling the Linux kernel with Clang
+
+Signed-off-by: Mark Charlebois <charlebm@gmail.com>
+
+---
+ include/linux/mm.h |    6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index bcaab4e..4624578 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -337,12 +337,14 @@ static inline void compound_unlock(struct page *page)
+ 
+ static inline unsigned long compound_lock_irqsave(struct page *page)
+ {
+-	unsigned long uninitialized_var(flags);
+ #ifdef CONFIG_TRANSPARENT_HUGEPAGE
++	unsigned long uninitialized_var(flags);
+ 	local_irq_save(flags);
+ 	compound_lock(page);
+-#endif
+ 	return flags;
++#else
++	return 0UL;
++#endif
+ }
+ 
+ static inline void compound_unlock_irqrestore(struct page *page,
+-- 
+1.7.10.4
+

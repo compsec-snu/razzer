@@ -1,0 +1,2 @@
+KERNEL_CFG=configs/config_v4.16_rc3_custom_config
+KERNELDIR=${STATIC_ANALYSIS_KERNEL_DIR}

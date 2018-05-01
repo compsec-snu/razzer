@@ -1,0 +1,12 @@
+Index: rpi/include/linux/rcupdate.h
+===================================================================
+--- rpi.orig/include/linux/rcupdate.h
++++ rpi/include/linux/rcupdate.h
+@@ -805,7 +805,6 @@
+ {
+ 	typedef void (*rcu_callback)(struct rcu_head *);
+ 
+-	BUILD_BUG_ON(!__builtin_constant_p(offset));
+ 
+ 	/* See the kfree_rcu() header comment. */
+ 	BUILD_BUG_ON(!__is_kfree_rcu_offset(offset));

@@ -1,0 +1,40 @@
+From e71368a4aaa44f9c605704b3491bf6c466577c3a Mon Sep 17 00:00:00 2001
+From: Behan Webster <behanw@converseincode.com>
+Date: Wed, 12 Feb 2014 12:16:37 -0800
+Subject: [PATCH] arm64: LLVMLinux: Use current_stack_pointer in
+ save_stack_trace_tsk
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the global current_stack_pointer to get the value of the stack pointer.
+This change supports being able to compile the kernel with both gcc and clang.
+
+Signed-off-by: Behan Webster <behanw@converseincode.com>
+Reviewed-by: Mark Charlebois <charlebm@gmail.com>
+Reviewed-by: Jan-Simon Möller <dl9pf@gmx.de>
+Reviewed-by: Olof Johansson <olof@lixom.net>
+Acked-by: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/kernel/stacktrace.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
+index 55437ba..407991b 100644
+--- a/arch/arm64/kernel/stacktrace.c
++++ b/arch/arm64/kernel/stacktrace.c
+@@ -111,10 +111,9 @@ void save_stack_trace_tsk(struct task_struct *tsk, struct stack_trace *trace)
+ 		frame.sp = thread_saved_sp(tsk);
+ 		frame.pc = thread_saved_pc(tsk);
+ 	} else {
+-		register unsigned long current_sp asm("sp");
+ 		data.no_sched_functions = 0;
+ 		frame.fp = (unsigned long)__builtin_frame_address(0);
+-		frame.sp = current_sp;
++		frame.sp = current_stack_pointer;
+ 		frame.pc = (unsigned long)save_stack_trace_tsk;
+ 	}
+ 
+-- 
+1.9.1
+
