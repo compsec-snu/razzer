@@ -35,7 +35,7 @@ scheduler is implemented using QEMU/KVM. See documents in
 
 # Paper
 
-[Razzer: Finding Kernel Race Bugs through Fuzzing](https://lifeasageek.github.io/papers/jeong:razzer.pdf)
+[Razzer: Finding Kernel Race Bugs through Fuzzing (IEEE S&P 2019)](https://lifeasageek.github.io/papers/jeong:razzer.pdf)
 
 # Trophies
 
