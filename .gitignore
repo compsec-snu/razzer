@@ -11,7 +11,6 @@ TODO
 build
 tags
 playground
-log
 /tools/race-syzkaller/bin/
 /tools/race-syzkaller/syzkaller
 *.wpa
