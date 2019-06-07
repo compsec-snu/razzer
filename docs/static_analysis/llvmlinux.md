@@ -24,12 +24,3 @@ binary. It is okay if .bc files for files under interests and
 built-in.bc for each subdirectory (e.g., drivers/built-in.bc,
 net/built-in.bc) is built.
 
-## Run LLVM linux
-
-Run following commands.
-
-```
-cd tools/llvmlinux/targets/x86_64
-./build-kernel.sh --config configs/static_analysis_v4.17.mk
-```
-
