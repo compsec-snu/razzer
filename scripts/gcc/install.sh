@@ -19,6 +19,7 @@ pushd $TOOLCHAINS_HOME/ > /dev/null
   cd $GCC_DIR > /dev/null
   mkdir build
   mkdir install
+  ./contrib/download_prerequisites
   cd build
   ../configure --enable-languages=c,c++ --disable-bootstrap \
                --enable-checking=no --with-gnu-as \
