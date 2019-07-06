@@ -7,4 +7,6 @@ pushd $SYZKALLER_DIR > /dev/null
   CC=$GCC_HOME/install/bin/g++ make
 popd > /dev/null
 
+
+rm -f $PROJECT_DIR/tools/race-syzkaller/syzkaller
 ln -s $SYZKALLER_DIR $PROJECT_DIR/tools/race-syzkaller/syzkaller > /dev/null

@@ -17,10 +17,8 @@ echo
 pushd $SRC_DIR > /dev/null
     if [ -d "Release-build" ];
     then
-        echo Error: Release-build dir exists
-        echo Run rm -rf $SRC_DIR/Release-build
-        popd > /dev/null
-        exit 1
+        echo [WARN]: Release-build dir exists, so assume it is installed correctly
+        echo Run [ rm -rf $SRC_DIR/Release-build ]if you want to reinstall
     else
         mkdir Release-build
         cd Release-build

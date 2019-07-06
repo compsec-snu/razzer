@@ -5,7 +5,7 @@ PROJECT_DIR=$(realpath $(dirname $BASH_SOURCE)/../../)
 echo "QEMU_HOME:" $QEMU_HOME
 pushd $QEMU_HOME>/dev/null
 
-mkdir build
+mkdir -p build
 pushd build
 
 # This is just placehold. Actual HYPEADDR will be filled when executing exp.sh
