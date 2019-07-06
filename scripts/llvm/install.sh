@@ -5,12 +5,10 @@ PROJECT_DIR=$(realpath $(dirname $BASH_SOURCE)/../../)
 
 LLVM_DIR=$LLVM_HOME
 CLANG_DIR=$LLVM_HOME/tools/clang
-COMPILER_RT_DIR=$LLVM_HOME/projects/compiler-rt
 LLD_DIR=$LLVM_HOME/tools/lld
 
 LLVM_URL='http://llvm.org/releases/4.0.0/llvm-4.0.0.src.tar.xz'
 CLANG_URL='http://llvm.org/releases/4.0.0/cfe-4.0.0.src.tar.xz'
-COMPILER_RT_URL='http://releases.llvm.org/4.0.0/compiler-rt-4.0.0.src.tar.xz'
 LLD_URL='http://releases.llvm.org/4.0.0/lld-4.0.0.src.tar.xz'
 
 echo "LLVM_DIR:" $LLVM_DIR
@@ -27,17 +25,14 @@ pushd $TEMP_DIR > /dev/null
     
     wget $LLVM_URL -O llvm.tar.xz
     wget $CLANG_URL -O clang.tar.xz
-    wget $COMPILER_RT_URL -O compiler-rt.tar.xz
     wget $LLD_URL -O lld.tar.xz
 
     tar xf llvm.tar.xz
     tar xf clang.tar.xz
-    tar xf compiler-rt.tar.xz
     tar xf lld.tar.xz
 
     mv llvm-4.0.0.src $LLVM_DIR
     mv cfe-4.0.0.src $CLANG_DIR
-    mv compiler-rt-4.0.0.src $COMPILER_RT_DIR
     mv lld-4.0.0.src $LLD_DIR
 # I assume that I can always delete tmp/temp directories
 popd > /dev/null
