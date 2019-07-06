@@ -15,10 +15,20 @@ which is included as a submodule. To initialize the submodule one
 should execute `git submodule update` command as a follow.
 
 ```
-git submodule update --init --depth=1 kernels_repo
+$ git submodule update --init --depth=1 kernels_repo
+```
+
+
+## Dependencies
+
+```
+$ sudo apt install zlib
+$ sudo apt install libglib-dev
+$ sudo apt install python-setuptools
 ```
 
 ## Install toolchains / tools
+
 
 `scripts/install.sh` will try to install all toolchains and tools.
 
