@@ -2,9 +2,13 @@
 
 # Environment setup
 
-Running `scripts/envsetup.sh` will set up necessary environment
-variables. One should select the kernel version during environment
-setup, for example, `v4.17`
+```
+$ source scripts/envsetup.sh
+```
+
+`scripts/envsetup.sh` sets up necessary environment variables. One
+should select the kernel version during environment setup, for
+example, `v4.17`.
 
 # Install
 
@@ -22,26 +26,28 @@ $ git submodule update --init --depth=1 kernels_repo
 ## Dependencies
 
 ```
-$ sudo apt install zlib
-$ sudo apt install libglib-dev
-$ sudo apt install python-setuptools
+$ sudo apt install zlib libglib-dev python-setuptools quilt libssl-dev
 ```
 
 ## Install toolchains / tools
 
 
-`scripts/install.sh` will try to install all toolchains and tools.
+```
+$ scripts/install.sh
+```
+
+`scripts/install.sh` then installs all the rest necessary toolchains and tools.
 
 # Static analysis
 
 The Razzer's static analysis is based on the LLVM toolchain and the
-SVF static analysis tool. See documents in `docs/static_analysis/`.
+SVF static analysis tool. See documents in `docs/static-analysis.md`.
 
 # Fuzzing
 
 Razzer's two-phases fuzzing is based on Syzkaller. The deterministic
 scheduler is implemented using QEMU/KVM. See documents in
-`docs/fuzzing/`.
+`docs/fuzzing.md`.
 
 # Paper
 
