@@ -26,7 +26,7 @@ $ git submodule update --init --depth=1 kernels_repo
 ## Dependencies
 
 ```
-$ sudo apt install zlib libglib-dev python-setuptools quilt libssl-dev
+$ sudo apt install zlib libglib-dev python-setuptools quilt libssl-dev dwarfdump
 ```
 
 ## Install toolchains / tools
