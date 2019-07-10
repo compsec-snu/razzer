@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 qemu-system-x86_64 \
-  -kernel $KERNEL/arch/x86/boot/bzImage \
+  -kernel $KERNEL_BUILD/arch/x86/boot/bzImage \
   -append "console=ttyS0 root=/dev/sda debug earlyprintk=serial slub_debug=QUZ"\
-  -hda $IMAGE/wheezy.img \
+  -hda $SYZKALLER_HOME/exp/wheezy.img \
   -net user,hostfwd=tcp::10021-:22 -net nic \
   -enable-kvm \
   -nographic \
